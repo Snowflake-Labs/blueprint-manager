@@ -1,0 +1,78 @@
+## Account Resource Monitor Configuration
+
+### Configuration Summary
+
+| Setting | Value |
+|---------|-------|
+| **Monitor Name** | `account_resource_monitor` |
+| **Credit Limit** | {{ account_resource_monitor_limit }} credits |
+| **Action at Limit** | {{ account_resource_monitor_action }} |
+| **Reset Frequency** | {{ account_resource_monitor_reset_frequency }} |
+| **Scope** | Account-wide (all warehouses) |
+
+### How the Monitor Works
+{%- if account_resource_monitor_action == "Suspend Immediately" %}
+
+**Suspend Immediately Selected**
+
+When the credit limit is reached, all warehouses will be **immediately suspended**, stopping all running queries.
+
+| Impact | Description |
+|--------|-------------|
+| Running queries | ❌ Cancelled immediately |
+| New queries | ❌ Blocked |
+| Warehouses | ❌ Suspended |
+{%- elif account_resource_monitor_action == "Suspend After Current Queries" %}
+
+**Suspend After Current Queries Selected**
+
+When the credit limit is reached, warehouses will be **suspended after current queries complete**.
+
+| Impact | Description |
+|--------|-------------|
+| Running queries | ✅ Complete normally |
+| New queries | ❌ Blocked |
+| Warehouses | ❌ Suspended after current work |
+{%- else %}
+
+**Notify Only Selected**
+
+When the credit limit is reached, **alerts will be sent** but warehouses will continue running.
+
+| Impact | Description |
+|--------|-------------|
+| Running queries | ✅ Continue |
+| New queries | ✅ Allowed |
+| Cost protection | ⚠️ Manual intervention required |
+{%- endif %}
+
+### Alert Thresholds (Tiered Protection)
+
+| Credit Level | Percentage | Action | Purpose |
+|--------------|------------|--------|---------|
+| {{ (account_resource_monitor_limit | int * 0.75) | round | int }} credits | 75% | Notify | Early warning |
+| {{ (account_resource_monitor_limit | int * 0.90) | round | int }} credits | 90% | Notify | Final warning |
+| {{ account_resource_monitor_limit }} credits | 100% | {{ account_resource_monitor_action }} | Limit enforcement |
+| {{ (account_resource_monitor_limit | int * 1.10) | round | int }} credits | 110% | {{ account_resource_monitor_action }} | Post-limit enforcement |
+
+### How Budgets + Resource Monitors Work Together
+
+| Tool | Alert Type | When It Fires | Action |
+|------|------------|---------------|--------|
+| **Budget** | Predictive | When *projected* to exceed threshold | Notify only |
+| **Resource Monitor** | Actual | When *actually* reaching threshold | Notify or Suspend |
+
+**Example Timeline:**
+1. Day 10: Budget forecasts you'll hit 75% → Alert sent (early warning based on trend)
+2. Day 18: Resource monitor hits 75% actual usage → Alert sent (real-time confirmation)
+3. Day 24: Resource monitor hits 90% → Alert sent (final warning)
+4. Day 28: Resource monitor hits 100% → {{ account_resource_monitor_action }}
+
+### Emergency Procedures
+
+If the resource monitor suspends warehouses unexpectedly:
+
+1. **Assess Situation**: Determine why limit was reached
+2. **Increase Limit**: `ALTER RESOURCE MONITOR account_resource_monitor SET CREDIT_QUOTA = <new_limit>;`
+3. **Resume Warehouses**: Manually resume suspended warehouses
+4. **Investigate**: Identify cause of high usage

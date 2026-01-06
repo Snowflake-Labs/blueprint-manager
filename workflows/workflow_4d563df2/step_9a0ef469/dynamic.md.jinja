@@ -1,0 +1,83 @@
+## Snowflake Budget Configuration
+
+You're configuring Snowflake's native account budget for automated spending monitoring and alerts.
+
+### Budget Details
+
+| Setting | Value |
+|---------|-------|
+| **Monthly Spending Limit** | {{ account_monthly_budget }} credits |
+| **Notification Threshold** | {{ budget_notification_threshold }}% (alerts when projected spending > {{ (account_monthly_budget | int * budget_notification_threshold | int / 100) | round | int }} credits) |
+| **Notification Method** | Email |
+| **Alert Recipients** | {% for email in budget_alert_emails %}`{{ email | trim }}`{% if not loop.last %}, {% endif %}{% endfor %} |
+| **Refresh Interval** | {{ budget_refresh_interval }} |
+
+### How Snowflake Budgets Work
+
+1. **Monthly Time Interval**: Budget resets at 12:00 AM UTC on the 1st of each month
+2. **Time-Series Forecasting**: Snowflake analyzes spending patterns to predict end-of-month consumption
+3. **Threshold-Based Alerts**: You'll receive email notifications when projected spending exceeds {{ budget_notification_threshold }}% of your {{ account_monthly_budget }} credit limit
+4. **Informational Only**: Budgets send alerts but don't stop services (use Resource Monitors for that)
+
+### Email Notification Recipients
+
+Budget alerts will be sent to:
+{%- for email in budget_alert_emails %}
+- `{{ email | trim }}`
+{%- endfor %}
+
+### What Happens When Budget Threshold is Exceeded?
+
+**Important:** Snowflake budgets are **informational only**.
+
+| What Happens | What Does NOT Happen |
+|--------------|----------------------|
+| ✅ Email notifications sent | ❌ Services NOT suspended |
+| ✅ Spending data tracked | ❌ Warehouses continue running |
+
+**For Hard Limits:** Configure Resource Monitors in the Configure Resource Monitors step.
+
+---
+
+### Upgrading to Webhook Notifications (Optional)
+
+If you later want to receive budget alerts in Slack, Microsoft Teams, or PagerDuty instead of email, you can modify your budget configuration:
+
+**Step 1: Create a Notification Integration**
+
+```sql
+-- For Slack
+CREATE OR REPLACE NOTIFICATION INTEGRATION budget_slack_integration
+  TYPE = WEBHOOK
+  ENABLED = TRUE
+  WEBHOOK_URL = '<YOUR_SLACK_WEBHOOK_URL>'
+  WEBHOOK_BODY_TEMPLATE = '{"text": "Snowflake Budget Alert: <SNOWFLAKE_WEBHOOK_MESSAGE>"}'
+  COMMENT = 'Slack webhook for budget notifications';
+
+-- For Microsoft Teams
+CREATE OR REPLACE NOTIFICATION INTEGRATION budget_teams_integration
+  TYPE = WEBHOOK
+  ENABLED = TRUE
+  WEBHOOK_URL = '<YOUR_TEAMS_WEBHOOK_URL>'
+  WEBHOOK_BODY_TEMPLATE = '{"text": "Snowflake Budget Alert: <SNOWFLAKE_WEBHOOK_MESSAGE>"}'
+  COMMENT = 'Teams webhook for budget notifications';
+```
+
+**Step 2: Link Integration to Budget**
+
+```sql
+-- Add the notification integration to your budget
+CALL SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!ADD_NOTIFICATION_INTEGRATION('budget_slack_integration');
+```
+
+**How to get webhook URLs:**
+
+| Platform | Steps |
+|----------|-------|
+| **Slack** | Workspace Settings → Apps → Incoming Webhooks → Create new webhook |
+| **Teams** | Channel → ⋯ → Connectors → Incoming Webhook → Configure |
+| **PagerDuty** | Services → Integrations → Events API v2 |
+
+**More Information:**
+- [Notifications for budgets](https://docs.snowflake.com/en/user-guide/budgets/notifications)
+- [CREATE NOTIFICATION INTEGRATION](https://docs.snowflake.com/en/sql-reference/sql/create-notification-integration)

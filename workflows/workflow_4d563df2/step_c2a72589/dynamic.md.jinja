@@ -1,0 +1,88 @@
+# Create Infrastructure Database
+
+## Overview
+
+This section documents the configuration for the centralized Infrastructure Database. This database serves as the primary repository for platform-wide objects including FinOps Tags, Network Rules, governance policies, and shared procedures.
+
+## Decision Summary
+
+| Parameter | Value |
+|-----------|-------|
+| **Database Name** | `{{ platform_database_name | upper }}` |
+| **Governance Schema** | `{{ governance_name | upper }}` |
+| **Managed Access** | Enabled |
+
+## Database Configuration
+
+**Purpose:** Central hub database for metadata, security, and administrative objects that apply across the organization.
+
+**Ownership:** Platform Team (identified by domain prefix in naming convention)
+
+### Schema Structure
+
+| Schema Name | Purpose | Managed Access |
+|-------------|---------|----------------|
+| `{{ governance_name | upper }}` | Governance policies, tags, and security objects | ✅ Yes |
+
+### Naming Convention Rationale
+
+| Component | Value | Purpose |
+|-----------|-------|---------|
+| Domain | `PLAT` (or platform identifier) | Identifies central platform team ownership |
+| Data Product | `INFRA` (or infrastructure identifier) | Indicates infrastructure/administrative purpose |
+
+## Objects to be Created
+
+The `{{ governance_name | upper }}` schema will contain:
+
+| Object Type | Purpose |
+|-------------|---------|
+| Tags | FinOps tags for cost allocation (DOMAIN, ENVIRONMENT, DATAPRODUCT, etc.) |
+| Network Rules | IP allowlisting and network security policies |
+| Stored Procedures | Administrative and maintenance procedures |
+| Views | Governance and audit views |
+| Tables | Configuration and metadata tables |
+
+## Deployment Considerations
+
+{%- if account_strategy != "Single Account" %}
+**Multi-Account Deployment ({{ account_strategy }}):**
+- The Infrastructure Database will be created in the **Organization Account**
+- It will be **shared** to child accounts using Secure Data Sharing
+- All business units will use the same standardized metadata and security objects
+- Changes to governance objects propagate automatically to all accounts
+
+| Source Account | Target Accounts | Objects Shared |
+|----------------|-----------------|----------------|
+| Organization Account | All child accounts | Tags, Network Rules, Governance Views |
+{%- else %}
+**Single Account Deployment:**
+- The Infrastructure Database resides in the single account
+- All objects are directly accessible to authorized roles
+- No cross-account sharing required
+{%- endif %}
+
+## Access Control
+
+| Role | Access Level | Purpose |
+|------|--------------|---------|
+| SYSADMIN | OWNERSHIP | Full control of database and objects |
+| SECURITYADMIN | USAGE, CREATE | Manage security-related objects |
+| ACCOUNTADMIN | FULL | Administrative access |
+| Platform Roles | USAGE | Access to shared governance objects |
+
+## Verification
+
+After creation, verify the Infrastructure Database:
+
+```sql
+-- Verify database exists
+SHOW DATABASES LIKE '{{ platform_database_name | upper }}';
+
+-- Verify schema with Managed Access
+SHOW SCHEMAS IN DATABASE {{ platform_database_name | upper }};
+
+-- Confirm Managed Access is enabled
+SELECT * FROM {{ platform_database_name | upper }}.INFORMATION_SCHEMA.SCHEMATA 
+WHERE SCHEMA_NAME = '{{ governance_name | upper }}';
+```

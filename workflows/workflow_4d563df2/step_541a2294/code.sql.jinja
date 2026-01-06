@@ -1,0 +1,104 @@
+-- ============================================================================
+-- SCIM INTEGRATION SETUP
+-- ============================================================================
+-- Identity Provider: {{ identity_provider }}
+-- Integration Name: {{ scim_integration_name | upper }}
+-- Provisioner Role: {{ scim_provisioner_role | upper }}
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE SCIM PROVISIONER ROLE
+-- ============================================================================
+-- Create a dedicated role for SCIM provisioning
+-- This role will own the integration and provisioned users
+
+CREATE ROLE IF NOT EXISTS {{ scim_provisioner_role | upper }};
+
+-- Grant necessary privileges to the SCIM provisioner role
+GRANT CREATE USER ON ACCOUNT TO ROLE {{ scim_provisioner_role | upper }};
+GRANT CREATE ROLE ON ACCOUNT TO ROLE {{ scim_provisioner_role | upper }};
+
+-- Grant the provisioner role to ACCOUNTADMIN for management
+GRANT ROLE {{ scim_provisioner_role | upper }} TO ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 2: CREATE NETWORK RULE FOR SCIM
+-- ============================================================================
+-- Restrict SCIM API access to your IdP's IP addresses
+
+CREATE OR REPLACE NETWORK RULE scim_network_rule
+  TYPE = IPV4
+  MODE = INGRESS
+  VALUE_LIST = (
+{%- for ip in scim_allowed_ips %}
+    '{{ ip | trim }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+  )
+  COMMENT = 'Network rule for {{ identity_provider }} SCIM integration';
+
+-- ============================================================================
+-- STEP 3: CREATE NETWORK POLICY FOR SCIM
+-- ============================================================================
+
+CREATE OR REPLACE NETWORK POLICY scim_network_policy
+  ALLOWED_NETWORK_RULE_LIST = (scim_network_rule)
+  COMMENT = 'Network policy for {{ identity_provider }} SCIM integration';
+
+-- ============================================================================
+-- STEP 4: CREATE SCIM SECURITY INTEGRATION
+-- ============================================================================
+
+{%- if identity_provider == "Okta" %}
+CREATE OR REPLACE SECURITY INTEGRATION {{ scim_integration_name | upper }}
+  TYPE = SCIM
+  SCIM_CLIENT = 'OKTA'
+  RUN_AS_ROLE = '{{ scim_provisioner_role | upper }}'
+  NETWORK_POLICY = 'scim_network_policy'
+  SYNC_PASSWORD = FALSE
+  COMMENT = 'Okta SCIM integration for user provisioning';
+{%- elif identity_provider == "Microsoft Entra ID (Azure AD)" %}
+CREATE OR REPLACE SECURITY INTEGRATION {{ scim_integration_name | upper }}
+  TYPE = SCIM
+  SCIM_CLIENT = 'AZURE'
+  RUN_AS_ROLE = '{{ scim_provisioner_role | upper }}'
+  NETWORK_POLICY = 'scim_network_policy'
+  SYNC_PASSWORD = FALSE
+  COMMENT = 'Azure AD SCIM integration for user provisioning';
+{%- else %}
+CREATE OR REPLACE SECURITY INTEGRATION {{ scim_integration_name | upper }}
+  TYPE = SCIM
+  SCIM_CLIENT = 'GENERIC'
+  RUN_AS_ROLE = '{{ scim_provisioner_role | upper }}'
+  NETWORK_POLICY = 'scim_network_policy'
+  SYNC_PASSWORD = FALSE
+  COMMENT = '{{ identity_provider }} SCIM integration for user provisioning';
+{%- endif %}
+
+-- ============================================================================
+-- STEP 5: RETRIEVE SCIM TOKEN AND ENDPOINT
+-- ============================================================================
+-- IMPORTANT: Run this query and copy the token to your IdP configuration
+-- The token is only shown once - save it securely!
+
+SELECT SYSTEM$GENERATE_SCIM_ACCESS_TOKEN('{{ scim_integration_name | upper }}') AS scim_token;
+
+/*
+SCIM ENDPOINT URL (configure in your IdP):
+https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix | lower }}_{% endif %}{% if org_account_name | upper != "NONE" %}{{ org_account_name | lower }}{% else %}{{ snowflake_org_name | lower }}{% endif %}.snowflakecomputing.com/scim/v2/
+*/
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify the role was created
+SHOW ROLES LIKE '{{ scim_provisioner_role | upper }}';
+
+-- Verify the network policy was created
+SHOW NETWORK POLICIES LIKE 'scim_network_policy';
+
+-- Verify the security integration was created
+SHOW SECURITY INTEGRATIONS LIKE '{{ scim_integration_name | upper }}';
+DESC SECURITY INTEGRATION {{ scim_integration_name | upper }};

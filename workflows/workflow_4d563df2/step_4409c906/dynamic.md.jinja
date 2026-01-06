@@ -1,0 +1,38 @@
+# Provision Account Administrators
+
+## Overview
+
+This section documents the administrator role assignments for your Snowflake account. These users are provisioned through SCIM from your Identity Provider.
+
+## Administrator Assignments
+
+| Login Name | Role |
+|------------|------|
+{%- for user in scim_admin_users %}
+| `{{ user.login_name }}` | {{ user.admin_role | upper }} |
+{%- endfor %}
+
+## Role Summary
+
+| Role | Users |
+|------|-------|
+| ACCOUNTADMIN | {% for user in scim_admin_users %}{% if user.admin_role | upper == "ACCOUNTADMIN" %}`{{ user.login_name }}`{% if not loop.last %}, {% endif %}{% endif %}{% endfor %} |
+| SECURITYADMIN | {% for user in scim_admin_users %}{% if user.admin_role | upper == "SECURITYADMIN" %}`{{ user.login_name }}`{% if not loop.last %}, {% endif %}{% endif %}{% endfor %} |
+| SYSADMIN | {% for user in scim_admin_users %}{% if user.admin_role | upper == "SYSADMIN" %}`{{ user.login_name }}`{% if not loop.last %}, {% endif %}{% endif %}{% endfor %} |
+| USERADMIN | {% for user in scim_admin_users %}{% if user.admin_role | upper == "USERADMIN" %}`{{ user.login_name }}`{% if not loop.last %}, {% endif %}{% endif %}{% endfor %} |
+
+## Important Notes
+
+### SCIM Provisioning Flow
+
+1. Users must first be provisioned through SCIM from your Identity Provider
+2. SCIM creates the user accounts in Snowflake
+3. The SQL commands below grant roles to the provisioned users
+4. Run the SQL **after** users have been provisioned via SCIM
+
+### Best Practices Applied
+
+- **Minimum of 2 ACCOUNTADMIN users**: Prevents lockout scenarios
+- **Role separation**: Different roles for different responsibilities
+- **Named accounts**: Individual accountability through named users
+- **SCIM integration**: Automated provisioning and deprovisioning

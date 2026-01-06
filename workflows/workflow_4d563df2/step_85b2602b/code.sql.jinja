@@ -1,0 +1,56 @@
+-- ============================================================================
+-- ACCOUNT STRATEGY VERIFICATION
+-- ============================================================================
+-- This script provides queries to verify and document the account strategy
+-- No configuration changes are made in this step
+-- ============================================================================
+
+-- ============================================================================
+-- VERIFY CURRENT ACCOUNT INFORMATION
+-- ============================================================================
+
+-- Get current account details
+SELECT 
+  CURRENT_ACCOUNT() AS current_account,
+  CURRENT_ACCOUNT_NAME() AS account_name,
+  CURRENT_ORGANIZATION_NAME() AS organization_name,
+  CURRENT_REGION() AS region;
+
+-- Check if organization is enabled
+SHOW ORGANIZATION ACCOUNTS;
+
+-- Get account edition and other details
+SELECT 
+  SYSTEM$GET_SNOWFLAKE_PLATFORM_INFO() AS platform_info;
+
+-- ============================================================================
+-- DOCUMENT ACCOUNT STRATEGY DECISION
+-- ============================================================================
+-- The following information will be recorded in the Infrastructure Database
+
+/*
+Strategy Selected: {{ account_strategy }}
+
+Key Characteristics:
+{%- if account_strategy == "Single Account" %}
+- Primary Isolation: Logical (Database/Schema)
+- Cost Tracking: Requires Tagging
+- SDLC Data Sharing: Zero Copy Cloning
+- Complexity: Low
+{%- elif account_strategy == "Multi-Account (Environment-based)" %}
+- Primary Isolation: Physical (Account per Environment)
+- Cost Tracking: Separate Bills per Environment
+- SDLC Data Sharing: Secure Data Sharing
+- Complexity: Medium
+{%- elif account_strategy == "Multi-Account (Domain-based)" %}
+- Primary Isolation: Physical (Account per Domain)
+- Cost Tracking: Separate Bills per Domain
+- SDLC Data Sharing: Secure Data Sharing
+- Complexity: Medium
+{%- elif account_strategy == "Multi-Account (Domain + Environment)" %}
+- Primary Isolation: Physical (Account per Domain+Environment)
+- Cost Tracking: Precise Granularity
+- SDLC Data Sharing: Complex Sharing
+- Complexity: High
+{%- endif %}
+*/

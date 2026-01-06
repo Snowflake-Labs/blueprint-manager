@@ -1,0 +1,54 @@
+-- ============================================================================
+-- ACCOUNT RESOURCE MONITOR CONFIGURATION
+-- ============================================================================
+-- Credit Limit: {{ account_resource_monitor_limit }} credits
+-- Action: {{ account_resource_monitor_action }}
+-- Reset Frequency: {{ account_resource_monitor_reset_frequency }}
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE ACCOUNT-LEVEL RESOURCE MONITOR
+-- ============================================================================
+
+CREATE OR REPLACE RESOURCE MONITOR account_resource_monitor
+  WITH CREDIT_QUOTA = {{ account_resource_monitor_limit }}
+  FREQUENCY = {{ account_resource_monitor_reset_frequency | upper }}
+  START_TIMESTAMP = IMMEDIATELY
+  TRIGGERS
+    ON 75 PERCENT DO NOTIFY
+    ON 90 PERCENT DO NOTIFY
+{%- if account_resource_monitor_action == "Suspend Immediately" %}
+    ON 100 PERCENT DO SUSPEND_IMMEDIATE
+    ON 110 PERCENT DO SUSPEND_IMMEDIATE;
+{%- elif account_resource_monitor_action == "Suspend After Current Queries" %}
+    ON 100 PERCENT DO SUSPEND
+    ON 110 PERCENT DO SUSPEND;
+{%- else %}
+    ON 100 PERCENT DO NOTIFY
+    ON 110 PERCENT DO NOTIFY;
+{%- endif %}
+
+-- ============================================================================
+-- STEP 2: APPLY RESOURCE MONITOR TO ACCOUNT
+-- ============================================================================
+
+ALTER ACCOUNT SET RESOURCE_MONITOR = account_resource_monitor;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+SHOW RESOURCE MONITORS LIKE 'account_resource_monitor';
+SHOW PARAMETERS LIKE 'RESOURCE_MONITOR' IN ACCOUNT;
+
+SELECT 
+  name,
+  credit_quota,
+  used_credits,
+  remaining_credits,
+  ROUND(used_credits / credit_quota * 100, 2) AS percentage_used,
+  frequency
+FROM TABLE(INFORMATION_SCHEMA.RESOURCE_MONITORS())
+WHERE name = 'ACCOUNT_RESOURCE_MONITOR';

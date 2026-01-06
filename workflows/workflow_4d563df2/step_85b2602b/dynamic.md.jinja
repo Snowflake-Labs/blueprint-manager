@@ -1,0 +1,108 @@
+# Determine Account Strategy
+
+## Overview
+
+This section captures the foundational account strategy decision for our Snowflake data platform. This decision determines how workloads are organized, security boundaries are established, and costs are allocated across the organization.
+
+## Decision Summary
+
+| Decision | Selection |
+|----------|-----------|
+| **Account Strategy** | {{ account_strategy }} |
+| **Primary Isolation** | {% if account_strategy == "Single Account" %}Logical (Database/Schema){% else %}Physical (Account){% endif %} |
+| **Complexity Level** | {% if account_strategy == "Single Account" %}Low{% elif account_strategy == "Multi-Account (Domain + Environment)" %}High{% else %}Medium{% endif %} |
+
+## Strategy Details
+
+{%- if account_strategy == "Single Account" %}
+### Single Account Strategy
+
+We have selected a **Single Account** strategy for our Snowflake deployment. In this model, all data environments (Dev, Test, Prod) and business domains will exist within one Snowflake account.
+
+**Rationale:**
+- Centralized data team manages all data assets and security
+- Simplest possible administration with a "single pane of glass" for monitoring
+- Developer agility is prioritized, including the ability to use Zero-Copy Cloning
+- Cost allocation needs can be handled by tagging resources rather than separate invoices
+
+| Characteristic | Value |
+|----------------|-------|
+| Primary Data Isolation | Logical (Database/Schema) |
+| Cost Tracking | Requires Tagging |
+| SDLC Data Sharing | Zero Copy Cloning |
+| Complexity | Low |
+
+**Considerations:**
+- Lower isolation means changes in non-production environments could theoretically impact production resource limits
+- Single security boundary for all data
+- Organization Account is recommended for future-proofing
+
+{%- elif account_strategy == "Multi-Account (Environment-based)" %}
+### Multi-Account (Environment-based) Strategy
+
+We have selected a **Multi-Account (Environment-based)** strategy for our Snowflake deployment. This strategy separates environments into distinct Snowflake accounts, providing strong isolation between Software Development Lifecycle (SDLC) stages.
+
+**Rationale:**
+- Environment isolation is critical for our compliance and security requirements
+- Security policies differ by environment (e.g., strict IP allow-listing for Production)
+- Audit or regulatory requirements specify distinct boundaries for production environments
+- Ability to use different Snowflake Editions per environment to optimize costs
+
+| Characteristic | Value |
+|----------------|-------|
+| Primary Data Isolation | Physical (Account) |
+| Cost Tracking | Separate Bills per Environment |
+| SDLC Data Sharing | Secure Data Sharing |
+| Complexity | Medium |
+
+**Considerations:**
+- Cannot "clone" databases across accounts; requires data sharing or replication
+- Requires managing security and users across multiple accounts
+- Organization Account is required
+
+{%- elif account_strategy == "Multi-Account (Domain-based)" %}
+### Multi-Account (Domain-based) Strategy
+
+We have selected a **Multi-Account (Domain-based)** strategy for our Snowflake deployment. In this federated model, distinct business units (domains) are given their own accounts, aligning with a Data Mesh architecture.
+
+**Rationale:**
+- Decentralized ownership with business units operating as independent entities
+- Precise chargeback with clear, separate billing for each business unit
+- Different domains may have different release cadences or maintenance windows
+- Data sovereignty/residency requirements by geographic region
+
+| Characteristic | Value |
+|----------------|-------|
+| Primary Data Isolation | Physical (Account) |
+| Cost Tracking | Separate Bills per Domain |
+| SDLC Data Sharing | Secure Data Sharing |
+| Complexity | Medium |
+
+**Considerations:**
+- Requires robust data sharing framework for cross-domain analytics
+- Higher complexity in governance and standardization
+- Organization Account is required
+
+{%- elif account_strategy == "Multi-Account (Domain + Environment)" %}
+### Multi-Account (Domain + Environment) Strategy
+
+We have selected a **Multi-Account (Domain + Environment)** strategy for our Snowflake deployment. This is the most granular strategy where each business unit has separate accounts for their environments.
+
+**Rationale:**
+- Complex governance needs requiring maximum isolation
+- Highest level of isolation: issues in one domain/environment cannot affect others
+- Mature platform team capable of automating management of many accounts
+- Most precise tracking of costs by team and lifecycle stage
+
+| Characteristic | Value |
+|----------------|-------|
+| Primary Data Isolation | Physical (Account) |
+| Cost Tracking | Precise Granularity |
+| SDLC Data Sharing | Complex Sharing |
+| Complexity | High |
+
+**Considerations:**
+- Highest operational complexity; requires Infrastructure as Code automation
+- Extensive data sharing and replication configuration needed
+- Organization Account is required
+{%- endif %}

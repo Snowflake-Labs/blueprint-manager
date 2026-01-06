@@ -1,0 +1,57 @@
+## Identity Management Approach
+
+### Your Selections
+
+| Setting | Value |
+|---------|-------|
+| **User Provisioning** | {{ identity_provider }} |
+| **SAML/SSO** | {{ configure_saml }} |
+
+{%- if identity_provider == "None - Manual User Management" %}
+
+### Manual User Management Selected
+
+You have chosen to manage users manually without SCIM integration. This means:
+- Users must be created directly in Snowflake
+- User deprovisioning must be done manually when employees leave
+- No automatic synchronization with an Identity Provider
+
+**What's next:**
+- The Create Account Administrators step will guide you through creating admin users manually
+- Consider implementing SCIM in the future to improve security and reduce administrative overhead
+
+{%- else %}
+
+### SCIM Integration Selected: {{ identity_provider }}
+
+You have chosen automated user provisioning via SCIM. This means:
+- Users will be automatically created when added to your IdP
+- Users will be automatically disabled when removed from your IdP
+- Centralized identity management from your IdP
+
+**What's next:**
+- The Configure SCIM Integration step will guide you through setting up the SCIM connection
+- The Provision Account Administrators step will help you assign admin roles to SCIM-provisioned users
+
+{%- endif %}
+
+{%- if configure_saml == "Yes - Configure SAML now" %}
+
+### SAML/SSO Configuration
+
+You will configure SAML/SSO in a dedicated step. This enables:
+- Users can log in using their IdP credentials (single sign-on)
+- Centralized authentication control from your IdP
+- Seamless user experience without separate Snowflake passwords
+
+{%- else %}
+
+### SAML/SSO Deferred
+
+You have chosen to skip SAML configuration for now. Users will authenticate with:
+- Snowflake username and password
+- Multi-Factor Authentication (MFA) for security
+
+You can configure SAML later without rebuilding your environment.
+
+{%- endif %}

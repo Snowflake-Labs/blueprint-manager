@@ -1,0 +1,72 @@
+-- ============================================================================
+-- ORGANIZATION NAME VERIFICATION
+-- ============================================================================
+-- This script verifies the organization name and account identifier structure
+-- No configuration changes are made in this step
+-- ============================================================================
+
+-- ============================================================================
+-- VERIFY CURRENT ORGANIZATION AND ACCOUNT
+-- ============================================================================
+
+-- Get current organization name
+SELECT CURRENT_ORGANIZATION_NAME() AS organization_name;
+
+-- Get current account name
+SELECT CURRENT_ACCOUNT_NAME() AS account_name;
+
+-- Get full account identifier
+SELECT 
+  CURRENT_ORGANIZATION_NAME() || '-' || CURRENT_ACCOUNT_NAME() AS account_identifier;
+
+-- ============================================================================
+-- VERIFY ORGANIZATION STRUCTURE
+-- ============================================================================
+
+-- List all accounts in the organization (requires ORGADMIN)
+-- Run this if you have ORGADMIN privileges
+-- SHOW ORGANIZATION ACCOUNTS;
+
+-- ============================================================================
+-- DOCUMENT ORGANIZATION CONFIGURATION
+-- ============================================================================
+-- The following information will be recorded in the Infrastructure Database
+
+/*
+Organization Configuration:
+- Organization Name: {{ snowflake_org_name | upper }}
+{%- if account_name_prefix | upper != "NONE" %}
+- Account Name Prefix: {{ account_name_prefix }}
+- Account Identifier Pattern: {{ snowflake_org_name | upper }}-{{ account_name_prefix }}_<account_name>
+{%- else %}
+- Account Name Prefix: None
+- Account Identifier Pattern: {{ snowflake_org_name | upper }}-<account_name>
+{%- endif %}
+*/
+
+-- ============================================================================
+-- CONNECTION STRING EXAMPLES
+-- ============================================================================
+
+/*
+Web UI URL:
+{%- if account_name_prefix | upper != "NONE" %}
+https://{{ snowflake_org_name | lower }}-{{ account_name_prefix | lower }}_<account_name>.snowflakecomputing.com
+{%- else %}
+https://{{ snowflake_org_name | lower }}-<account_name>.snowflakecomputing.com
+{%- endif %}
+
+SnowSQL Connection:
+{%- if account_name_prefix | upper != "NONE" %}
+snowsql -a {{ snowflake_org_name | upper }}-{{ account_name_prefix }}_<account_name>
+{%- else %}
+snowsql -a {{ snowflake_org_name | upper }}-<account_name>
+{%- endif %}
+
+Python Connector:
+{%- if account_name_prefix | upper != "NONE" %}
+account = "{{ snowflake_org_name | lower }}-{{ account_name_prefix | lower }}_<account_name>"
+{%- else %}
+account = "{{ snowflake_org_name | lower }}-<account_name>"
+{%- endif %}
+*/

@@ -1,0 +1,39 @@
+-- ================================================================
+-- SCHEMA ROLES CREATION
+-- (Execute the following commands in the appropriate account)
+-- ================================================================
+
+-- Run as Data Product Owner
+USE ROLE {{ dataproduct_list[0] | upper }}_OWNER;
+
+{% if account_name_convention == 'Domain' %}USE DATABASE {{ dataproduct_list[0] | upper }}_{{ environment_list[0] | upper }}_{{ zone_list[0] }};
+{% elif account_name_convention == 'Environment' %}USE DATABASE {{ domain_list[0] | upper }}_{{ dataproduct_list[0] | upper }}_{{ zone_list[0] | upper }};
+{% elif account_name_convention == 'Domain_Environment' or account_name_convention == 'Environment_Domain' %}USE DATABASE {{ dataproduct_list[0] | upper }}_{{ zone_list[0] | upper }};
+{% else %}USE DATABASE {{ domain_list[0] | upper }}_{{ dataproduct_list[0] | upper }}_{{ environment_list[0] | upper }}_{{ zone_list[0] | upper }};
+{% endif %}
+
+{% for list_item_1 in stem_list %}
+{% for list_item_2 in purpose_list %}
+-- Create Database Roles for the schema (applying to current and future objects)
+CREATE DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_READ_ROLE COMMENT = 'Read access for {{ list_item_1 | upper }}_{{ list_item_2 | upper }}';
+CREATE DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_WRITE_ROLE COMMENT = 'Write access for {{ list_item_1 | upper }}_{{ list_item_2 | upper }}';
+CREATE DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_CREATE_ROLE COMMENT = 'Create access for {{ list_item_1 | upper }}_{{ list_item_2 | upper }}';
+
+-- Grant privileges to the database roles (inheriting schema level roles)
+GRANT USAGE ON SCHEMA {{ list_item_1 | upper }}_{{ list_item_2 | upper }} TO DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_READ_ROLE;
+GRANT SELECT ON ALL TABLES IN SCHEMA {{ list_item_1 | upper }}_{{ list_item_2 | upper }} TO DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_READ_ROLE;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA {{ list_item_1 | upper }}_{{ list_item_2 | upper }} TO DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_READ_ROLE;
+
+GRANT USAGE ON SCHEMA {{ list_item_1 | upper }}_{{ list_item_2 | upper }} TO DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_WRITE_ROLE;
+GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA {{ list_item_1 | upper }}_{{ list_item_2 | upper }} TO DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_WRITE_ROLE;
+GRANT INSERT, UPDATE, DELETE ON FUTURE TABLES IN SCHEMA {{ list_item_1 | upper }}_{{ list_item_2 | upper }} TO DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_WRITE_ROLE;
+
+GRANT USAGE ON SCHEMA {{ list_item_1 | upper }}_{{ list_item_2 | upper }} TO DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_CREATE_ROLE;
+GRANT CREATE TABLE, CREATE VIEW ON SCHEMA {{ list_item_1 | upper }}_{{ list_item_2 | upper }} TO DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_CREATE_ROLE;
+
+-- Grant schema roles to database roles
+GRANT DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_READ_ROLE TO DATABASE ROLE DB_READ_ROLE;
+GRANT DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_WRITE_ROLE TO DATABASE ROLE DB_WRITE_ROLE;
+GRANT DATABASE ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_CREATE_ROLE TO DATABASE ROLE DB_CREATE_ROLE;
+{% endfor %}
+{% endfor %}

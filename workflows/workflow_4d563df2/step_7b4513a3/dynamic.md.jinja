@@ -1,0 +1,46 @@
+# Create Account Administrators
+
+## Overview
+
+This section documents the administrators being created for your Snowflake account. Since SCIM is not configured, users are being created directly in Snowflake.
+
+## Administrators to be Created
+
+| Username | Email | Name | Role |
+|----------|-------|------|------|
+{%- for user in manual_admin_users %}
+| `{{ user.username }}` | {{ user.email }} | {{ user.first_name }} {{ user.last_name }} | {{ user.admin_role | upper }} |
+{%- endfor %}
+
+## Role Summary
+
+| Role | Users |
+|------|-------|
+| ACCOUNTADMIN | {% for user in manual_admin_users %}{% if user.admin_role | upper == "ACCOUNTADMIN" %}`{{ user.username }}`{% if not loop.last %}, {% endif %}{% endif %}{% endfor %} |
+| SECURITYADMIN | {% for user in manual_admin_users %}{% if user.admin_role | upper == "SECURITYADMIN" %}`{{ user.username }}`{% if not loop.last %}, {% endif %}{% endif %}{% endfor %} |
+| SYSADMIN | {% for user in manual_admin_users %}{% if user.admin_role | upper == "SYSADMIN" %}`{{ user.username }}`{% if not loop.last %}, {% endif %}{% endif %}{% endfor %} |
+| USERADMIN | {% for user in manual_admin_users %}{% if user.admin_role | upper == "USERADMIN" %}`{{ user.username }}`{% if not loop.last %}, {% endif %}{% endif %}{% endfor %} |
+
+## Important Notes
+
+### Manual User Management
+
+Since you've chosen manual user management:
+- Users must be created and maintained directly in Snowflake
+- User deprovisioning must be done manually when employees leave
+- Consider implementing a regular access review process
+- Password resets must be handled through Snowflake
+
+### Initial Password Security
+
+- All users are created with a temporary password
+- Users **must change their password** on first login
+- The initial password should be communicated securely to each user
+- Consider using a secure password sharing tool or in-person communication
+
+### Best Practices Applied
+
+- **Minimum of 2 ACCOUNTADMIN users**: Prevents lockout scenarios
+- **Named accounts**: Individual accountability through named users
+- **Password change required**: Enforces secure initial access
+- **Role separation**: Different roles for different responsibilities

@@ -1,0 +1,35 @@
+{%- if enable_budgets == "Yes" %}
+## Snowflake Native Budgets Enabled
+
+You've chosen to use Snowflake's native budget feature for cost control and monitoring.
+
+### Snowflake Budget Features
+
+Snowflake's built-in budget functionality provides:
+
+1. **Account Budget**: Monitor spending for all credit usage in your account
+2. **Custom Budgets**: Create budgets for specific groups of objects (future capability)
+3. **Time-Series Forecasting**: Daily alerts when spending is projected to exceed limits
+4. **Multiple Notification Methods**: Email, webhooks, or cloud service queues
+5. **Monthly Spending Limits**: Expressed in Snowflake credits
+
+### Budget vs Resource Monitors
+
+| Feature | Budgets (this step) | Resource Monitors (Enable Resource Monitors step) |
+|---------|---------------------|------------------------------|
+| **Purpose** | Alerting & awareness | Active cost control |
+| **Action** | Send notifications | Can suspend warehouses |
+| **Flexibility** | Can exceed budget | Hard limit enforced |
+| **Forecasting** | Time-series prediction | Simple threshold |
+| **Best For** | Planning & monitoring | Cost protection |
+{%- else %}
+## Spending Budgets Not Enabled
+
+You've chosen not to set up formal budgets. You'll monitor spending without predefined limits.
+
+### Implications
+
+- **No Proactive Alerts**: You won't receive threshold-based notifications
+- **Reactive Monitoring**: You must manually check spending regularly
+- **Alternative**: Consider Resource Monitors for hard credit limits
+{%- endif %}

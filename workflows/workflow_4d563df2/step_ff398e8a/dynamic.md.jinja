@@ -1,0 +1,88 @@
+# Define Domains & Environments
+
+## Overview
+
+This section defines the domains (business units/entities) and environments (SDLC stages) that will structure our Snowflake platform. These definitions serve as the foundation for account names, database names, warehouse names, role names, and FinOps tagging.
+
+## Decision Summary
+
+| Component | Defined Values | Usage Level |
+|-----------|----------------|-------------|
+| **Domains** | {% for domain in domain_list %}`{{ domain | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} | {% if account_strategy == "Single Account" or account_strategy == "Multi-Account (Environment-based)" %}Database{% else %}Account{% endif %} |
+| **Environments** | {% for env in environment_list %}`{{ env | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} | {% if account_strategy == "Single Account" or account_strategy == "Multi-Account (Domain-based)" %}Database{% else %}Account{% endif %} |
+
+## Domains
+
+Domains represent logical groupings of business functions, data, or ownership. They define boundaries for governance, cost allocation, and data stewardship.
+
+| Domain Abbreviation | Description |
+|---------------------|-------------|
+{%- for domain in domain_list %}
+| `{{ domain | upper }}` | |
+{%- endfor %}
+
+{%- if account_strategy == "Single Account" %}
+**Usage:** Domains will appear at the **database level** in object names.
+{%- elif account_strategy == "Multi-Account (Environment-based)" %}
+**Usage:** Domains will appear at the **database level** within each environment account.
+{%- elif account_strategy == "Multi-Account (Domain-based)" %}
+**Usage:** Domains will appear at the **account level**.
+{%- elif account_strategy == "Multi-Account (Domain + Environment)" %}
+**Usage:** Domains will appear at the **account level** combined with environments.
+{%- endif %}
+
+## Environments
+
+Environments represent stages in the Software Development Lifecycle (SDLC), used to isolate data and application development based on maturity and stability.
+
+| Environment Abbreviation | Stage | Description |
+|--------------------------|-------|-------------|
+{%- for env in environment_list %}
+| `{{ env | upper }}` | | |
+{%- endfor %}
+
+{%- if account_strategy == "Single Account" %}
+**Usage:** Environments will appear at the **database level** in object names.
+{%- elif account_strategy == "Multi-Account (Environment-based)" %}
+**Usage:** Environments will appear at the **account level**.
+{%- elif account_strategy == "Multi-Account (Domain-based)" %}
+**Usage:** Environments will appear at the **database level** within each domain account.
+{%- elif account_strategy == "Multi-Account (Domain + Environment)" %}
+**Usage:** Environments will appear at the **account level** combined with domains.
+{%- endif %}
+
+## Example Names
+
+Based on the **{{ account_strategy }}** strategy:
+
+{%- if account_strategy == "Single Account" %}
+| Object Type | Example Names |
+|-------------|---------------|
+| Database | {% for domain in domain_list[:2] %}`{{ domain | upper }}_ANALYTICS_{{ environment_list[0] | upper if environment_list else 'PROD' }}`{% if not loop.last %}, {% endif %}{% endfor %} |
+{%- elif account_strategy == "Multi-Account (Environment-based)" %}
+| Object Type | Example Names |
+|-------------|---------------|
+| Account | {% for env in environment_list[:3] %}`{{ env | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} |
+| Database | {% for domain in domain_list[:2] %}`{{ domain | upper }}_ANALYTICS`{% if not loop.last %}, {% endif %}{% endfor %} |
+{%- elif account_strategy == "Multi-Account (Domain-based)" %}
+| Object Type | Example Names |
+|-------------|---------------|
+| Account | {% for domain in domain_list[:3] %}`{{ domain | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} |
+| Database | `ANALYTICS_{{ environment_list[0] | upper if environment_list else 'PROD' }}` |
+{%- elif account_strategy == "Multi-Account (Domain + Environment)" %}
+| Object Type | Example Names |
+|-------------|---------------|
+| Account | {% for domain in domain_list[:2] %}{% for env in environment_list[:2] %}`{{ domain | upper }}_{{ env | upper }}`{% if not loop.last %}, {% endif %}{% endfor %}{% endfor %} |
+| Database | `ANALYTICS` |
+{%- endif %}
+
+## FinOps Tag Alignment
+
+These abbreviations will be used as values for FinOps tags to enable cost allocation and chargeback. The tags will be created in the Infrastructure Database (next step).
+
+| Tag Name | Tag Values |
+|----------|------------|
+| `DOMAIN` | {% for domain in domain_list %}`{{ domain | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} |
+| `ENVIRONMENT` | {% for env in environment_list %}`{{ env | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} |
+
+> **Note:** The DOMAIN and ENVIRONMENT tags will be created after the Infrastructure Database is set up.

@@ -1,0 +1,52 @@
+-- ============================================================================
+-- ENABLE SPENDING BUDGETS - DECISION DOCUMENTATION
+-- ============================================================================
+-- This step captures a foundational decision about budget usage.
+-- Implementation SQL follows in the Configure Spending Budgets step based on specific configuration inputs.
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- CURRENT ACCOUNT SPENDING OVERVIEW
+-- ============================================================================
+-- Review current spending to inform budget decisions
+
+-- Current month credit usage
+SELECT 
+  DATE_TRUNC('month', start_time) AS month,
+  SUM(credits_used) AS total_credits
+FROM snowflake.account_usage.metering_history
+WHERE start_time >= DATE_TRUNC('month', CURRENT_DATE())
+GROUP BY DATE_TRUNC('month', start_time);
+
+-- Credit usage by service type (last 30 days)
+SELECT 
+  service_type,
+  SUM(credits_used) AS credits_used,
+  ROUND(SUM(credits_used) / (SELECT SUM(credits_used) FROM snowflake.account_usage.metering_history WHERE start_time >= DATEADD(day, -30, CURRENT_DATE())) * 100, 2) AS percentage
+FROM snowflake.account_usage.metering_history
+WHERE start_time >= DATEADD(day, -30, CURRENT_DATE())
+GROUP BY service_type
+ORDER BY credits_used DESC;
+
+-- ============================================================================
+-- DECISION DOCUMENTATION
+-- ============================================================================
+
+/*
+Budget Decision: {{ enable_budgets }}
+{%- if enable_budgets == "Yes" %}
+
+Snowflake native budgets will be configured in the Configure Spending Budgets step with:
+- Monthly spending limit (in credits)
+- Email addresses for alert recipients
+- Refresh interval for spending updates
+{%- else %}
+
+Budgets not enabled. Cost monitoring options:
+- Use Resource Monitors for hard credit limits (Enable Resource Monitors step)
+- Manual monitoring via Account Usage views
+- Third-party FinOps tools
+{%- endif %}
+*/

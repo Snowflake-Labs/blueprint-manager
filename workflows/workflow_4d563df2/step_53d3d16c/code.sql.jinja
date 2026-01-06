@@ -1,0 +1,56 @@
+-- ============================================================================
+-- ENABLE RESOURCE MONITORS - DECISION DOCUMENTATION
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- CURRENT RESOURCE MONITOR STATUS
+-- ============================================================================
+
+SHOW RESOURCE MONITORS;
+SHOW PARAMETERS LIKE 'RESOURCE_MONITOR' IN ACCOUNT;
+
+-- ============================================================================
+-- CREDIT USAGE ANALYSIS
+-- ============================================================================
+
+-- Daily credit usage for last 30 days
+SELECT 
+  DATE_TRUNC('day', start_time) AS usage_date,
+  SUM(credits_used) AS daily_credits
+FROM snowflake.account_usage.metering_history
+WHERE start_time >= DATEADD(day, -30, CURRENT_DATE())
+GROUP BY DATE_TRUNC('day', start_time)
+ORDER BY usage_date DESC;
+
+-- Peak usage analysis
+SELECT 
+  MAX(daily_credits) AS peak_daily_credits,
+  AVG(daily_credits) AS avg_daily_credits,
+  MAX(daily_credits) * 30 AS projected_monthly_peak
+FROM (
+  SELECT 
+    DATE_TRUNC('day', start_time) AS usage_date,
+    SUM(credits_used) AS daily_credits
+  FROM snowflake.account_usage.metering_history
+  WHERE start_time >= DATEADD(day, -30, CURRENT_DATE())
+  GROUP BY DATE_TRUNC('day', start_time)
+);
+
+-- ============================================================================
+-- DECISION DOCUMENTATION
+-- ============================================================================
+
+/*
+Resource Monitor Decision: {{ enable_resource_monitors }}
+{%- if enable_resource_monitors == "Yes" %}
+
+Account-level resource monitor will be configured in the Configure Resource Monitors step.
+{%- else %}
+
+Resource monitors not enabled. Cost protection relies on:
+- Budgets for alerting (Enable/Configure Spending Budgets steps)
+- Manual monitoring via Account Usage views
+{%- endif %}
+*/

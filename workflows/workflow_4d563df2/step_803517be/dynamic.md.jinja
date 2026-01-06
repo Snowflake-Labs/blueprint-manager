@@ -1,0 +1,42 @@
+{%- if enable_cost_tags == "Yes" %}
+## Additional Cost Allocation Tags Enabled
+
+You've chosen to extend your tagging framework with additional cost allocation tags.
+
+### Existing Tags (from Platform Foundation task)
+
+These tags were created in `{{ platform_database_name }}.{{ governance_name }}`:
+
+| Tag | Purpose |
+|-----|---------|
+| `domain` | Business unit |
+| `environment` | SDLC stage |
+| `dataproduct` | Data product ID |
+| `workload` | Workload type |
+| `zone` | Data zone |
+
+### Additional Tags (this step)
+
+| Tag | Purpose |
+|-----|---------|
+| `cost_center` | Accounting code |
+| `owner` | Responsible party |
+| `project` | Initiative name |
+| `application` | System name |
+{%- else %}
+## Additional Cost Allocation Tags Not Enabled
+
+You've chosen to use only the core tags from the Platform Foundation task.
+
+### Available Tags
+
+| Tag | Purpose |
+|-----|---------|
+| `domain` | Business unit tracking |
+| `environment` | Environment cost separation |
+| `dataproduct` | Data product allocation |
+| `workload` | Workload type tracking |
+| `zone` | Data zone classification |
+
+These provide sufficient cost allocation for most organizations.
+{%- endif %}

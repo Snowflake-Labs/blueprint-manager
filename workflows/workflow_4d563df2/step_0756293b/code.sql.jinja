@@ -1,0 +1,103 @@
+-- ============================================================================
+-- BREAK-GLASS EMERGENCY ACCESS SETUP
+-- ============================================================================
+-- This script creates break-glass emergency access account(s)
+-- Use these accounts ONLY when SSO/SAML is unavailable
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE AUTHENTICATION POLICY FOR BREAK-GLASS
+-- ============================================================================
+-- This policy allows password-only authentication, no MFA
+-- Restricted to web UI only for security
+
+CREATE OR REPLACE AUTHENTICATION POLICY breakglass_auth_policy
+  AUTHENTICATION_METHODS = (PASSWORD)
+  MFA_AUTHENTICATION_METHODS = ()
+  CLIENT_TYPES = (SNOWFLAKE_UI)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Authentication policy for break-glass emergency access - password only, UI only';
+
+-- ============================================================================
+-- STEP 2: CREATE BREAK-GLASS ACCOUNTS
+-- ============================================================================
+{%- for account in breakglass_accounts %}
+
+-- -----------------------------------------------------------------------------
+-- Break-Glass Account: {{ account.username | upper }}
+-- -----------------------------------------------------------------------------
+{%- if account.allowed_ips | upper != "NONE" %}
+
+-- Create network rule for {{ account.username | upper }}
+CREATE OR REPLACE NETWORK RULE {{ account.username | lower }}_network_rule
+  TYPE = IPV4
+  MODE = INGRESS
+  VALUE_LIST = ({% for ip in account.allowed_ips.split(',') %}'{{ ip | trim }}'{% if not loop.last %}, {% endif %}{% endfor %})
+  COMMENT = 'Network rule for break-glass account {{ account.username | upper }}';
+
+-- Create network policy for {{ account.username | upper }}
+CREATE OR REPLACE NETWORK POLICY {{ account.username | lower }}_network_policy
+  ALLOWED_NETWORK_RULE_LIST = ({{ account.username | lower }}_network_rule)
+  COMMENT = 'Network policy for break-glass account {{ account.username | upper }}';
+{%- endif %}
+
+-- Create break-glass user
+CREATE USER IF NOT EXISTS {{ account.username | upper }}
+  PASSWORD = 'TempBreakGlass123!'  -- MUST be changed on first login
+  EMAIL = '{{ account.email }}'
+  MUST_CHANGE_PASSWORD = TRUE
+  DEFAULT_ROLE = 'ACCOUNTADMIN'
+  DEFAULT_WAREHOUSE = NULL
+  COMMENT = 'Break-glass emergency access account - use OTP workflow';
+
+-- Grant ACCOUNTADMIN role for full recovery capabilities
+GRANT ROLE ACCOUNTADMIN TO USER {{ account.username | upper }};
+
+-- Apply the break-glass authentication policy
+ALTER USER {{ account.username | upper }} 
+  SET AUTHENTICATION POLICY breakglass_auth_policy;
+
+{%- if account.allowed_ips | upper != "NONE" %}
+-- Apply the network policy to restrict access by IP
+ALTER USER {{ account.username | upper }} 
+  SET NETWORK POLICY {{ account.username | lower }}_network_policy;
+{%- endif %}
+{%- endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify users were created
+{%- for account in breakglass_accounts %}
+SHOW USERS LIKE '{{ account.username | upper }}';
+{%- endfor %}
+
+-- Verify authentication policy
+SHOW AUTHENTICATION POLICIES LIKE 'breakglass_auth_policy';
+
+-- Verify network policies
+SHOW NETWORK POLICIES;
+
+-- ============================================================================
+-- POST-SETUP: CHANGE PASSWORDS AND STORE OTPs
+-- ============================================================================
+-- IMPORTANT: After running this script:
+-- 
+-- For each break-glass account:
+-- 1. Log in and change the initial password
+-- 2. Generate a set of one-time passwords (OTPs)
+-- 3. Store the OTPs securely (password vault or physical safe)
+-- 4. Document the break-glass procedure for your team
+-- 5. Test the procedure to ensure it works
+--
+-- Break-glass accounts created:
+{%- for account in breakglass_accounts %}
+-- - {{ account.username | upper }} ({{ account.email }})
+{%- endfor %}
+--
+-- To change the password later (as ACCOUNTADMIN):
+-- ALTER USER <username> SET PASSWORD = '<new_otp>';
+-- ============================================================================

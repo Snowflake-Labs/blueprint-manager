@@ -1,0 +1,63 @@
+# Configure Network Rules and Policies
+
+## Overview
+
+This section documents the network access controls for your Snowflake account. These policies restrict which IP addresses can connect to Snowflake.
+
+## Network Policy Configuration
+
+| Setting | Value |
+|---------|-------|
+| **Rules Location** | `{{ platform_database_name | upper }}.{{ governance_name | upper }}` |
+| **Account-Level Policy** | {{ enable_account_network_policy }} |
+| **Allowed Network Rules** | {{ allowed_network_rules | length }} rule(s) configured |
+{%- if blocked_network_rules | length > 0 %}
+| **Blocked Network Rules** | {{ blocked_network_rules | length }} rule(s) configured |
+{%- endif %}
+
+## Allowed Network Rules
+
+The following network rules define which IP addresses can access Snowflake:
+
+| Rule Name | CIDR Blocks |
+|-----------|-------------|
+{%- for rule in allowed_network_rules %}
+| `{{ rule.rule_name }}` | `{{ rule.cidr_blocks }}` |
+{%- endfor %}
+
+{%- if blocked_network_rules | length > 0 %}
+## Blocked Network Rules
+
+The following network rules explicitly block IP addresses:
+
+| Rule Name | CIDR Blocks |
+|-----------|-------------|
+{%- for rule in blocked_network_rules %}
+| `{{ rule.rule_name }}` | `{{ rule.cidr_blocks }}` |
+{%- endfor %}
+{%- endif %}
+
+## Policy Application
+
+{%- if enable_account_network_policy == "Yes - Apply to all users by default" %}
+**Account-Level Enforcement**: The network policy will be applied to all users in the account. Users connecting from IPs not in the allow list will be blocked.
+
+**Exceptions:**
+- Break-glass accounts have their own network policy
+- SCIM integration has its own network policy
+{%- else %}
+**User-Level Enforcement**: The network policy will only be applied to users you explicitly assign it to. Consider this a phased rollout approach.
+
+**Next Steps:**
+- Test the policy with a subset of users
+- Validate all required IPs are included
+- Enable account-level policy once validated
+{%- endif %}
+
+## Security Considerations
+
+- Network policies are evaluated at connection time
+- IP changes during a session don't terminate the session
+- VPN users should always connect through corporate VPN
+- Cloud services may need static IPs or VPN connectivity
+- Regularly review and update allowed IP lists

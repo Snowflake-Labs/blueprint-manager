@@ -1,0 +1,69 @@
+# Create Organization Account
+
+## Overview
+
+This section documents the configuration for creating the Organization Account. The Organization Account provides centralized management capabilities for your Snowflake environment, including the ability to create and manage other accounts.
+
+## Organization Account Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Account Name** | `{{ org_account_name | upper }}` |
+{%- if account_name_prefix | upper != "NONE" %}
+| **Full Account Name** | `{{ account_name_prefix }}_{{ org_account_name }}` |
+| **Account URL** | `https://{{ snowflake_org_name | upper }}-{{ account_name_prefix }}_{{ org_account_name }}.snowflakecomputing.com` |
+{%- else %}
+| **Account URL** | `https://{{ snowflake_org_name | upper }}-{{ org_account_name }}.snowflakecomputing.com` |
+{%- endif %}
+| **Edition** | {{ org_account_edition }} |
+| **Cloud Region** | {{ org_account_region }} |
+
+## Initial Administrator
+
+| Parameter | Value |
+|-----------|-------|
+| **Administrator Username** | {{ org_admin_name }} |
+| **Administrator Email** | {{ org_admin_email }} |
+| **User Type** | PERSON |
+| **Initial Password** | System-generated (must change on first login) |
+
+## Account Details
+
+**Edition: {{ org_account_edition }}**
+
+{%- if org_account_edition == "Enterprise" %}
+Enterprise Edition provides full organization management capabilities including:
+- Multi-cluster warehouses and concurrency scaling
+- Column-level security and up to 90-day Time Travel
+- Failover/Failback for business continuity
+- Full ORGADMIN functionality for managing child accounts
+{%- elif org_account_edition == "Business Critical" %}
+Business Critical Edition provides everything in Enterprise, plus:
+- HIPAA and PCI DSS compliance support
+- Customer-managed encryption keys (Tri-Secret Secure)
+- Private connectivity options (PrivateLink)
+- Enhanced security for regulated environments
+{%- endif %}
+
+**Cloud Region: {{ org_account_region }}**
+
+The Organization Account will be hosted in this region. All administrative operations and organization-level data will reside here.
+
+## Post-Creation Checklist
+
+After the Organization Account is created:
+
+- [ ] Initial administrator logs in and changes password
+- [ ] Set up MFA for the initial ACCOUNTADMIN user
+- [ ] Add 1-2 additional ACCOUNTADMIN users for redundancy
+- [ ] Configure network policies (IP allowlisting) if required
+- [ ] Grant ORGADMIN role to appropriate administrators
+- [ ] Verify organization-level views are accessible
+- [ ] Document account credentials securely
+
+## Important Notes
+
+- The Organization Account should **not** contain business data
+- It is used exclusively for administrative and management purposes
+- All child accounts will be created from this Organization Account
+- ORGADMIN privileges are required to create additional accounts

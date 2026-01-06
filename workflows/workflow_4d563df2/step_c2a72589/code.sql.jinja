@@ -1,0 +1,82 @@
+-- ============================================================================
+-- CREATE INFRASTRUCTURE DATABASE
+-- ============================================================================
+-- This script creates the central Infrastructure Database for platform
+-- metadata, governance objects, and administrative resources
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE INFRASTRUCTURE DATABASE
+-- ============================================================================
+
+CREATE DATABASE IF NOT EXISTS {{ platform_database_name | upper }}
+  COMMENT = 'Infrastructure database for platform-wide metadata and governance objects';
+
+-- ============================================================================
+-- STEP 2: CREATE GOVERNANCE SCHEMA WITH MANAGED ACCESS
+-- ============================================================================
+-- Managed Access ensures only the schema owner can grant privileges
+
+USE DATABASE {{ platform_database_name | upper }};
+
+CREATE SCHEMA IF NOT EXISTS {{ governance_name | upper }}
+  WITH MANAGED ACCESS
+  COMMENT = 'Schema for governance policies, tags, and security objects';
+
+-- ============================================================================
+-- STEP 3: SET UP ACCESS CONTROL
+-- ============================================================================
+
+-- Grant USAGE on database to SYSADMIN and SECURITYADMIN
+GRANT USAGE ON DATABASE {{ platform_database_name | upper }} TO ROLE SYSADMIN;
+GRANT USAGE ON DATABASE {{ platform_database_name | upper }} TO ROLE SECURITYADMIN;
+
+-- Grant USAGE on schema
+GRANT USAGE ON SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO ROLE SYSADMIN;
+GRANT USAGE ON SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO ROLE SECURITYADMIN;
+
+-- ============================================================================
+-- STEP 4: CREATE FINOPS TAGS
+-- ============================================================================
+-- Create the core FinOps tags for cost allocation and governance
+-- These use the domains and environments defined in Define Domains & Environments step
+
+USE SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
+
+-- DOMAIN tag - identifies business unit ownership
+CREATE TAG IF NOT EXISTS domain
+  ALLOWED_VALUES = (
+{%- for domain in domain_list %}
+    '{{ domain | upper }}'{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+  COMMENT = 'Business domain/unit for cost allocation and governance';
+
+-- ENVIRONMENT tag - identifies SDLC stage
+CREATE TAG IF NOT EXISTS environment
+  ALLOWED_VALUES = (
+{%- for env in environment_list %}
+    '{{ env | upper }}'{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+  COMMENT = 'Environment/SDLC stage for cost allocation and governance';
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify database exists
+SHOW DATABASES LIKE '{{ platform_database_name | upper }}';
+
+-- Verify schema with Managed Access
+SHOW SCHEMAS IN DATABASE {{ platform_database_name | upper }};
+DESC SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
+
+-- Verify tags were created
+SHOW TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
+DESC TAG domain;
+DESC TAG environment;

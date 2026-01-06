@@ -1,0 +1,66 @@
+-- ============================================================================
+-- INFRASTRUCTURE DATABASE SHARING CONFIGURATION
+-- ============================================================================
+-- Share Name: {{ infrastructure_share_name | upper }}
+-- Source Database: {{ platform_database_name | upper }}
+-- Strategy: {{ account_strategy }}
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE THE SHARE
+-- ============================================================================
+
+CREATE SHARE IF NOT EXISTS {{ infrastructure_share_name | upper }}
+  COMMENT = 'Shared infrastructure database for governance objects across organization accounts';
+
+-- ============================================================================
+-- STEP 2: GRANT DATABASE AND SCHEMA TO SHARE
+-- ============================================================================
+
+-- Grant usage on the database
+GRANT USAGE ON DATABASE {{ platform_database_name | upper }} TO SHARE {{ infrastructure_share_name | upper }};
+
+-- Grant usage on the governance schema
+GRANT USAGE ON SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO SHARE {{ infrastructure_share_name | upper }};
+
+-- ============================================================================
+-- STEP 3: GRANT OBJECTS TO SHARE
+-- ============================================================================
+
+-- Grant all tags in the governance schema
+GRANT SELECT ON ALL TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO SHARE {{ infrastructure_share_name | upper }};
+
+-- Grant all views in the governance schema (for cost reporting views)
+GRANT SELECT ON ALL VIEWS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO SHARE {{ infrastructure_share_name | upper }};
+
+-- Grant future tags (so new tags are automatically shared)
+GRANT SELECT ON FUTURE TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO SHARE {{ infrastructure_share_name | upper }};
+
+-- Grant future views (so new views are automatically shared)
+GRANT SELECT ON FUTURE VIEWS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO SHARE {{ infrastructure_share_name | upper }};
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify the share was created
+SHOW SHARES LIKE '{{ infrastructure_share_name | upper }}';
+
+-- Verify granted privileges
+SHOW GRANTS TO SHARE {{ infrastructure_share_name | upper }};
+
+-- ============================================================================
+-- NEXT STEPS (when creating new accounts)
+-- ============================================================================
+-- When you create a new account in your organization, run these commands:
+--
+-- 1. In the Organization Account, grant the share to the new account:
+--    ALTER SHARE {{ infrastructure_share_name | upper }} ADD ACCOUNTS = {{ snowflake_org_name | upper }}.<new_account_name>;
+--
+-- 2. In the new account, create a database from the share:
+--    CREATE DATABASE {{ platform_database_name | lower }}_shared FROM SHARE {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}.{{ infrastructure_share_name | upper }};
+--
+-- This will be done in the Account Creation workflow.
+-- ============================================================================

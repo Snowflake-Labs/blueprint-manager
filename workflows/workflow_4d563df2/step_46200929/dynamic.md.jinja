@@ -1,0 +1,62 @@
+## Cost Allocation Tags Configuration
+
+### Configuration Summary
+
+**Additional Tags:** {{ additional_tag_dimensions }}
+**Enforcement:** {{ require_cost_tags }}
+
+### Complete Tag Framework
+
+After this step, you'll have the following tags:
+
+**Core Tags (from Platform Foundation task):**
+
+| Tag | Purpose |
+|-----|---------|
+| `domain` | Business unit |
+| `environment` | SDLC stage |
+| `dataproduct` | Data product ID |
+| `workload` | Workload type |
+| `zone` | Data zone |
+
+**Additional Tags (this step):**
+
+| Tag | Purpose |
+|-----|---------|
+{%- if additional_tag_dimensions == "All (Cost Center, Owner, Project, Application)" %}
+| `cost_center` | Accounting code |
+| `owner` | Responsible party |
+| `project` | Initiative name |
+| `application` | System name |
+{%- elif additional_tag_dimensions == "Essential (Cost Center, Owner)" %}
+| `cost_center` | Accounting code |
+| `owner` | Responsible party |
+{%- else %}
+| `owner` | Responsible party |
+{%- endif %}
+
+### Applying Tags to Resources
+
+After creating tags, apply them to resources:
+
+```sql
+ALTER WAREHOUSE my_warehouse SET TAG 
+  domain = 'FINANCE',
+  environment = 'PROD',
+  owner = 'Data Team';
+```
+
+## Task 3 Summary: Cost Management
+
+| Step | Configuration | Status |
+|------|---------------|--------|
+| 3.1 | Spending Budgets | {% if enable_budgets == "Yes" %}Enabled{% else %}Not enabled{% endif %} |
+{%- if enable_budgets == "Yes" %}
+| 3.2 | Budget Amount | {{ account_monthly_budget }} credits/month |
+{%- endif %}
+| 3.3 | Resource Monitors | {% if enable_resource_monitors == "Yes" %}Enabled{% else %}Not enabled{% endif %} |
+{%- if enable_resource_monitors == "Yes" %}
+| 3.4 | Monitor Limit | {{ account_resource_monitor_limit }} credits |
+{%- endif %}
+| 3.5 | Cost Allocation Tags | Extended |
+| 3.6 | Additional Tags | {{ additional_tag_dimensions }} |

@@ -1,0 +1,65 @@
+{%- if enable_resource_monitors == "Yes" %}
+## Account Resource Monitor Enabled
+
+You've chosen to configure an account-level resource monitor for active cost protection.
+
+### What is an Account Resource Monitor?
+
+An **account-level resource monitor** protects your entire Snowflake account by:
+
+- Tracking **all credit consumption** across the account
+- Sending **notifications** at warning thresholds
+- **Suspending all warehouses** when the limit is reached
+- Providing **real-time protection** against runaway costs
+
+### How Budgets and Resource Monitors Work Together
+
+These tools are **complementary**, not alternatives:
+
+| Feature | Budgets | Resource Monitors |
+|---------|---------|-------------------|
+| **Alerting Type** | Predictive (forecasting) | Actual (real-time) |
+| **Available Actions** | Notify only | Notify, Suspend, Suspend Immediate |
+| **Threshold Support** | Single threshold | Multiple thresholds (tiered) |
+| **Best For** | Early warning | Hard limits |
+
+**Recommended Combined Strategy:**
+
+| Tool | Threshold | Action | Purpose |
+|------|-----------|--------|---------|
+| **Budget** | 75% | Notify | Early warning based on forecast |
+| **Resource Monitor** | 75% | Notify | Real-time warning |
+| **Resource Monitor** | 90% | Notify | Final warning |
+| **Resource Monitor** | 100% | Suspend | Stop spending |
+
+This tiered approach gives you:
+1. **Early awareness** from budget forecasting
+2. **Multiple warning points** as you approach limits
+3. **Hard stop** to prevent overspending
+
+### Trigger Actions Explained
+
+| Action | What Happens | When to Use |
+|--------|--------------|-------------|
+| **NOTIFY** | Sends email to ACCOUNTADMIN users | Warning thresholds (75%, 90%) |
+| **SUSPEND** | Blocks new queries, lets running queries finish, then suspends | Default for 100% threshold |
+| **SUSPEND_IMMEDIATE** | Terminates all queries immediately | Only if immediate stop is critical |
+{%- else %}
+## Resource Monitors Not Enabled
+
+You've chosen not to configure resource monitors. Cost control will rely on budgets and manual monitoring.
+
+### Implications
+
+- **No Automatic Protection**: Warehouses won't be automatically suspended
+- **Risk of Runaway Costs**: Inefficient queries could result in high costs
+- **Manual Intervention Required**: Must manually suspend warehouses if costs spike
+
+### When This Makes Sense
+
+- Very small accounts with minimal spending
+- Development/sandbox environments with low risk
+- Organizations with other cost control mechanisms
+
+**Recommendation:** Strongly consider enabling resource monitors for production environments.
+{%- endif %}

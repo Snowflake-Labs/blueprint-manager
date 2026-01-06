@@ -1,0 +1,61 @@
+-- ================================================================
+-- DATABASE SETUP
+-- (Execute the following commands in the appropriate account)
+-- ================================================================
+
+-- For now, assume DOMAIN_DATA-PRODUCT_ENVIRONMENT_ZONE order
+-- Run as SYSADMIN for creating tags and databases
+USE ROLE SYSADMIN;
+
+{% if account_name_convention == 'Domain' and account_strategy == 'Multi-Account' %}
+-- The 'DOMAIN' is included at the Account level
+-- Format as 'DATA-PRODUCT_ENVIRONMENT_ZONE'
+
+{% for list_item_2 in dataproduct_list %}-- Entries for {{ list_item_2 | upper }} data product
+{% for list_item_3 in environment_list %}  -- Entries for {{ list_item_3 | upper }} environment
+{% for list_item_4 in zone_list %}
+CREATE DATABASE IF NOT EXISTS {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}
+  COMMENT = '{{ list_item_2 | capitalize }} in {{ list_item_3 | lower }} database for {{ list_item_4 | lower }} data.'
+  WITH TAG (DATA_PRODUCT = '{{ list_item_2 | upper }}', ENVIRONMENT = '{{ list_item_3 | upper }}', ZONE = '{{ list_item_4 | upper }}');
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% elif account_name_convention == 'Environment' and account_strategy == 'Multi-Account' %}
+-- The 'ENVIRONMENT' is included at the Account level
+-- Format as 'DOMAIN_DATA-PRODUCT_ZONE'
+
+{% for list_item_1 in domain_list %}-- Entries for {{ list_item_1 | upper }} domain
+{% for list_item_2 in dataproduct_list %}  -- Entries for {{ list_item_2 | upper }} data product
+{% for list_item_4 in zone_list %}
+CREATE DATABASE IF NOT EXISTS {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}
+  COMMENT = '{{ list_item_1 | capitalize }} {{ list_item_2 | capitalize }} database for {{ list_item_4 | lower }} data.'
+  WITH TAG (DOMAIN = '{{ list_item_1 | upper }}', DATA_PRODUCT = '{{ list_item_2 | upper }}', ZONE = '{{ list_item_4 | upper }}');
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% elif account_name_convention == 'Domain_Environment' or account_name_convention == 'Environment_Domain'  and account_strategy == 'Multi-Account' %}
+-- The 'DOMAIN' and 'ENVIRONMENT' is included at the Account level
+-- Format as 'DATA-PRODUCT_ZONE'
+
+{% for list_item_2 in dataproduct_list %}-- Entries for {{ list_item_2 | upper }} data product
+{% for list_item_4 in zone_list %}
+CREATE DATABASE IF NOT EXISTS {{ list_item_2 | upper }}_{{ list_item_4 | upper }}
+  COMMENT = '{{ list_item_2 | capitalize }} database for {{ list_item_4 | lower }} data.'
+  WITH TAG (DATA_PRODUCT = '{{ list_item_2 | upper }}', ZONE = '{{ list_item_4 | upper }}');
+{% endfor %}
+{% endfor %}
+{% else %}
+-- Format as 'DOMAIN_DATA-PRODUCT_ENVIRONMENT_ZONE'
+
+{% for list_item_1 in domain_list %}-- Entries for {{ list_item_1 | upper }} domain
+{% for list_item_2 in dataproduct_list %}  -- Entries for {{ list_item_2 | upper }} data product
+{% for list_item_3 in environment_list %}    -- Entries for {{ list_item_3 | upper }} environment
+{% for list_item_4 in zone_list %}
+CREATE DATABASE IF NOT EXISTS {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}
+  COMMENT = '{{ list_item_1 | capitalize }} {{ list_item_2 | capitalize }} in {{ list_item_3 | lower }} database for {{ list_item_4 | lower }} data.'
+  WITH TAG (DOMAIN = '{{ list_item_1 | upper }}', DATA_PRODUCT = '{{ list_item_2 | upper }}', ENVIRONMENT = '{{ list_item_3 | upper }}', ZONE = '{{ list_item_4 | upper }}');
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% endif %}

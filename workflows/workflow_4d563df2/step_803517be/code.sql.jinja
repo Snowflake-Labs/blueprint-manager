@@ -1,0 +1,33 @@
+-- ============================================================================
+-- ENABLE COST ALLOCATION TAGS - DECISION DOCUMENTATION
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+USE DATABASE {{ platform_database_name | upper }};
+USE SCHEMA {{ governance_name | upper }};
+
+-- ============================================================================
+-- REVIEW EXISTING TAGS (from Platform Foundation task)
+-- ============================================================================
+
+SHOW TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
+
+-- ============================================================================
+-- DECISION DOCUMENTATION
+-- ============================================================================
+
+/*
+Cost Allocation Tags Decision: {{ enable_cost_tags }}
+{%- if enable_cost_tags == "Yes" %}
+
+Additional cost allocation tags will be created in the Configure Cost Allocation Tags step:
+- cost_center
+- owner
+- project
+- application
+{%- else %}
+
+Using only the core tags from the Platform Foundation task:
+- domain, environment, dataproduct, workload, zone
+{%- endif %}
+*/

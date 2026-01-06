@@ -1,0 +1,87 @@
+-- ============================================================================
+-- SNOWFLAKE NATIVE BUDGET CONFIGURATION
+-- ============================================================================
+-- Monthly Budget: {{ account_monthly_budget }} credits
+-- Notification Threshold: {{ budget_notification_threshold }}%
+-- Notification Method: Email
+-- Refresh Interval: {{ budget_refresh_interval }}
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: ACTIVATE ACCOUNT BUDGET
+-- ============================================================================
+
+CALL SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!ACTIVATE();
+
+-- ============================================================================
+-- STEP 2: CONFIGURE BUDGET SETTINGS
+-- ============================================================================
+
+-- Set the monthly spending limit
+CALL SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!SET_SPENDING_LIMIT({{ account_monthly_budget }});
+
+-- Set the notification threshold (alerts when projected spending > {{ budget_notification_threshold }}%)
+CALL SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!SET_NOTIFICATION_THRESHOLD({{ budget_notification_threshold }});
+
+-- ============================================================================
+-- STEP 3: ADD EMAIL NOTIFICATION RECIPIENTS
+-- ============================================================================
+{%- for email in budget_alert_emails %}
+
+CALL SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!SET_EMAIL_NOTIFICATIONS('{{ email | trim }}');
+{%- endfor %}
+
+{%- if budget_refresh_interval == "1 hour (frequent monitoring)" %}
+
+-- ============================================================================
+-- STEP 4: SET BUDGET REFRESH INTERVAL TO 1 HOUR
+-- ============================================================================
+-- Note: 1-hour refresh increases compute cost by ~12x compared to default
+
+CALL SYSTEM$SET_BUDGET_REFRESH_TIER('HOURLY');
+{%- else %}
+
+-- ============================================================================
+-- STEP 4: BUDGET REFRESH INTERVAL (DEFAULT)
+-- ============================================================================
+-- Using default 6.5-hour refresh interval - no action needed
+{%- endif %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify budget is active and check settings
+CALL SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!GET_SPENDING_LIMIT();
+CALL SYSTEM$GET_BUDGET_REFRESH_TIER();
+
+-- Check current spending against budget
+SELECT 
+  DATE_TRUNC('month', CURRENT_DATE()) AS budget_month,
+  {{ account_monthly_budget }} AS budget_limit,
+  {{ budget_notification_threshold }} AS threshold_percent,
+  ROUND({{ account_monthly_budget }} * {{ budget_notification_threshold }} / 100, 0) AS alert_trigger_credits,
+  SUM(credits_used) AS credits_used_to_date,
+  ROUND(SUM(credits_used) / {{ account_monthly_budget }} * 100, 2) AS percentage_used
+FROM snowflake.account_usage.metering_history
+WHERE start_time >= DATE_TRUNC('month', CURRENT_DATE());
+
+-- ============================================================================
+-- OPTIONAL: UPGRADE TO WEBHOOK NOTIFICATIONS (FUTURE)
+-- ============================================================================
+-- If you want to receive alerts in Slack/Teams instead of email, run:
+--
+-- 1. Create a notification integration:
+-- CREATE OR REPLACE NOTIFICATION INTEGRATION budget_slack_integration
+--   TYPE = WEBHOOK
+--   ENABLED = TRUE
+--   WEBHOOK_URL = '<YOUR_SLACK_WEBHOOK_URL>'
+--   WEBHOOK_BODY_TEMPLATE = '{"text": "Snowflake Budget Alert: <SNOWFLAKE_WEBHOOK_MESSAGE>"}'
+--   COMMENT = 'Slack webhook for budget notifications';
+--
+-- 2. Add the integration to your budget:
+-- CALL SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!ADD_NOTIFICATION_INTEGRATION('budget_slack_integration');
+--
+-- See: https://docs.snowflake.com/en/user-guide/budgets/notifications

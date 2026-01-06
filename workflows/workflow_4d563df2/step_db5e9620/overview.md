@@ -1,0 +1,201 @@
+In this step, you'll provide the parameters needed to create your Organization Account. The Organization Account is a special account that provides centralized management capabilities, including the ability to create and manage other Snowflake accounts within your organization.
+
+## Why is this important?
+
+The Organization Account is the foundation of your Snowflake governance structure. It must be created before any other accounts in a multi-account deployment, as it provides the ORGADMIN role necessary to provision additional accounts. Even for single-account strategies, the Organization Account provides centralized management features and future-proofing for expansion.
+
+**Important:** The Organization Account will be created with a single **initial ACCOUNTADMIN user** for bootstrapping access. You should add 1-2 additional ACCOUNTADMIN users for redundancy after creation.
+
+## External Prerequisites
+
+* Snowflake Enterprise Edition or higher (Organization Accounts are not available with Standard Edition)
+* ORGADMIN role access to create the account
+
+## Key Concepts
+
+* **Organization Account Name:** `{{ org_account_name }}` (configured in Configure Organization Account step)
+* **Initial Administrator:** The first user with ACCOUNTADMIN privileges who will bootstrap the account
+* **Account Edition:** Must be Enterprise or Business Critical (Standard is not supported for Organization Accounts)
+* **Cloud Region:** The geographic region where the Organization Account will be hosted
+
+## More Information
+
+* [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts) — Overview and capabilities
+* [Creating Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts-create) — How to create accounts in an organization
+* [Snowflake Editions](https://docs.snowflake.com/en/user-guide/intro-editions) — Feature comparison across editions
+* [Supported Cloud Regions](https://docs.snowflake.com/en/user-guide/intro-regions) — Available regions by cloud provider
+* [CREATE ACCOUNT](https://docs.snowflake.com/en/sql-reference/sql/create-account) — SQL command reference
+
+### Configuration Questions
+
+#### What do you want to name your organization account? (`org_account_name`: text)
+The Organization Account is a special account that provides centralized management capabilities for your Snowflake environment. Enter the name you want to use, or enter `NONE` if you do not want to create an organization account.  
+
+**⚠️ Strong Recommendation: Create an Organization Account**  
+
+We strongly recommend creating an Organization Account, even if you have selected a Single Account strategy. Here's why:  
+
+* **Future-proofing:** If there's any potential for adding accounts later, having the Organization Account already set up makes expansion seamless  
+* **Centralized features:** Access to organization-level views, billing, and governance features  
+* **Easier migration:** Moving to a multi-account strategy later is significantly easier with an existing Organization Account  
+* **No downside:** The Organization Account has minimal overhead and doesn't impact your single-account operations  
+
+**For Multi-Account Strategies:** An Organization Account is **required**. It provides:  
+* Centralized view of all accounts  
+* Unified billing and cost management  
+* Ability to create and manage child accounts programmatically  
+* Organization-level policies and governance  
+
+**Recommended Name:** `ORG`  
+
+Since there can be only one Organization Account per organization, the name should clearly indicate this special purpose. We recommend simply naming it `ORG`.  
+
+**Example URLs with name `ORG`:**  
+* Custom org name: `https://ACME-ORG.snowflakecomputing.com`  
+* System-generated with prefix: `https://XY12345-acme_ORG.snowflakecomputing.com`  
+* System-generated without prefix: `https://XY12345-ORG.snowflakecomputing.com`  
+
+**Requirements:**  
+* Snowflake Enterprise Edition or higher  
+* ORGADMIN role granted in the existing account  
+
+**Enter `NONE` only if you are certain you will never need multi-account capabilities.**  
+
+**More Information:**  
+* [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
+* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)  
+
+#### What cloud region should host the Organization Account? (`org_account_region`: text)
+  Select the Snowflake Region ID where your Organization Account will be created.  
+  
+  **How to find available regions:**  
+  ```sql  
+  -- List all available regions for your organization  
+  SHOW REGIONS;  
+  ```  
+  
+  **Key Considerations:**  
+  * **Regulated Regions:** If your organization has accounts in a U.S. SnowGov Region, Snowflake recommends creating the Organization Account in that regulated region  
+  * **Administrator Location:** Choose a region close to your platform administrators for lower latency  
+  * **Primary Account Location:** Consider using the same region as your primary data account(s)  
+  * **Data Residency:** While the Organization Account shouldn't contain business data, some organizations prefer to keep all accounts in the same geographic region  
+  
+  **Common Region IDs:**  
+  * AWS US West 2 (Oregon): `AWS_US_WEST_2`  
+  * AWS US East 1 (N. Virginia): `AWS_US_EAST_1`  
+  * Azure East US 2: `AZURE_EASTUS2`  
+  * GCP US Central 1: `GCP_US_CENTRAL1`  
+  
+  **Note:** If you omit REGION, the organization account is created in the same region as the account running the command.  
+  
+  **More Information:**  
+  * [CREATE ORGANIZATION ACCOUNT](https://docs.snowflake.com/en/sql-reference/sql/create-organization-account)  
+  * [Supported Cloud Regions](https://docs.snowflake.com/en/user-guide/intro-regions)  
+
+#### What Snowflake edition will you use for the Organization Account? (`org_account_edition`: multi-select)
+The Organization Account requires **Enterprise Edition or higher**. Standard Edition does not support Organization Account functionality.  
+
+**Enterprise Edition** (Recommended):  
+* Full organization management capabilities  
+* Multi-cluster warehouses for concurrency scaling  
+* Column-level security and up to 90-day Time Travel  
+* Failover/Failback for business continuity  
+* Best for: Most organizations  
+
+**Business Critical Edition:**  
+* Everything in Enterprise, plus:  
+* HIPAA and PCI DSS compliance support  
+* Customer-managed encryption keys (Tri-Secret Secure)  
+* Private connectivity (AWS PrivateLink, Azure Private Link, GCP Private Service Connect)  
+* Best for: Highly regulated industries or when the Organization Account needs to meet strict compliance requirements  
+
+**Recommendation:** Enterprise Edition is typically sufficient for the Organization Account since it primarily serves administrative purposes rather than hosting sensitive business data.  
+
+**More Information:**  
+* [Snowflake Editions](https://docs.snowflake.com/en/user-guide/intro-editions)  
+**Options:**
+- ENTERPRISE
+- BUSINESS_CRITICAL
+
+#### What prefix (if any) should be added to all account names? (`account_name_prefix`: text)
+An account name prefix is an optional string added to the beginning of every account name for consistency and organization identification.  
+
+**When to use a prefix:**  
+* If your organization name is system-generated (e.g., `XY12345`) and you want your company name visible in account names  
+* If you want to enforce consistent naming across all accounts  
+* If you have multiple organizations or business units sharing Snowflake and need differentiation  
+
+**Example with prefix:**  
+* Prefix: `acme`  
+* Account names become: `acme_prod`, `acme_dev`, `acme_finance`  
+* URL: `https://XY12345-acme_prod.snowflakecomputing.com`  
+
+**Example without prefix:**  
+* Account names: `prod`, `dev`, `finance`  
+* URL: `https://ACME-prod.snowflakecomputing.com`  
+
+**Recommendations:**  
+* If you have a **custom organization name** (like `ACME`), a prefix is typically unnecessary since your identity is already in the URL  
+* If you have a **system-generated name**, consider using an abbreviated company name as a prefix  
+* Keep prefixes short (3-8 characters) with no underscores  
+
+**Enter `NONE` if you do not want to use an account name prefix.**  
+
+**More Information:**  
+* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
+
+#### What is your Snowflake organization name? (`snowflake_org_name`: text)
+Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
+
+**How to find your organization name:**  
+Look at your current Snowflake URL. The organization name is the portion before the dash:  
+* `https://**ACME**-prod.snowflakecomputing.com` → Organization name is `ACME`  
+* `https://**XY12345**-prod.snowflakecomputing.com` → Organization name is `XY12345`  
+
+**Types of Organization Names:**  
+* **Custom Name:** A human-readable name like `ACME` or `INITECH` that was requested from Snowflake. These provide better branding and more readable URLs.  
+* **System-Generated:** An auto-assigned alphanumeric code like `XY12345` or `AB98765`, created automatically during self-service signup.  
+
+**To request a custom name:** If you have a system-generated name and want to change it, contact Snowflake Support or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
+
+**More Information:**  
+* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)  
+
+#### What username should be used for the initial administrator? (`org_admin_name`: text)
+The initial administrator is the first user created in the Organization Account with ACCOUNTADMIN privileges. This is the **username** (login name), not the person's full name.
+
+**Recommendations:**  
+* Use a standard username format (e.g., `jsmith`, `john.smith`, or email address)
+* Choose a trusted member of your platform or security team
+* Use lowercase for consistency
+* Avoid special characters other than `.`, `_`, or `-`
+
+**Examples:**
+* `platform_admin`
+* `john.smith`
+* `jsmith@company.com`
+
+**Security Notes:**  
+* Password will be set to require change on first login (`MUST_CHANGE_PASSWORD = TRUE`)  
+* RSA public key authentication can be configured after account creation  
+* Additional ACCOUNTADMIN users should be added for redundancy  
+
+**More Information:**  
+* [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)  
+* [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#accountadmin-role)  
+
+#### What email address should be used for the Organization Account administrator? (`org_admin_email`: text)
+This email address will be associated with the initial ACCOUNTADMIN user and used for:  
+* Account activation and password reset notifications  
+* Critical security alerts and notifications  
+* Snowflake support communications  
+
+**Best Practices:**  
+* Use a monitored email address (not a personal email that may become inactive)  
+* Consider using a shared mailbox or distribution list for continuity (e.g., `snowflake-admin@yourcompany.com`)  
+* Ensure the email belongs to or is accessible by the named administrator  
+
+**Note:** This can be changed after account creation, but it's important to set correctly from the start.  
+
+**More Information:**  
+* [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)  

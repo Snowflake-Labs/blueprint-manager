@@ -1,0 +1,145 @@
+-- ============================================================================
+-- COST ALLOCATION TAGS CONFIGURATION
+-- ============================================================================
+-- Additional Tags: {{ additional_tag_dimensions }}
+-- Enforcement: {{ require_cost_tags }}
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+USE DATABASE {{ platform_database_name | upper }};
+USE SCHEMA {{ governance_name | upper }};
+
+-- ============================================================================
+-- STEP 1: CREATE ADDITIONAL COST ALLOCATION TAGS
+-- ============================================================================
+
+{%- if additional_tag_dimensions == "All (Cost Center, Owner, Project, Application)" %}
+CREATE TAG IF NOT EXISTS cost_center
+  COMMENT = 'Accounting cost center code for chargeback';
+
+CREATE TAG IF NOT EXISTS owner
+  COMMENT = 'Team or individual responsible for the resource';
+
+CREATE TAG IF NOT EXISTS project
+  COMMENT = 'Project or initiative name for cost allocation';
+
+CREATE TAG IF NOT EXISTS application
+  COMMENT = 'Application or system name';
+{%- elif additional_tag_dimensions == "Essential (Cost Center, Owner)" %}
+CREATE TAG IF NOT EXISTS cost_center
+  COMMENT = 'Accounting cost center code for chargeback';
+
+CREATE TAG IF NOT EXISTS owner
+  COMMENT = 'Team or individual responsible for the resource';
+{%- else %}
+CREATE TAG IF NOT EXISTS owner
+  COMMENT = 'Team or individual responsible for the resource';
+{%- endif %}
+
+-- ============================================================================
+-- STEP 2: CREATE COST REPORTING VIEWS
+-- ============================================================================
+
+-- View: Credit usage by domain
+CREATE OR REPLACE VIEW cost_by_domain AS
+SELECT 
+  tr.tag_value AS domain,
+  DATE_TRUNC('day', wm.start_time) AS usage_date,
+  SUM(wm.credits_used) AS total_credits
+FROM snowflake.account_usage.warehouse_metering_history wm
+JOIN snowflake.account_usage.tag_references tr
+  ON wm.warehouse_name = tr.object_name
+  AND tr.domain = 'WAREHOUSE'
+  AND tr.tag_name = 'DOMAIN'
+  AND tr.deleted_on IS NULL
+WHERE wm.start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP())
+GROUP BY tr.tag_value, DATE_TRUNC('day', wm.start_time)
+ORDER BY usage_date DESC, total_credits DESC;
+
+-- View: Credit usage by environment
+CREATE OR REPLACE VIEW cost_by_environment AS
+SELECT 
+  tr.tag_value AS environment,
+  DATE_TRUNC('day', wm.start_time) AS usage_date,
+  SUM(wm.credits_used) AS total_credits
+FROM snowflake.account_usage.warehouse_metering_history wm
+JOIN snowflake.account_usage.tag_references tr
+  ON wm.warehouse_name = tr.object_name
+  AND tr.domain = 'WAREHOUSE'
+  AND tr.tag_name = 'ENVIRONMENT'
+  AND tr.deleted_on IS NULL
+WHERE wm.start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP())
+GROUP BY tr.tag_value, DATE_TRUNC('day', wm.start_time)
+ORDER BY usage_date DESC, total_credits DESC;
+
+-- View: Untagged warehouses
+CREATE OR REPLACE VIEW untagged_warehouses AS
+SELECT 
+  w.name AS warehouse_name,
+  w.size,
+  w.created_on
+FROM snowflake.account_usage.warehouses w
+LEFT JOIN (
+  SELECT DISTINCT object_name 
+  FROM snowflake.account_usage.tag_references 
+  WHERE tag_name = 'DOMAIN' AND domain = 'WAREHOUSE' AND deleted_on IS NULL
+) d ON w.name = d.object_name
+WHERE w.deleted IS NULL
+  AND d.object_name IS NULL
+ORDER BY w.created_on DESC;
+
+-- Grant access to cost views
+GRANT SELECT ON VIEW cost_by_domain TO ROLE SYSADMIN;
+GRANT SELECT ON VIEW cost_by_environment TO ROLE SYSADMIN;
+GRANT SELECT ON VIEW untagged_warehouses TO ROLE SYSADMIN;
+
+-- ============================================================================
+-- STEP 3: TAG THE INFRASTRUCTURE DATABASE
+-- ============================================================================
+
+ALTER DATABASE {{ platform_database_name | upper }} SET TAG 
+  {{ platform_database_name | upper }}.{{ governance_name | upper }}.owner = 'Platform Team';
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+SHOW TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
+
+SELECT * FROM cost_by_domain LIMIT 10;
+SELECT * FROM cost_by_environment LIMIT 10;
+SELECT * FROM untagged_warehouses;
+
+-- ============================================================================
+-- PLATFORM FOUNDATION SETUP COMPLETE
+-- ============================================================================
+/*
+Task 3: Cost Management Summary
+
+Spending Budgets:
+{%- if enable_budgets == "Yes" %}
+- Status: Enabled
+- Monthly Limit: {{ account_monthly_budget }} credits
+{%- else %}
+- Status: Not enabled
+{%- endif %}
+
+Resource Monitors:
+{%- if enable_resource_monitors == "Yes" %}
+- Status: Enabled
+- Credit Limit: {{ account_resource_monitor_limit }} credits
+- Action: {{ resource_monitor_action }}
+{%- else %}
+- Status: Not enabled
+{%- endif %}
+
+Cost Allocation Tags:
+- Core tags: domain, environment, dataproduct, workload, zone
+- Additional tags: {{ additional_tag_dimensions }}
+
+NEXT STEPS:
+1. Apply tags to existing warehouses and databases
+2. Set up regular cost review meetings
+3. Proceed to Data Product Configuration workflow
+*/
+-- ============================================================================

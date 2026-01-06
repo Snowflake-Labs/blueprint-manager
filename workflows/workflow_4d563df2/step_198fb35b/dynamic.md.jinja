@@ -1,0 +1,45 @@
+## Infrastructure Database Sharing Configuration
+
+### Share Configuration
+
+| Setting | Value |
+|---------|-------|
+| Share Name | `{{ infrastructure_share_name | upper }}` |
+| Source Database | `{{ platform_database_name | upper }}` |
+| Shared Schema | `{{ governance_name | upper }}` |
+
+### What's Being Shared
+
+The following objects from `{{ platform_database_name | upper }}.{{ governance_name | upper }}` will be accessible to all accounts that consume this share:
+
+**Tags:**
+- `DOMAIN` - Business unit identifier
+- `ENVIRONMENT` - SDLC stage (dev, test, prod)
+- `DATAPRODUCT` - Data product identifier
+- `WORKLOAD` - Workload type
+- `ZONE` - Data zone
+
+**Views (if created in Cost Management task):**
+- `cost_by_domain` - Credit usage by domain
+- `cost_by_environment` - Credit usage by environment
+- `untagged_warehouses` - Resources missing required tags
+
+### Consuming the Share
+
+When you create additional accounts in your organization, you'll need to create a database from this share in each account:
+
+```sql
+-- Run in the target account
+CREATE DATABASE {{ platform_database_name | lower }}_shared FROM SHARE {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}.{{ infrastructure_share_name | upper }};
+```
+
+This creates a read-only database that references the shared objects in real-time.
+
+### Accounts to Grant Access
+
+When new accounts are created, grant them access to this share:
+
+```sql
+-- Run in the Organization Account
+ALTER SHARE {{ infrastructure_share_name | upper }} ADD ACCOUNTS = {{ snowflake_org_name | upper }}.<new_account_name>;
+```

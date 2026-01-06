@@ -1,0 +1,21 @@
+-- ============================================================================
+-- IDENTITY MANAGEMENT APPROACH - SELECTION ONLY
+-- ============================================================================
+-- User Provisioning: {{ identity_provider }}
+-- SAML/SSO: {{ configure_saml }}
+-- ============================================================================
+
+-- This step captures your identity management choices.
+-- No SQL is generated here - configuration follows in subsequent steps.
+
+/*
+SUMMARY:
+- User Provisioning Method: {{ identity_provider }}
+- SAML/SSO Configuration: {{ configure_saml }}
+
+{%- if identity_provider != "None - Manual User Management" %}
+Next: Configure SCIM Integration to set up automated user provisioning.
+{%- else %}
+Next: Create Account Administrators to manually create admin users.
+{%- endif %}
+*/

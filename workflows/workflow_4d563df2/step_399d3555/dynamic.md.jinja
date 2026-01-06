@@ -1,0 +1,78 @@
+# Configure Authentication Policies
+
+## Overview
+
+This section documents the authentication policies for your Snowflake account. These policies define how different types of users must authenticate.
+
+## Authentication Policy Summary
+
+| User Type | Policy Name | Authentication Methods | MFA |
+|-----------|-------------|------------------------|-----|
+| Human Users | `human_user_auth_policy` | {{ human_auth_methods }} | {{ mfa_method }} |
+| Service Accounts | `service_account_auth_policy` | {{ service_auth_methods }} | Not Required |
+| Break-Glass | `breakglass_auth_policy` | Password Only | Disabled |
+
+## Policy Details
+
+### Human User Authentication Policy
+
+| Setting | Value |
+|---------|-------|
+| **Policy Name** | `human_user_auth_policy` |
+| **Authentication Methods** | {{ human_auth_methods }} |
+| **MFA Methods** | {{ mfa_method }} |
+| **Client Types** | All (UI, Drivers, SnowSQL) |
+| **Account-Level** | {{ apply_auth_policies_account_level }} |
+
+{%- if human_auth_methods == "SAML Only (SSO required)" %}
+Users must authenticate through your Identity Provider ({{ identity_provider }}). Password authentication is not allowed.
+{%- elif human_auth_methods == "SAML or Password with MFA" %}
+Users can authenticate via SSO or with password + MFA. SSO is recommended for security.
+{%- else %}
+Users authenticate with password + MFA. Consider implementing SSO for improved security and user experience.
+{%- endif %}
+
+### Service Account Authentication Policy
+
+| Setting | Value |
+|---------|-------|
+| **Policy Name** | `service_account_auth_policy` |
+| **Authentication Methods** | {{ service_auth_methods }} |
+| **MFA Methods** | None (not applicable for services) |
+| **Client Types** | Drivers only (no UI access) |
+| **Password** | Disabled |
+
+Service accounts cannot use password authentication or access the web UI. This prevents misuse of service credentials.
+
+### Break-Glass Authentication Policy
+
+| Setting | Value |
+|---------|-------|
+| **Policy Name** | `breakglass_auth_policy` |
+| **Authentication Methods** | Password Only |
+| **MFA Methods** | None (uses OTP workflow) |
+| **Client Types** | UI Only |
+| **Purpose** | Emergency access when SSO is down |
+
+The break-glass account has a special policy that allows password-only authentication for emergency scenarios.
+
+## Policy Application
+
+{%- if apply_auth_policies_account_level == "Yes - Apply default policy to all users" %}
+The human user authentication policy will be applied at the account level:
+- All users must comply with the policy by default
+- Break-glass accounts have an explicit override
+- Service accounts should have the service policy explicitly assigned
+{%- else %}
+Authentication policies are created but not applied at account level:
+- Assign policies to users as needed
+- Consider phased rollout starting with admin users
+- Enable account-level enforcement once validated
+{%- endif %}
+
+## Security Best Practices Applied
+
+- **No password for service accounts**: Prevents credential theft and simplifies rotation
+- **MFA required for password auth**: Adds second factor for human users
+- **Break-glass is exception-based**: Special policy only for emergency access
+- **Principle of least privilege**: Each user type gets appropriate authentication methods

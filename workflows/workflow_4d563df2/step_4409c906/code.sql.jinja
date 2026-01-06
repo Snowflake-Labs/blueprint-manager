@@ -1,0 +1,85 @@
+-- ============================================================================
+-- PROVISION ACCOUNT ADMINISTRATORS
+-- ============================================================================
+-- This script grants administrative roles to SCIM-provisioned users
+-- IMPORTANT: Run this AFTER users have been provisioned via SCIM
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: VERIFY USERS EXIST (from SCIM provisioning)
+-- ============================================================================
+-- Before granting roles, verify the users have been provisioned via SCIM
+-- If users don't exist, they need to be assigned to Snowflake in your IdP first
+{%- for user in scim_admin_users %}
+
+-- Check if user exists: {{ user.login_name }}
+SHOW USERS LIKE '{{ user.login_name }}';
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 2: GRANT ADMINISTRATIVE ROLES
+-- ============================================================================
+{%- for user in scim_admin_users %}
+GRANT ROLE {{ user.admin_role | upper }} TO USER "{{ user.login_name }}";
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 3: GRANT ROLE HIERARCHY (for ACCOUNTADMIN users)
+-- ============================================================================
+-- ACCOUNTADMIN users should also have SECURITYADMIN and SYSADMIN
+-- to enable proper role usage for day-to-day tasks
+{%- for user in scim_admin_users %}
+{%- if user.admin_role | upper == "ACCOUNTADMIN" %}
+GRANT ROLE SECURITYADMIN TO USER "{{ user.login_name }}";
+GRANT ROLE SYSADMIN TO USER "{{ user.login_name }}";
+{%- endif %}
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 4: SET DEFAULT ROLES
+-- ============================================================================
+-- Set appropriate default roles for each administrator
+-- Users should use the least-privileged role needed for their work
+{%- for user in scim_admin_users %}
+{%- if user.admin_role | upper == "ACCOUNTADMIN" %}
+-- Set default role for {{ user.login_name }} (use SYSADMIN for day-to-day work)
+ALTER USER "{{ user.login_name }}" SET DEFAULT_ROLE = 'SYSADMIN';
+{%- else %}
+-- Set default role for {{ user.login_name }}
+ALTER USER "{{ user.login_name }}" SET DEFAULT_ROLE = '{{ user.admin_role | upper }}';
+{%- endif %}
+{%- endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify admin role grants
+SELECT 
+  grantee_name,
+  role,
+  granted_by,
+  created_on
+FROM snowflake.account_usage.grants_to_users
+WHERE role IN ('ACCOUNTADMIN', 'SECURITYADMIN', 'SYSADMIN', 'USERADMIN')
+  AND deleted_on IS NULL
+ORDER BY role, grantee_name;
+
+-- ============================================================================
+-- POST-PROVISIONING NOTES
+-- ============================================================================
+
+/*
+Administrators Configured:
+{%- for user in scim_admin_users %}
+- {{ user.login_name }} - {{ user.admin_role | upper }}
+{%- endfor %}
+
+Next Steps:
+1. Verify users can log in via SSO (Step 2.3)
+2. Configure break-glass emergency access (Step 2.4)
+3. Set up network policies (Step 2.5)
+4. Enable MFA for all administrators (Step 2.7)
+*/

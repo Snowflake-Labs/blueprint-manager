@@ -1,0 +1,58 @@
+-- ============================================================================
+-- DOMAINS & ENVIRONMENTS CONFIGURATION
+-- ============================================================================
+-- This script documents the domain and environment definitions
+-- FinOps tags will be created in the Infrastructure Database (Step 1.6)
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- DOCUMENT CONFIGURATION
+-- ============================================================================
+-- The following domains and environments have been defined
+-- Tags will be created in the Infrastructure Database after it is set up
+
+/*
+Domains Configured:
+{%- for domain in domain_list %}
+- {{ domain | upper }}
+{%- endfor %}
+
+Environments Configured:
+{%- for env in environment_list %}
+- {{ env | upper }}
+{%- endfor %}
+
+Account Strategy: {{ account_strategy }}
+
+{%- if account_strategy == "Single Account" %}
+Usage: Both domains and environments will appear at the database level in object names.
+{%- elif account_strategy == "Multi-Account (Environment-based)" %}
+Usage: Environments will be at account level, domains at database level.
+{%- elif account_strategy == "Multi-Account (Domain-based)" %}
+Usage: Domains will be at account level, environments at database level.
+{%- elif account_strategy == "Multi-Account (Domain + Environment)" %}
+Usage: Both domains and environments will be at account level.
+{%- endif %}
+*/
+
+-- ============================================================================
+-- NEXT STEPS
+-- ============================================================================
+-- FinOps tags (DOMAIN, ENVIRONMENT) will be created after the
+-- Infrastructure Database and Governance Schema are set up.
+-- This ensures all governance objects are centralized in one location.
+
+-- Example of how tags will be applied (in Data Product Configuration):
+/*
+-- Apply domain tag to a database
+ALTER DATABASE my_database SET TAG domain = 'FIN';
+
+-- Apply environment tag to a warehouse
+ALTER WAREHOUSE my_warehouse SET TAG environment = 'PROD';
+
+-- Query tagged resources
+SELECT *
+FROM TABLE(INFORMATION_SCHEMA.TAG_REFERENCES('domain', 'TAG'));
+*/

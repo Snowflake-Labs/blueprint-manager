@@ -1,0 +1,128 @@
+-- ================================================================
+-- DATA PRODUCT FUNCTIONAL ROLE SETUP
+-- (Execute the following commands in the appropriate account)
+-- ================================================================
+
+-- Run as USERADMIN for creating roles
+USE ROLE USERADMIN;
+
+{% for item in dataproduct_list %}
+-- Set up Account Functional Roles for {{ item | upper }}
+
+CREATE ROLE IF NOT EXISTS {{ item | upper }}_OWNER COMMENT = 'Data Product Owner Role for {{ item | upper }}';
+CREATE ROLE IF NOT EXISTS {{ item | upper }}_READER COMMENT = 'Data Product Reader Role for {{ item | upper }}';
+{% if functional_role_approach == 'Medium – Owner + Create/Write + Reader' %}CREATE ROLE IF NOT EXISTS {{ item | upper }}_CREATE_WRITE COMMENT = 'Data Product Create and Write Role for {{ item | upper }}';
+{% elif functional_role_approach == 'Large – Owner + Create + Write + Reader' %}CREATE ROLE IF NOT EXISTS {{ item | upper }}_CREATE COMMENT = 'Data Product Create Role for {{ item | upper }}';
+CREATE ROLE IF NOT EXISTS {{ item | upper }}_WRITE COMMENT = 'Data Product Write Role for {{ item | upper }}';
+{% endif %}
+{% endfor %}
+
+{% if account_name_convention == 'Domain' %}
+-- The 'DOMAIN' is included at the Account level
+{% for list_item_2 in dataproduct_list %}
+-- Grant ownership of {{ list_item_2 | upper }} databases to role {{ list_item_2 | upper }}_OWNER
+{% for list_item_3 in environment_list %}
+{% for list_item_4 in zone_list %}
+GRANT OWNERSHIP ON DATABASE {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }} TO ROLE {{ list_item_2 | upper }}_OWNER;
+
+-- As Data Product Owner Role: Create individual Database Roles for each database
+USE ROLE {{ list_item_2 | upper }}_OWNER;
+USE DATABASE {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }};
+
+-- Create Database Roles for the database
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_READ_ROLE COMMENT = 'Read access role for {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}';
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE COMMENT = 'Write access role for {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}';
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE COMMENT = 'Create access role for {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}';
+
+-- Grant DB Roles to Account Functional Roles
+GRANT ROLE {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_READ_ROLE TO ROLE {{ list_item_2 | upper }}_READER;
+{% if functional_role_approach == 'Medium – Owner + Create/Write + Reader' %}GRANT ROLE {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE_WRITE;
+GRANT ROLE {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE_WRITE;
+{% elif functional_role_approach == 'Large – Owner + Create + Write + Reader' %}GRANT ROLE {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE TO ROLE {{ list_item_2 | upper }}_WRITE;
+GRANT ROLE {{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE;
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% elif account_name_convention == 'Environment' %}
+-- The 'ENVIRONMENT' is included at the Account level
+{% for list_item_1 in domain_list %}
+{% for list_item_2 in dataproduct_list %}
+-- Grant ownership of {{ list_item_2 | upper }} databases to role {{ list_item_2 | upper }}_OWNER
+{% for list_item_4 in zone_list %}
+GRANT OWNERSHIP ON DATABASE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }} TO ROLE {{ list_item_2 | upper }}_OWNER;
+
+-- As Data Product Owner Role: Create individual Database Roles for each database
+USE ROLE {{ list_item_2 | upper }}_OWNER;
+USE DATABASE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }};
+
+-- Create Database Roles for the database
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_READ_ROLE COMMENT = 'Read access role for {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}';
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE COMMENT = 'Write access role for {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}';
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE COMMENT = 'Create access role for {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}';
+
+-- Grant DB Roles to Account Functional Roles
+GRANT ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_READ_ROLE TO ROLE {{ list_item_2 | upper }}_READER;
+{% if functional_role_approach == 'Medium – Owner + Create/Write + Reader' %}GRANT ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE_WRITE;
+GRANT ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE_WRITE;
+{% elif functional_role_approach == 'Large – Owner + Create + Write + Reader' %}GRANT ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE TO ROLE {{ list_item_2 | upper }}_WRITE;
+GRANT ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE;
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% elif account_name_convention == 'Domain_Environment' or account_name_convention == 'Environment_Domain' %}
+-- The 'DOMAIN' and 'ENVIRONMENT' is included at the Account level
+{% for list_item_2 in dataproduct_list %}
+-- Grant ownership of {{ list_item_2 | upper }} databases to role {{ list_item_2 | upper }}_OWNER
+{% for list_item_4 in zone_list %}
+GRANT OWNERSHIP ON DATABASE {{ list_item_2 | upper }}_{{ list_item_4 | upper }} TO ROLE {{ list_item_2 | upper }}_OWNER;
+
+-- As Data Product Owner Role: Create individual Database Roles for each database
+USE ROLE {{ list_item_2 | upper }}_OWNER;
+USE DATABASE {{ list_item_2 | upper }}_{{ list_item_4 | upper }};
+
+-- Create Database Roles for the database
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_READ_ROLE COMMENT = 'Read access role for {{ list_item_2 | upper }}_{{ list_item_4 | upper }}';
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE COMMENT = 'Write access role for {{ list_item_2 | upper }}_{{ list_item_4 | upper }}';
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE COMMENT = 'Create access role for {{ list_item_2 | upper }}_{{ list_item_4 | upper }}';
+
+-- Grant DB Roles to Account Functional Roles
+GRANT ROLE {{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_READ_ROLE TO ROLE {{ list_item_2 | upper }}_READER;
+{% if functional_role_approach == 'Medium – Owner + Create/Write + Reader' %}GRANT ROLE {{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE_WRITE;
+GRANT ROLE {{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE_WRITE;
+{% elif functional_role_approach == 'Large – Owner + Create + Write + Reader' %}GRANT ROLE {{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE TO ROLE {{ list_item_2 | upper }}_WRITE;
+GRANT ROLE {{ list_item_2 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE;
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% else %}
+-- Format as 'DOMAIN_DATA-PRODUCT_ENVIRONMENT_ZONE'
+{% for list_item_1 in domain_list %}
+{% for list_item_2 in dataproduct_list %}
+-- Grant ownership of {{ list_item_2 | upper }} databases to role {{ list_item_2 | upper }}_OWNER
+{% for list_item_3 in environment_list %}
+{% for list_item_4 in zone_list %}
+GRANT OWNERSHIP ON DATABASE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }} TO ROLE {{ list_item_2 | upper }}_OWNER;
+
+-- As Data Product Owner Role: Create individual Database Roles for each database
+USE ROLE {{ list_item_2 | upper }}_OWNER;
+USE DATABASE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }};
+
+-- Create Database Roles for the database
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_READ_ROLE COMMENT = 'Read access role for {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}';
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE COMMENT = 'Write access role for {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}';
+CREATE DATABASE ROLE IF NOT EXISTS {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE COMMENT = 'Create access role for {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}';
+
+-- Grant DB Roles to Account Functional Roles
+GRANT ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_READ_ROLE TO ROLE {{ list_item_2 | upper }}_READER;
+{% if functional_role_approach == 'Medium – Owner + Create/Write + Reader' %}GRANT ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE_WRITE;
+GRANT ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE_WRITE;
+{% elif functional_role_approach == 'Large – Owner + Create + Write + Reader' %}GRANT ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_WRITE_ROLE TO ROLE {{ list_item_2 | upper }}_WRITE;
+GRANT ROLE {{ list_item_1 | upper }}_{{ list_item_2 | upper }}_{{ list_item_3 | upper }}_{{ list_item_4 | upper }}.DB_CREATE_ROLE TO ROLE {{ list_item_2 | upper }}_CREATE;
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% endif %}

@@ -1,0 +1,109 @@
+-- ============================================================================
+-- ACCOUNT OBJECT NAMING CONVENTIONS
+-- ============================================================================
+-- This script records naming convention decisions and creates validation
+-- functions for consistent object naming
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+USE DATABASE {{ platform_database_name | upper }};
+USE SCHEMA {{ governance_name | upper }};
+
+-- ============================================================================
+-- STEP 1: CREATE NAMING CONVENTION DOCUMENTATION VIEW
+-- ============================================================================
+
+CREATE OR REPLACE VIEW naming_convention_reference AS
+SELECT
+  '{{ object_component_order }}' AS component_order,
+  {% if require_domain_in_objects == "Yes" %}TRUE{% else %}FALSE{% endif %} AS require_domain,
+  {% if require_env_in_objects == "Yes" %}TRUE{% else %}FALSE{% endif %} AS require_environment,
+  {% if require_dataproduct_in_objects == "Yes" %}TRUE{% else %}FALSE{% endif %} AS require_dataproduct,
+  -- Database naming pattern
+{%- if object_component_order == "<domain>_<env>_<dataproduct>" %}
+  '<DOMAIN>_<ENV>_<DATAPRODUCT>[_<ZONE>]' AS database_pattern,
+  'FIN_PROD_ANALYTICS_RAW' AS database_example,
+{%- elif object_component_order == "<domain>_<dataproduct>_<env>" %}
+  '<DOMAIN>_<DATAPRODUCT>_<ENV>[_<ZONE>]' AS database_pattern,
+  'FIN_ANALYTICS_PROD_RAW' AS database_example,
+{%- elif object_component_order == "<env>_<domain>_<dataproduct>" %}
+  '<ENV>_<DOMAIN>_<DATAPRODUCT>[_<ZONE>]' AS database_pattern,
+  'PROD_FIN_ANALYTICS_RAW' AS database_example,
+{%- endif %}
+  -- Warehouse naming pattern
+{%- if object_component_order == "<domain>_<env>_<dataproduct>" %}
+  '<DOMAIN>_<ENV>_<DATAPRODUCT>_<WORKLOAD>' AS warehouse_pattern,
+  'FIN_PROD_ANALYTICS_TRANSFORM' AS warehouse_example,
+{%- elif object_component_order == "<domain>_<dataproduct>_<env>" %}
+  '<DOMAIN>_<DATAPRODUCT>_<ENV>_<WORKLOAD>' AS warehouse_pattern,
+  'FIN_ANALYTICS_PROD_TRANSFORM' AS warehouse_example,
+{%- elif object_component_order == "<env>_<domain>_<dataproduct>" %}
+  '<ENV>_<DOMAIN>_<DATAPRODUCT>_<WORKLOAD>' AS warehouse_pattern,
+  'PROD_FIN_ANALYTICS_TRANSFORM' AS warehouse_example,
+{%- endif %}
+  -- Role naming pattern
+{%- if object_component_order == "<domain>_<env>_<dataproduct>" %}
+  '<DOMAIN>_<ENV>_<DATAPRODUCT>_<FUNCTION>' AS role_pattern,
+  'FIN_PROD_ANALYTICS_READ' AS role_example
+{%- elif object_component_order == "<domain>_<dataproduct>_<env>" %}
+  '<DOMAIN>_<DATAPRODUCT>_<ENV>_<FUNCTION>' AS role_pattern,
+  'FIN_ANALYTICS_PROD_READ' AS role_example
+{%- elif object_component_order == "<env>_<domain>_<dataproduct>" %}
+  '<ENV>_<DOMAIN>_<DATAPRODUCT>_<FUNCTION>' AS role_pattern,
+  'PROD_FIN_ANALYTICS_READ' AS role_example
+{%- endif %}
+;
+
+-- ============================================================================
+-- STEP 2: CREATE ADDITIONAL FINOPS TAGS
+-- ============================================================================
+-- DOMAIN and ENVIRONMENT tags were created in Create Infrastructure Database step
+-- Here we create the additional tags for naming conventions
+
+-- Create DATAPRODUCT tag (values will be added per data product)
+CREATE TAG IF NOT EXISTS dataproduct
+  COMMENT = 'Data product identifier for cost allocation';
+
+-- Create WORKLOAD tag for warehouse classification
+CREATE TAG IF NOT EXISTS workload
+  ALLOWED_VALUES = ('INGEST', 'TRANSFORM', 'BI', 'ADHOC', 'ML', 'ADMIN')
+  COMMENT = 'Workload type for warehouse cost allocation';
+
+-- Create ZONE tag for database classification
+CREATE TAG IF NOT EXISTS zone
+  ALLOWED_VALUES = ('RAW', 'CURATED', 'CONSUMPTION', 'WORKSPACE', 'ARCHIVE')
+  COMMENT = 'Data zone for database classification';
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- View naming convention reference
+SELECT * FROM naming_convention_reference;
+
+-- Verify all tags exist (including DOMAIN and ENVIRONMENT from Create Infrastructure Database step)
+SHOW TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
+
+-- ============================================================================
+-- TASK 1 COMPLETION SUMMARY
+-- ============================================================================
+
+/*
+Account Strategy & Nomenclature Task Complete!
+
+Summary:
+- Account Strategy: {{ account_strategy }}
+- Organization Name: {{ snowflake_org_name | upper }}
+{%- if account_name_prefix | upper != "NONE" %}
+- Account Prefix: {{ account_name_prefix }}
+{%- endif %}
+{%- if org_account_name | upper != "NONE" %}
+- Organization Account: {{ org_account_name | upper }} ({{ org_account_edition }} in {{ org_account_region }})
+{%- endif %}
+- Domains: {% for domain in domain_list %}{{ domain | upper }}{% if not loop.last %}, {% endif %}{% endfor %}
+
+- Environments: {% for env in environment_list %}{{ env | upper }}{% if not loop.last %}, {% endif %}{% endfor %}
+
+- Infrastructure Database: {{ platform_database_name | upper }}.{{ governance_name | upper }}
+- Naming Convention: {{ object_component_order }}
+*/
