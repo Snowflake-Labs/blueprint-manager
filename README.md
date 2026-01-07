@@ -1,26 +1,103 @@
 # Landing Zone
 
-This repository contains infrastructure-as-code templates and workflows for setting up cloud landing zones.
+This repository contains infrastructure-as-code templates and workflows for setting up Snowflake landing zones.
 
 ## Structure
 
 - `definitions/` - Question definitions for configuration
 - `workflows/` - Available workflow configurations
-- `iac/` - Infrastructure as Code templates
-- `scripts/` - Utility scripts
-- `answers/` - Sample answer files for workflows
+- `scripts/` - Utility scripts for rendering templates
+- `answers/` - Answer files for workflows
+- `output/` - Generated infrastructure code and documentation
 
-## Getting Started
+## Setting Up Your Landing Zone using Snowflake Cortex (Recommended)
 
-1. Choose a workflow from the `workflows/` directory
-2. Review the workflow's `overview.md` for details
-3. Copy the corresponding sample answers file from `answers/`
-4. Customize the answers for your environment
-5. Run the render script to generate your infrastructure code
+The easiest way to configure your Snowflake Landing Zone is using the **Answer File Builder** skill with Snowflake Cortex. This provides a guided, interactive experience.
 
-## Usage
+### Getting Started
+
+1. **Clone the repository:**
 
 ```bash
-python scripts/render_journey.py --workflow <workflow_id> --answers answers/<your_answers>.yaml
+
+git clone https://github.com/Snowflake-Labs/snowflake-landing-zone.git
+
+cd snowflake-landing-zone
 ```
 
+2. **Start Cortex CLI:**
+
+```bash
+cortex
+```
+
+3. **Launch the skill:**
+
+```bash
+> Help me set up my Snowflake landing zone
+```
+
+### How it works:
+
+1. **Choose your approach:**
+   - **Option A:** Provide a description of your organization (size, use case, security requirements, etc.) and Cortex will intelligently configure as many settings as possible
+   - **Option B:** Go through each question step-by-step with full guidance
+
+2. **Review the configuration** — Cortex shows you:
+   - ✅ Questions it answered automatically (with reasoning)
+   - ❓ Questions that need your input (account names, emails, etc.)
+   - ⚠️ Questions that need more context from you
+
+3. **Generate SQL** — once your answers are complete, Cortex runs the render script to produce ready-to-execute Snowflake SQL
+
+### Benefits:
+- No need to understand the answer file format
+- Intelligent defaults based on your organization profile
+- Clear explanation of each configuration decision
+- Validation and guidance throughout the process
+
+## Manual Configuration (Alternative)
+
+If you prefer to manage files directly without the guided experience:
+
+### 1. Choose a workflow
+
+```bash
+ls workflows/
+```
+
+Review the workflow's `meta.yaml` and step `overview.md` files to understand what will be configured.
+
+### 2. Create an answer file
+
+Copy an existing sample or create a new YAML file in `answers/<workflow_id>/`:
+
+```bash
+mkdir -p answers/<workflow_id>
+cp answers/<workflow_id>/sample.yaml answers/<workflow_id>/my_answers.yaml
+```
+
+Edit the answer file to provide values for each question. See `definitions/questions.yaml` for question details and valid options.
+
+### 3. Generate infrastructure code
+
+```bash
+python scripts/render_journey.py \
+  answers/<workflow_id>/my_answers.yaml \
+  --workflow <workflow_id> \
+  --lang sql
+```
+
+**Options:**
+- `--lang sql` or `--lang terraform` — choose output language
+- `--output-dir <path>` — custom output directory (default: `output/iac`)
+- `--guidance-dir <path>` — custom documentation directory (default: `output/documentation`)
+- `--skip-guidance` — skip generating documentation
+
+**Output:**
+- SQL/Terraform files in `output/iac/<lang>/`
+- Documentation in `output/documentation/`
+
+### 4. Execute the generated code
+
+Review the generated SQL file, then execute it in your Snowflake worksheet. The SQL is idempotent — safe to run multiple times.
