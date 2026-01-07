@@ -132,8 +132,9 @@ Invoke this skill when users:
    
    Current configuration:
    - Total questions in workflow: [N]
-   - Questions answered: [M]
-   - Questions incomplete/TODO: [P]
+   - ✅ Questions answered: [M]
+   - ❓ Requires user input: [P]
+   - ⚠️ Needs more context: [Q]
    ```
 
 5. **Offer next actions:**
@@ -141,7 +142,7 @@ Invoke this skill when users:
    What would you like to do?
    
    1. Review/update configuration step-by-step
-   2. Update specific TODO values
+   2. Fill in required values (account names, emails, etc.)
    3. View current configuration summary
    4. Generate infrastructure code (SQL)
    5. Start over with new context (will prompt for description)
@@ -153,7 +154,7 @@ Invoke this skill when users:
 
 7. **Route based on selection:**
    - Option 1 → Skip to Step 6 (Interactive Walkthrough)
-   - Option 2 → Skip to Step 7 (Update TODOs)
+   - Option 2 → Skip to Step 7 (Fill in required values)
    - Option 3 → Skip to Step 5 (Present Summary)
    - Option 4 → Skip to Step 8 (Generate IaC)
    - Option 5 → Proceed to Step 3 (will regenerate all answers based on new context)
@@ -173,14 +174,21 @@ Invoke this skill when users:
 
 2. **Parse questions** to understand what information is needed across the entire workflow
 
-3. **Present open-ended request with suggested topics:**
+3. **Present open-ended request with suggested topics AND step-by-step option:**
    
    **Request Template - Adapt based on workflow:**
    
    ```
-   Please provide an open-ended description of your organization to help me configure your Snowflake Landing Zone appropriately.
+   I can help you configure your Snowflake Landing Zone in one of two ways:
    
-   Consider including information about the following topics in your response:
+   ---
+   
+   **Option A: Provide a Description (Recommended)**
+   
+   Share an open-ended description of your organization, and I'll intelligently 
+   configure as many settings as possible based on what you tell me.
+   
+   Consider including information about:
    
    **Organization Profile**
    - Organization size (small startup, mid-size, large enterprise)
@@ -206,16 +214,40 @@ Invoke this skill when users:
    - Team structure (centralized data team, distributed, hybrid)
    - Data product approach (single product, multiple domains, not sure yet)
    
-   Please share as much or as little detail as feels relevant. I'll use your description to make intelligent configuration decisions.
+   Share as much or as little as feels relevant.
+   
+   ---
+   
+   **Option B: Step-by-Step Walkthrough**
+   
+   If you prefer, I can walk you through each question one at a time, 
+   explaining each option as we go. This takes longer but gives you 
+   full control over every decision.
+   
+   ---
+   
+   **How would you like to proceed?**
+   
+   - Type your organization description to use Option A
+   - Or type "step-by-step" to go through questions one at a time
    ```
 
-**⚠️ MANDATORY STOPPING POINT**: Wait for user's open-ended response.
+**⚠️ MANDATORY STOPPING POINT**: Wait for user response.
 
-**Output:** User context gathered from their open-ended description
+**If user provides a description:**
+- Proceed to Step 4 (Generate All Workflow Answers based on context)
+
+**If user types "step-by-step" (or similar):**
+- Skip Step 4 entirely
+- Create answer file with all questions as `null`
+- Proceed directly to Step 6 (Interactive Step-by-Step Walkthrough)
+- Present each question with full guidance, one at a time
+
+**Output:** Either user context for auto-generation, or indication to use step-by-step mode
 
 ### Step 4: Generate All Workflow Answers
 
-**Goal:** Intelligently fill out ALL workflow answers based on user's context
+**Goal:** Intelligently fill out workflow answers based on user's context, being honest about what can and cannot be determined
 
 **Actions:**
 
@@ -227,116 +259,166 @@ Invoke this skill when users:
    - Parse overview.md for question IDs (format: `` `answer_title` ``)
    - Look up question definitions from `questions.yaml`
 
-3. **Apply intelligent defaults based on user context:**
+3. **Categorize each question into one of three types:**
 
-   **Decision Logic Examples:**
+   **Category A: Auto-Answerable** - Questions where user context provides enough information to make a confident decision
    
-   **Organization Size:**
+   **Category B: User-Specific Required** - Questions that ALWAYS require user input (account names, emails, org names, etc.) - these are NOT auto-answerable
+   
+   **Category C: Insufficient Context** - Questions where the user's description doesn't provide enough information to make a reasonable choice
+
+4. **⚠️ STRICT RULES FOR ANSWER GENERATION:**
+
+   **DO NOT generate fake TODO answers.** Specifically:
+   - ❌ Do NOT use placeholder values like `YOUR_ACCOUNT_NAME`, `user@example.com`, `YOUR_COMPANY_NAME`
+   - ❌ Do NOT invent domain names, team names, or organizational structures not mentioned by user
+   - ❌ Do NOT guess specific values (IP ranges, user counts, budget amounts) unless explicitly stated
+   - ❌ Do NOT create list items (domains, warehouses, users) that weren't mentioned or clearly implied
+   
+   **INSTEAD:**
+   - ✅ Leave Category B questions unanswered (null/empty in YAML)
+   - ✅ Leave Category C questions unanswered with a comment explaining what information is needed
+   - ✅ Only answer Category A questions where you have genuine confidence
+
+5. **Apply intelligent defaults ONLY when context supports it:**
+
+   **Decision Logic Examples (use only when user provided relevant context):**
+   
+   **Organization Size (if explicitly mentioned):**
    - Small startup → Single account, simple RBAC, minimal admins
    - Mid-size → Consider multi-account, moderate RBAC complexity
    - Enterprise → Multi-account strategy, complex RBAC, multiple admins
    
-   **Use Case:**
+   **Use Case (if explicitly mentioned):**
    - Analytics/BI → Focus on warehouses for queries, reader roles
    - Data Engineering → ETL warehouses, writer/owner roles, pipelines
    - ML/Data Science → Compute-optimized warehouses, data science roles
    
-   **Security Posture:**
+   **Security Posture (if explicitly mentioned):**
    - Has SSO → Configure SSO/SAML, use IdP for MFA
    - No SSO → Username/password with MFA, strong password policy
    - Strict network → Specific IP ranges, service account restrictions
    - Flexible → Broader access (0.0.0.0/0 with caution notes)
    
-   **Compliance:**
+   **Compliance (if explicitly mentioned):**
    - GDPR/HIPAA/SOC2 → Enable audit schemas, change tracking, data retention policies
    - None → Balanced policies, monitoring recommended but optional
    
-   **Cost Control:**
+   **Cost Control (if explicitly mentioned):**
    - Strict → Resource monitors with suspend, hourly budget refresh, required tags
    - Moderate → Budgets with alerts, daily refresh, recommended tags
    - Flexible → Budget tracking, no hard limits
    
-   **Budget Range:**
+   **Budget Range (if explicitly mentioned):**
    - Under $1K → 250 credits/month budget, small warehouses
    - $1-10K → 2,500 credits/month, moderate resources
    - $10-50K → 7,500 credits/month, production scale
    - $50K+ → Custom based on needs
 
-4. **Write all answers to YAML file:**
+6. **Write answers to YAML file:**
    - Use `answer_title` as keys
-   - Set intelligent defaults for every question
-   - Add inline comments explaining reasoning
-   - Mark any TODO items that require user-specific values (account names, emails, etc.)
+   - Set values ONLY for Category A questions (auto-answerable with confidence)
+   - Add inline comments explaining reasoning for each answered question
+   - Leave Category B and C questions as `null` or omit entirely
+   - Add comment for each unanswered question explaining why it wasn't answered
 
-5. **Generate answer summary:**
-   ```
-   Total questions: [N]
-   Answered automatically: [M]
-   Requires user input: [P] (marked as TODO)
-   ```
+7. **Track and report answer status:**
+   - Count questions in each category
+   - Prepare detailed list of unanswered questions with reasons
 
-**Output:** Completed answer file with intelligent defaults and TODO markers
+**Output:** Answer file with honest answers and clear tracking of what was/wasn't answered
 
 ### Step 5: Present Summary and Offer Walkthrough
 
-**Goal:** Show user what was configured and offer detailed review
+**Goal:** Show user exactly what was configured, what wasn't, and why
 
 **Actions:**
 
-1. **Present configuration summary:**
+1. **Present detailed configuration summary with transparency:**
    ```
    ======================================================================
-    ✓ Configuration Complete
+    Configuration Summary
    ======================================================================
    
-   Your Snowflake Landing Zone Configuration:
+   ## ✅ Questions Successfully Answered ([M] of [Total])
+   
+   Based on your description, I was able to confidently answer these questions:
    
    ### Account Strategy
-   - [Summary of account decisions and reasoning]
-   
-   ### Users & Access
-   - [Summary of admin users, authentication, security]
+   - [Question name]: [Answer] — Reasoning: [why]
    
    ### Security & Compliance
-   - [Summary of network policies, password policies, audit settings]
+   - [Question name]: [Answer] — Reasoning: [why]
    
    ### Cost Controls
-   - [Summary of budgets, resource monitors, tags]
+   - [Question name]: [Answer] — Reasoning: [why]
    
-   ### Data Structure
-   - [Summary of domains, zones, data products, warehouses]
+   [Continue for all answered questions...]
    
    ---
    
-   ### TODO: Update These Values
-   [List any values that need user input, e.g., account names, emails]
+   ## ❓ Questions Requiring Your Input ([P] of [Total])
+   
+   These questions require information only you can provide:
+   
+   1. **[question_name]** (`answer_title`)
+      - What's needed: [specific information required, e.g., "Your Snowflake account name"]
+      - How to find it: [help text, e.g., "Run SELECT CURRENT_ACCOUNT_NAME(); in Snowflake"]
+   
+   2. **[question_name]** (`answer_title`)
+      - What's needed: [specific information required]
+      - How to find it: [help text]
+   
+   [Continue for all user-specific questions...]
+   
+   ---
+   
+   ## ⚠️ Questions Not Answered - Insufficient Context ([Q] of [Total])
+   
+   I didn't have enough information from your description to answer these:
+   
+   1. **[question_name]** (`answer_title`)
+      - Missing context: [what information would help, e.g., "Number of data domains/teams"]
+      - Please provide: [specific ask]
+   
+   2. **[question_name]** (`answer_title`)
+      - Missing context: [what information would help]
+      - Please provide: [specific ask]
+   
+   [Continue for all insufficient-context questions...]
    
    ---
    
    Answer file saved: [file path]
    
-   Questions answered: [N] of [Total]
+   **Summary:**
+   - ✅ Auto-answered: [M] questions
+   - ❓ Needs your input: [P] questions  
+   - ⚠️ Needs more context: [Q] questions
+   - Total: [Total] questions
    ```
 
 2. **Offer walkthrough options:**
    ```
    What would you like to do next?
    
-   1. Review configuration step-by-step (see each question, answer, and reasoning)
-   2. Update specific TODO values now
-   3. Generate infrastructure code (SQL) and exit
-   4. Save and exit (update TODO values later)
+   1. Provide more context (I'll ask about unanswered questions)
+   2. Fill in required values now (account names, emails, etc.)
+   3. Review all configuration step-by-step
+   4. Generate infrastructure code (SQL) with current answers
+   5. Save and exit
    
-   Enter your choice (1-4):
+   Enter your choice (1-5):
    ```
 
 **⚠️ MANDATORY STOPPING POINT**: Wait for user choice.
 
 **Route based on selection:**
-- Option 1 → Proceed to Step 6 (Walkthrough)
-- Option 2 → Proceed to Step 7 (Update TODOs)
-- Option 3 → Proceed to Step 8 (Generate IaC)
-- Option 4 → End workflow
+- Option 1 → Ask follow-up questions for Category C items, then regenerate
+- Option 2 → Proceed to Step 7 (Update user-specific values)
+- Option 3 → Proceed to Step 6 (Walkthrough)
+- Option 4 → Proceed to Step 8 (Generate IaC) — warn if many questions unanswered
+- Option 5 → End workflow
 
 ### Step 6: Interactive Step-by-Step Walkthrough
 
@@ -484,46 +566,60 @@ Invoke this skill when users:
 - Confirm save
 - End workflow
 
-### Step 7: Update TODO Values
+### Step 7: Fill In Required Values
 
-**Goal:** Help user fill in specific values that require their input
+**Goal:** Help user provide values that only they can supply (account names, emails, etc.)
 
 **Actions:**
 
-1. **Parse answer file** for TODO comments and placeholder values
+1. **Parse answer file** for questions marked as ❓ USER INPUT REQUIRED (null values that need user-specific information)
 
-2. **Present TODO list:**
+2. **Present required values list:**
    ```
    ======================================================================
-    Values That Need Your Input
+    Values Only You Can Provide
    ======================================================================
    
-   1. primary_account_name: YOUR_ACCOUNT_NAME
-      Help: Run `SELECT CURRENT_ACCOUNT_NAME();` in Snowflake
+   These questions require information specific to your organization:
    
-   2. org_name: YOUR_COMPANY_NAME
-      Help: Your company/organization name
+   1. **primary_account_name** (currently: empty)
+      What's needed: Your Snowflake account name
+      How to find it: Run `SELECT CURRENT_ACCOUNT_NAME();` in Snowflake
    
-   3. accountadmin_users: [user1@yourcompany.com, user2@yourcompany.com]
-      Help: Email addresses for admin users
+   2. **org_name** (currently: empty)
+      What's needed: Your company/organization name
+   
+   3. **accountadmin_users** (currently: empty)
+      What's needed: Email addresses for Snowflake admin users
+      Format: List of email addresses
    
    ...
    
-   Which value would you like to update? (1-N, 'all' for guided, 'skip' to continue):
+   Which value would you like to provide? (1-N, 'all' for guided, 'skip' to continue):
    ```
 
-3. **For each selected TODO:**
-   - Show current placeholder
-   - Prompt for actual value
+3. **For each selected value:**
+   - Show what information is needed
+   - Provide guidance on how to find it
+   - Prompt for the actual value
+   - Validate format if applicable
    - Update answer file
    - Confirm update
 
-4. **After updates:**
+4. **After updates, show progress:**
    ```
+   ✅ Updated values:
+   - primary_account_name: ACME_CORP_PROD
+   - org_name: Acme Corporation
+   
+   Remaining required values: [N]
+   
    Would you like to:
-   1. Review configuration step-by-step
-   2. Generate infrastructure code (SQL) and exit
-   3. Save and exit
+   1. Continue filling in required values
+   2. Provide more context for unanswered questions
+   3. Review configuration step-by-step
+   4. Generate infrastructure code (SQL) and exit
+   5. Save and exit
    
    Enter your choice:
    ```
@@ -531,9 +627,11 @@ Invoke this skill when users:
 **⚠️ MANDATORY STOPPING POINT**: Wait for user choice.
 
 **Route based on selection:**
-- Option 1 → Return to Step 6 (Walkthrough)
-- Option 2 → Proceed to Step 8 (Generate IaC)
-- Option 3 → End workflow
+- Option 1 → Continue in Step 7
+- Option 2 → Ask follow-up questions for ⚠️ INSUFFICIENT CONTEXT items
+- Option 3 → Return to Step 6 (Walkthrough)
+- Option 4 → Proceed to Step 8 (Generate IaC)
+- Option 5 → End workflow
 
 ### Step 8: Generate Infrastructure Code
 
@@ -686,30 +784,41 @@ The generated answer file follows this structure:
 # ============================================================================
 # STEP N: Step Name
 # ============================================================================
-# Question Text
-answer_title_1: Answer value 1  # Reasoning: why this was chosen
-# Question Text
-answer_title_2:
-- List item 1
-- List item 2
-# Question Text
-enable_feature: 'Yes'  # Reasoning: based on user requirements
-# Question Text
-account_strategy: Single Account  # Reasoning: small startup, 5 users
-# Question Text
-domain_list:
-- DOMAIN1
-- DOMAIN2
+
+# ✅ AUTO-ANSWERED: Question Text
+answer_title_1: Answer value 1  # Reasoning: why this was chosen based on user context
+
+# ✅ AUTO-ANSWERED: Question Text  
+account_strategy: Single Account  # Reasoning: user mentioned "small startup with 5 users"
+
+# ❓ USER INPUT REQUIRED: Question Text
+# What's needed: Your Snowflake account name
+# How to find: Run SELECT CURRENT_ACCOUNT_NAME(); in Snowflake
+primary_account_name: null
+
+# ❓ USER INPUT REQUIRED: Question Text
+# What's needed: Email addresses for admin users
+accountadmin_users: null
+
+# ⚠️ INSUFFICIENT CONTEXT: Question Text
+# Missing: User didn't specify number of data domains or team structure
+# Please provide: List of data domains/business units that will have separate databases
+domain_list: null
+
+# ✅ AUTO-ANSWERED: Question Text
+enable_feature: 'Yes'  # Reasoning: user mentioned SOC2 compliance requirement
 ```
 
 **Key points:**
 - Use `answer_title` as the key (not question_text)
 - Group by workflow step with section headers
-- Add inline comments explaining reasoning
+- **Mark answer status clearly** with prefixes: ✅ AUTO-ANSWERED, ❓ USER INPUT REQUIRED, ⚠️ INSUFFICIENT CONTEXT
+- Add inline comments explaining reasoning for answered questions
 - Store multi-select as the selected option text (string)
 - Store list as YAML list with `-` items
 - Store text as string (quote if contains special characters)
-- Mark TODOs clearly for user-specific values
+- **Leave unanswered questions as `null`** — do NOT use placeholder values
+- **Explain what's needed** for each unanswered question
 
 ## Best Practices
 
@@ -723,11 +832,24 @@ domain_list:
 
 **When generating answers (Step 4):**
 
-1. ✅ **Apply sensible defaults** based on organization size and use case
-2. ✅ **Add reasoning comments** for every non-obvious choice
-3. ✅ **Mark TODOs clearly** for values that need user input
-4. ✅ **Be conservative with security** err on the side of caution
-5. ✅ **Scale appropriately** small startup ≠ enterprise needs
+1. ✅ **Be honest about uncertainty** — only answer questions where user context provides clear guidance
+2. ✅ **Never fabricate values** — do NOT generate fake placeholders like `YOUR_ACCOUNT_NAME` or `user@example.com`
+3. ✅ **Leave unknowns empty** — if you can't answer confidently, leave the answer as `null` rather than guessing
+4. ✅ **Distinguish answer categories clearly:**
+   - Auto-answered: You have enough context to decide
+   - User-specific: Always requires user input (account names, emails)
+   - Insufficient context: User didn't provide enough information
+5. ✅ **Add reasoning comments** for every answered question explaining why
+6. ✅ **Be conservative with security** — err on the side of caution
+7. ✅ **Scale appropriately** — small startup ≠ enterprise needs (but only if size was mentioned)
+
+**What NOT to do when generating answers:**
+
+1. ❌ **Don't invent organization-specific details** — domains, team names, user lists
+2. ❌ **Don't guess quantities** — user counts, budget amounts, warehouse sizes (unless explicitly stated)
+3. ❌ **Don't create placeholder lists** — like `[domain1, domain2]` or `[user1@company.com]`
+4. ❌ **Don't assume technical details** — IP ranges, cloud regions, compliance requirements
+5. ❌ **Don't fill in just to have something** — an empty answer is better than a fake one
 
 **During walkthrough (Step 6):**
 
@@ -736,6 +858,14 @@ domain_list:
 3. ✅ **Allow easy navigation** forward, back, jump, exit anytime
 4. ✅ **Save immediately** when user updates an answer
 5. ✅ **Provide context** from step overview but keep it brief
+6. ✅ **Highlight unanswered questions** — make it clear what still needs input
+
+**When presenting summary (Step 5):**
+
+1. ✅ **Separate answered from unanswered** — don't mix them together
+2. ✅ **Explain why each question wasn't answered** — missing context vs requires user input
+3. ✅ **Be specific about what's needed** — "your Snowflake account name" not "fill in TODO"
+4. ✅ **Give users a clear path forward** — how to provide missing information
 
 **When generating IaC (Step 8):**
 
@@ -743,6 +873,7 @@ domain_list:
 2. ✅ **Handle errors gracefully** provide manual command if script fails
 3. ✅ **Confirm output** show where SQL file was created
 4. ✅ **Give clear next steps** what to do with the SQL
+5. ✅ **Warn about incomplete answers** — if many questions are unanswered, the generated code may be incomplete
 
 ## Decision Logic Reference
 
@@ -774,8 +905,11 @@ Dynamically produce this at the initiation of the workflow based on the current 
 ## Output
 
 Upon completion, this skill produces:
-- A complete answer file at `answers/<workflow_id>/answers_<timestamp>.yaml` with intelligent defaults
-- Clear inline comments explaining reasoning for each answer
-- TODO markers for user-specific values
-- Optional: Generated SQL infrastructure code at `iac/sql/<workflow_id>_<timestamp>.sql`
-- Summary of configuration decisions and next steps
+- An answer file at `answers/<workflow_id>/answers_<timestamp>.yaml` with:
+  - ✅ Auto-answered questions (where user context was sufficient)
+  - ❓ User-specific questions marked as `null` with guidance on what's needed
+  - ⚠️ Insufficient context questions marked as `null` with explanation of missing information
+- Clear inline comments explaining reasoning for each answered question
+- Explicit tracking of which questions were answered vs not answered (and why)
+- Optional: Generated SQL infrastructure code at `output/iac/sql/<workflow_id>_<timestamp>.sql`
+- Summary showing exact breakdown: auto-answered, needs user input, needs more context
