@@ -20,7 +20,7 @@ The easiest way to configure your Snowflake Landing Zone is using the **Answer F
 
 ```bash
 
-git clone https://github.com/Snowflake-Labs/snowflake-landing-zone.git
+git clone git@github.com:Snowflake-Labs/snowflake-landing-zone.git
 
 cd snowflake-landing-zone
 ```
