@@ -1,0 +1,210 @@
+-- ============================================================================
+-- TRANSFER OWNERSHIP
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+-- Domain: {{ data_product_domain }}
+-- Environment: {{ data_product_environment }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: ACCOUNTADMIN (for GRANT OWNERSHIP)
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- TRANSFER DATABASE OWNERSHIP
+-- ============================================================================
+
+{%- for zone in zone_list %}
+
+{#- Build database name based on component order and account strategy -#}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+
+-- ----------------------------------------------------------------------------
+-- {{ zone | upper }} Zone Database
+-- ----------------------------------------------------------------------------
+
+-- Transfer database ownership
+GRANT OWNERSHIP ON DATABASE {{ db_name }}
+  TO ROLE {{ data_product_name | upper }}_ADMIN
+  COPY CURRENT GRANTS;
+
+-- Transfer schema ownership (all schemas in this database)
+GRANT OWNERSHIP ON ALL SCHEMAS IN DATABASE {{ db_name }}
+  TO ROLE {{ data_product_name | upper }}_ADMIN
+  COPY CURRENT GRANTS;
+
+{%- endfor %}
+
+-- ============================================================================
+-- GRANT SYSADMIN USAGE (for troubleshooting)
+-- ============================================================================
+
+-- Allow SYSADMIN to still access databases (but not own them)
+USE ROLE {{ data_product_name | upper }}_ADMIN;
+
+{%- for zone in zone_list %}
+
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+
+GRANT USAGE ON DATABASE {{ db_name }} TO ROLE SYSADMIN;
+GRANT USAGE ON ALL SCHEMAS IN DATABASE {{ db_name }} TO ROLE SYSADMIN;
+
+{%- endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify database ownership
+{%- for zone in zone_list %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+SHOW GRANTS ON DATABASE {{ db_name }};
+{%- endfor %}
+
+-- Verify schema ownership
+{%- for zone in zone_list %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+SHOW SCHEMAS IN DATABASE {{ db_name }};
+{%- endfor %}
+
+/*
+OWNERSHIP TRANSFERRED
+=====================
+
+Transferred ownership to {{ data_product_name | upper }}_ADMIN:
+- All {{ zone_list | length }} database(s) for data product {{ data_product_name }}
+- All schemas within those databases
+
+Naming Pattern: {{ object_component_order }}_<zone>
+
+The owner role now:
+- Owns all databases and schemas
+- Controls all grants (managed access)
+- Can delegate to ADMIN, WRITER, READER roles
+
+SYSADMIN retains USAGE for troubleshooting.
+*/

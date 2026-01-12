@@ -1,0 +1,116 @@
+-- ============================================================================
+-- NETWORK RULES AND POLICIES CONFIGURATION
+-- ============================================================================
+-- This script configures network access controls for your Snowflake account
+-- Network rules are created in the infrastructure database's governance schema
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+USE DATABASE {{ platform_database_name | upper }};
+USE SCHEMA {{ governance_name | upper }};
+
+-- ============================================================================
+-- STEP 1: CREATE ALLOWED NETWORK RULES
+-- ============================================================================
+{%- for rule in allowed_network_rules %}
+
+-- Network Rule: {{ rule.rule_name }}
+CREATE OR REPLACE NETWORK RULE {{ rule.rule_name }}
+  TYPE = IPV4
+  MODE = INGRESS
+  VALUE_LIST = ({% for ip in rule.cidr_blocks.split(',') %}'{{ ip | trim }}'{% if not loop.last %}, {% endif %}{% endfor %})
+  COMMENT = 'Allowed network rule: {{ rule.rule_name }}';
+{%- endfor %}
+
+{%- if blocked_network_rules | length > 0 %}
+-- ============================================================================
+-- STEP 2: CREATE BLOCKED NETWORK RULES
+-- ============================================================================
+{%- for rule in blocked_network_rules %}
+
+-- Blocked Network Rule: {{ rule.rule_name }}
+CREATE OR REPLACE NETWORK RULE {{ rule.rule_name }}
+  TYPE = IPV4
+  MODE = INGRESS
+  VALUE_LIST = ({% for ip in rule.cidr_blocks.split(',') %}'{{ ip | trim }}'{% if not loop.last %}, {% endif %}{% endfor %})
+  COMMENT = 'Blocked network rule: {{ rule.rule_name }}';
+{%- endfor %}
+{%- endif %}
+
+-- ============================================================================
+-- STEP 3: CREATE NETWORK POLICY
+-- ============================================================================
+-- Network policies are account-level objects, but reference schema-level rules
+
+CREATE OR REPLACE NETWORK POLICY account_network_policy
+  ALLOWED_NETWORK_RULE_LIST = (
+{%- for rule in allowed_network_rules %}
+    {{ platform_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name }}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+{%- if blocked_network_rules | length > 0 %}
+  BLOCKED_NETWORK_RULE_LIST = (
+{%- for rule in blocked_network_rules %}
+    {{ platform_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name }}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+{%- endif %}
+  COMMENT = 'Primary network policy for account access';
+
+-- ============================================================================
+-- STEP 4: APPLY NETWORK POLICY
+-- ============================================================================
+
+{%- if enable_account_network_policy == "Yes - Apply to all users by default" %}
+-- Apply network policy at the account level
+-- WARNING: Ensure all required IPs are included before running this!
+ALTER ACCOUNT SET NETWORK_POLICY = account_network_policy;
+
+-- Note: Break-glass and SCIM users have their own policies that override this
+{%- else %}
+-- Network policy created but not applied at account level
+-- Uncomment the users you want to apply the network policy to:
+{%- if identity_provider == 'None - Manual User Management' %}
+{%- for user in manual_admin_users %}
+-- ALTER USER "{{ user.username | upper }}" SET NETWORK_POLICY = account_network_policy;
+{%- endfor %}
+{%- else %}
+{%- for user in scim_admin_users %}
+-- ALTER USER "{{ user.login_name }}" SET NETWORK_POLICY = account_network_policy;
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify network rules were created
+SHOW NETWORK RULES;
+
+-- Verify network policy was created
+SHOW NETWORK POLICIES;
+DESC NETWORK POLICY account_network_policy;
+
+-- Check current account network policy setting
+SHOW PARAMETERS LIKE 'NETWORK_POLICY' IN ACCOUNT;
+
+-- ============================================================================
+-- TESTING INSTRUCTIONS
+-- ============================================================================
+-- Before enabling account-level policy:
+--
+-- 1. Test from an allowed IP:
+--    - Connect to Snowflake
+--    - Verify access works
+--
+-- 2. Test from a blocked IP (use mobile data or different network):
+--    - Attempt to connect
+--    - Verify access is blocked (only if account-level policy is enabled)
+--
+-- 3. Verify break-glass still works:
+--    - Test break-glass account from allowed IPs
+--    - Document results
+-- ============================================================================

@@ -1,0 +1,39 @@
+## Organization Network Configuration
+
+### Using Shared Network Rules
+
+This account will use the network rules shared from your Organization Account via the Infrastructure database.
+
+| Setting | Value |
+|---------|-------|
+| **Shared Database** | `{{ shared_database_name | upper }}` |
+| **Rules Schema** | `{{ governance_name | upper }}` |
+
+### Shared Network Rules Available
+
+The following network rules from your Organization Account are available:
+
+**Allowed Rules:**
+{%- for rule in allowed_network_rules %}
+- `{{ shared_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name | upper }}`
+{%- endfor %}
+
+{%- if blocked_network_rules | length > 0 %}
+**Blocked Rules:**
+{%- for rule in blocked_network_rules %}
+- `{{ shared_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name | upper }}`
+{%- endfor %}
+{%- endif %}
+
+### Network Policy
+
+A network policy will be created in this account that references the shared rules:
+
+**Policy Name:** `{{ new_account_name | upper }}_NETWORK_POLICY`
+
+### Benefits of This Approach
+
+✅ **Consistency**: Same IP allowlists as all other accounts
+✅ **Centralized Updates**: Changes in the Organization Account apply everywhere
+✅ **No Duplicate Configuration**: Rules managed in one place
+✅ **Audit Trail**: Clear lineage back to organization standards

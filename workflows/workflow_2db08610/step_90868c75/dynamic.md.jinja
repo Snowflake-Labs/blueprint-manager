@@ -1,0 +1,84 @@
+## Warehouse Access
+
+### Access Pattern: {{ warehouse_access_pattern }}
+
+### Warehouse Access Roles
+
+Each warehouse will have an access role for self-service administration:
+
+| Warehouse | Access Role | Privileges |
+|-----------|-------------|------------|
+{%- for wh in warehouse_definitions %}
+{%- set modifier_suffix = ('_' ~ wh.modifier | upper) if wh.modifier else '' %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- endif %}
+| `{{ wh_name }}` | `_WH_U_{{ wh_name }}` | MONITOR, USAGE |
+{%- endfor %}
+
+### Role Assignments
+
+{%- if warehouse_access_pattern == 'Dedicated (each role uses specific warehouses)' %}
+
+| Role | Warehouses | Reason |
+|------|------------|--------|
+| `{{ data_product_name | upper }}_CREATE` | All (via ownership) | Full administrative control |
+{%- if role_structure == 'Standard (Admin + Create + Read)' or role_structure == 'Full (Admin + Create + Write + Read)' %}
+| `{{ data_product_name | upper }}_CREATE` | All (via access roles) | Operational management |
+{%- endif %}
+{%- if role_structure == 'Full (Admin + Create + Write + Read)' %}
+| `{{ data_product_name | upper }}_WRITE` | Load/Transform warehouses | Data modification workloads |
+{%- endif %}
+| `{{ data_product_name | upper }}_READ` | Query warehouses | Read-only queries |
+
+{%- else %}
+
+| Role | Warehouses |
+|------|------------|
+| `{{ data_product_name | upper }}_CREATE` | All (via ownership) |
+{%- if role_structure == 'Standard (Admin + Create + Read)' or role_structure == 'Full (Admin + Create + Write + Read)' %}
+| `{{ data_product_name | upper }}_CREATE` | All (via access roles) |
+{%- endif %}
+{%- if role_structure == 'Full (Admin + Create + Write + Read)' %}
+| `{{ data_product_name | upper }}_WRITE` | All (via access roles) |
+{%- endif %}
+| `{{ data_product_name | upper }}_READ` | All (via access roles) |
+
+{%- endif %}
+
+### Self-Service Administration
+
+The data product ADMIN can grant warehouse access roles to additional users:
+
+```sql
+-- Example: Grant warehouse access to another role
+GRANT ROLE _WH_U_<warehouse_name> TO ROLE <other_role>;
+```

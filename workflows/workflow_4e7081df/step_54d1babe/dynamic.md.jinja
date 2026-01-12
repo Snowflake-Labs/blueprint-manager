@@ -1,0 +1,34 @@
+## Account Budget Configuration
+
+### Budget Settings
+
+| Setting | Value |
+|---------|-------|
+| **Account** | {{ new_account_name | upper }} |
+| **Monthly Limit** | {{ account_budget_limit }} credits |
+| **Alert Threshold** | {{ account_budget_threshold }}% |
+
+### Alert Recipients
+
+| Email Address |
+|---------------|
+{%- for email in account_budget_emails %}
+| {{ email }} |
+{%- endfor %}
+
+### How Alerts Work
+
+**Threshold: {{ account_budget_threshold }}%**
+
+You'll receive alerts when:
+- Actual spend reaches {{ account_budget_threshold }}% of {{ account_budget_limit }} credits ({{ (account_budget_limit | int * account_budget_threshold | int / 100) | round | int }} credits)
+- OR forecasted end-of-month spend is projected to exceed {{ account_budget_threshold }}% of the limit
+
+**Example Timeline:**
+- Day 1: Budget resets, 0 credits used
+- Day 15: 2,000 credits used, forecasted to reach {{ account_budget_limit }} by month end → Alert sent
+- Day 25: Actual spend hits {{ account_budget_threshold }}% ({{ (account_budget_limit | int * account_budget_threshold | int / 100) | round | int }} credits) → Alert sent (if not already)
+
+### Budget vs Resource Monitor
+
+This budget provides **monitoring and alerts**. For active cost control (suspend warehouses at limit), a Resource Monitor should also be configured.

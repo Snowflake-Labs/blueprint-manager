@@ -1,0 +1,36 @@
+-- ============================================================================
+-- CONFIRM ACCOUNT STRATEGY
+-- ============================================================================
+-- Strategy: {{ account_strategy }}
+-- ============================================================================
+
+-- This step confirms the multi-account strategy for your organization.
+-- No SQL is generated here - this captures organizational configuration.
+
+/*
+ACCOUNT STRATEGY CONFIRMATION
+==============================
+Strategy: {{ account_strategy }}
+
+This is an organization-level setting that applies to all accounts.
+
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+
+DOMAIN-BASED STRATEGY
+- Each account = one business domain
+- Environments managed at database level within each account
+
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+
+ENVIRONMENT-BASED STRATEGY
+- Each account = one SDLC environment
+- Domains managed at database level within each account
+
+{%- else %}
+
+DOMAIN + ENVIRONMENT STRATEGY
+- Each account = one domain-environment combination
+- Maximum isolation between domains and environments
+
+{%- endif %}
+*/

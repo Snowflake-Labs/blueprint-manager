@@ -1,0 +1,123 @@
+-- ============================================================================
+-- MFA VERIFICATION AND MONITORING
+-- ============================================================================
+-- This script provides queries to monitor MFA enrollment status
+-- No configuration changes are made - MFA enforcement is via authentication policies
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- CHECK CURRENT MFA SETTINGS
+-- ============================================================================
+
+-- View account-level MFA parameters
+SHOW PARAMETERS LIKE '%MFA%' IN ACCOUNT;
+
+-- ============================================================================
+-- CHECK MFA ENROLLMENT STATUS - ADMIN USERS
+-- ============================================================================
+
+-- Check if administrative users have MFA enrolled
+SELECT 
+  name,
+  login_name,
+  email,
+  has_mfa,
+  ext_authn_uid,
+  created_on,
+  last_success_login
+FROM snowflake.account_usage.users
+WHERE deleted_on IS NULL
+  AND name IN (
+{%- if identity_provider == 'None - Manual User Management' %}
+{%- for user in manual_admin_users %}
+    '{{ user.username | upper }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- else %}
+{%- for user in scim_admin_users %}
+    '{{ user.login_name }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endif %}
+  )
+ORDER BY has_mfa DESC, name;
+
+-- ============================================================================
+-- CHECK MFA ENROLLMENT STATUS - ALL USERS
+-- ============================================================================
+
+-- Summary of MFA enrollment across all users
+SELECT 
+  CASE WHEN has_mfa THEN 'MFA Enrolled' ELSE 'MFA Not Enrolled' END as mfa_status,
+  COUNT(*) as user_count
+FROM snowflake.account_usage.users
+WHERE deleted_on IS NULL
+GROUP BY has_mfa;
+
+-- Detailed list of users without MFA
+SELECT 
+  name,
+  login_name,
+  email,
+  created_on,
+  last_success_login
+FROM snowflake.account_usage.users
+WHERE deleted_on IS NULL
+  AND has_mfa = FALSE
+  AND name NOT LIKE '%SERVICE%'
+  AND name NOT LIKE '%SVC%'
+{%- for account in breakglass_accounts %}
+  AND name != '{{ account.username | upper }}'
+{%- endfor %}
+ORDER BY last_success_login DESC;
+
+-- ============================================================================
+-- MFA AUDIT QUERIES
+-- ============================================================================
+
+-- Recent MFA enrollment events
+SELECT 
+  event_timestamp,
+  user_name,
+  event_type,
+  is_success
+FROM snowflake.account_usage.login_history
+WHERE event_type LIKE '%MFA%'
+  AND event_timestamp > DATEADD(day, -30, CURRENT_TIMESTAMP())
+ORDER BY event_timestamp DESC
+LIMIT 100;
+
+-- Failed login attempts (potential MFA issues)
+SELECT 
+  event_timestamp,
+  user_name,
+  client_ip,
+  reported_client_type,
+  error_code,
+  error_message
+FROM snowflake.account_usage.login_history
+WHERE is_success = FALSE
+  AND event_timestamp > DATEADD(day, -7, CURRENT_TIMESTAMP())
+ORDER BY event_timestamp DESC;
+
+-- ============================================================================
+-- REMINDER: MFA GRACE PERIOD
+-- ============================================================================
+-- 
+-- Timeline: {{ mfa_enforcement_timeline }}
+-- 
+-- If using "Immediately":
+--   - Users must enroll on next login
+--   - Have support available for issues
+--
+-- If using grace period:
+--   - Users can log in without MFA during grace period
+--   - They will see enrollment prompts
+--   - After grace period, MFA is required
+--
+-- To manually disable a user's access until they enroll:
+-- ALTER USER <username> SET DISABLED = TRUE;
+-- 
+-- To re-enable after enrollment:
+-- ALTER USER <username> SET DISABLED = FALSE;
+-- ============================================================================

@@ -1,83 +1,73 @@
 -- ============================================================================
--- ORGANIZATION ACCOUNT CONFIGURATION
+-- ORGANIZATION ACCOUNT DECISION
 -- ============================================================================
--- This script documents the Organization Account decision
--- Actual account creation is performed in Create Organization
--- Account (if applicable)
+-- This script documents the Organization Account decision and verifies
+-- prerequisites. Actual account creation is performed in the next step
+-- (Create Organization Account) if enabled.
 -- ============================================================================
 
-{%- if org_account_name | upper != "NONE" %}
+{%- if enable_org_account == "Yes" %}
 -- ============================================================================
--- VERIFY ORGADMIN PRIVILEGES
+-- DECISION: CREATE ORGANIZATION ACCOUNT
 -- ============================================================================
--- Before creating an Organization Account, verify you have ORGADMIN privileges
+-- You have chosen to create an Organization Account for centralized management.
+-- The next step will configure and create the account.
+-- ============================================================================
+
+-- ============================================================================
+-- VERIFY PREREQUISITES
+-- ============================================================================
+-- Before creating an Organization Account, verify your current account setup
 
 USE ROLE ACCOUNTADMIN;
 
--- Check if ORGADMIN role exists and is granted
-SHOW ROLES LIKE 'ORGADMIN';
-
--- List current roles to verify ORGADMIN access
-SELECT CURRENT_ROLE();
-
--- Try to use ORGADMIN role (will fail if not granted)
--- USE ROLE ORGADMIN;
-
--- ============================================================================
--- VERIFY ORGANIZATION STATUS
--- ============================================================================
-
--- Check current organization
+-- Check your current organization name
 SELECT CURRENT_ORGANIZATION_NAME() AS organization_name;
 
--- List existing accounts in the organization (requires ORGADMIN)
--- SHOW ORGANIZATION ACCOUNTS;
+-- Verify your account edition (must be Enterprise or higher)
+SELECT CURRENT_ACCOUNT() AS account,
+       SYSTEM$GET_ACCOUNT_EDITION() AS edition;
 
--- ============================================================================
--- ORGANIZATION ACCOUNT PLANNING
--- ============================================================================
+-- Check if ORGADMIN role exists (may not exist yet in all accounts)
+SHOW ROLES LIKE 'ORGADMIN';
 
 /*
-Organization Account Configuration:
-- Account Name: {{ org_account_name | upper }}
-{%- if account_name_prefix | upper != "NONE" %}
-- Full Account Name: {{ account_name_prefix }}_{{ org_account_name }}
-- Account URL: https://{{ snowflake_org_name | lower }}-{{ account_name_prefix }}_{{ org_account_name }}.snowflakecomputing.com
-{%- else %}
-- Account URL: https://{{ snowflake_org_name | lower }}-{{ org_account_name }}.snowflakecomputing.com
-{%- endif %}
-
-Purpose:
-- Centralized management of all Snowflake accounts
-- Unified billing and cost management
-- Organization-level policies and governance
-- ORGADMIN privileges for account management
-
-Note: The actual CREATE ACCOUNT command will be generated in the Create Organization Account step
+============================================================================
+NEXT STEP
+============================================================================
+In the next step (Create Organization Account), you will:
+1. Specify the Organization Account Name
+2. Configure the initial administrator credentials
+3. Select the Snowflake edition and cloud region
+4. Execute the CREATE ORGANIZATION ACCOUNT command
+============================================================================
 */
 
 {%- else %}
 -- ============================================================================
--- ORGANIZATION ACCOUNT NOT CONFIGURED
+-- DECISION: ORGANIZATION ACCOUNT NOT ENABLED
+-- ============================================================================
+-- You have chosen not to create an Organization Account at this time.
 -- ============================================================================
 
 /*
-Decision: Organization Account will NOT be created at this time.
+Decision: Organization Account will NOT be created.
 
 Implications:
 - Single-account deployment without centralized management features
 - Organization-level features are not available
-- Can be enabled later if ORGADMIN role is available
+- Can be enabled later if you select or upgrade to Snowflake edition Enterprise or higher
 
 Note: For multi-account strategies, an Organization Account is REQUIRED.
 If you plan to expand to multiple accounts in the future, consider 
-enabling the Organization Account for easier migration.
+enabling the Organization Account for seamless expansion.
 */
 
--- Verify current account is properly configured for standalone operation
+-- Verify current account configuration for standalone operation
 SELECT 
   CURRENT_ACCOUNT() AS current_account,
   CURRENT_ACCOUNT_NAME() AS account_name,
-  CURRENT_ORGANIZATION_NAME() AS organization_name;
+  CURRENT_ORGANIZATION_NAME() AS organization_name,
+  SYSTEM$GET_ACCOUNT_EDITION() AS edition;
 
 {%- endif %}

@@ -18,6 +18,7 @@ CREATE DATABASE IF NOT EXISTS {{ platform_database_name | upper }}
 -- STEP 2: CREATE GOVERNANCE SCHEMA WITH MANAGED ACCESS
 -- ============================================================================
 -- Managed Access ensures only the schema owner can grant privileges
+-- This schema will store tags, network rules, and governance policies
 
 USE DATABASE {{ platform_database_name | upper }};
 
@@ -37,33 +38,8 @@ GRANT USAGE ON DATABASE {{ platform_database_name | upper }} TO ROLE SECURITYADM
 GRANT USAGE ON SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO ROLE SYSADMIN;
 GRANT USAGE ON SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO ROLE SECURITYADMIN;
 
--- ============================================================================
--- STEP 4: CREATE FINOPS TAGS
--- ============================================================================
--- Create the core FinOps tags for cost allocation and governance
--- These use the domains and environments defined in Define Domains & Environments step
-
-USE SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
-
--- DOMAIN tag - identifies business unit ownership
-CREATE TAG IF NOT EXISTS domain
-  ALLOWED_VALUES = (
-{%- for domain in domain_list %}
-    '{{ domain | upper }}'{% if not loop.last %},{% endif %}
-
-{%- endfor %}
-  )
-  COMMENT = 'Business domain/unit for cost allocation and governance';
-
--- ENVIRONMENT tag - identifies SDLC stage
-CREATE TAG IF NOT EXISTS environment
-  ALLOWED_VALUES = (
-{%- for env in environment_list %}
-    '{{ env | upper }}'{% if not loop.last %},{% endif %}
-
-{%- endfor %}
-  )
-  COMMENT = 'Environment/SDLC stage for cost allocation and governance';
+-- Grant CREATE TAG privilege to allow tag creation in later steps
+GRANT CREATE TAG ON SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO ROLE SYSADMIN;
 
 -- ============================================================================
 -- VERIFICATION
@@ -76,7 +52,16 @@ SHOW DATABASES LIKE '{{ platform_database_name | upper }}';
 SHOW SCHEMAS IN DATABASE {{ platform_database_name | upper }};
 DESC SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
 
--- Verify tags were created
-SHOW TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
-DESC TAG domain;
-DESC TAG environment;
+/*
+============================================================================
+NEXT STEPS
+============================================================================
+The Governance schema is now ready to store platform-wide objects.
+
+In subsequent steps, you will create:
+- Tags (DOMAIN, ENVIRONMENT, DATAPRODUCT, etc.) for cost allocation and to standardize account and/or data object naming conventions
+- Network rules for IP allowlisting
+- Governance views and procedures
+
+============================================================================
+*/

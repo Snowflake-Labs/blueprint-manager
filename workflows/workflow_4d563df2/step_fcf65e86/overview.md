@@ -59,7 +59,73 @@ Resource monitors complement budgets: Budgets provide predictive alerts based on
 
 ### Configuration Questions
 
-#### What credit limit should the account resource monitor enforce? (`account_resource_monitor_limit`: text)
+#### How often should the resource monitor reset? (`account_resource_monitor_reset_frequency`: multi-select)
+**What is this asking?**
+Choose when the credit counter resets to zero.
+
+**Why does this matter?**
+The reset frequency should align with your billing and budgeting cycles.
+
+**Options explained:**
+
+**Monthly (Recommended):**
+- Resets on the 1st of each month
+- Aligns with Snowflake billing cycles
+
+**Weekly:**
+- Resets every Monday
+- For tighter weekly cost control
+
+**Daily:**
+- Resets daily at midnight
+- For very tight cost control
+
+**Never:**
+- Manual reset only
+- For one-time credit allocations
+
+**Recommendation:**
+Use Monthly reset aligned with your billing cycle.
+**Options:**
+- Monthly
+- Weekly
+- Daily
+- Never (manual reset)
+
+#### What action should be taken when the credit limit is reached? (`account_resource_monitor_action`: multi-select)
+**What is this asking?**
+Choose what happens when the credit limit is reached.
+
+**Why does this matter?**
+Different actions balance cost protection against user disruption.
+
+**Options explained:**
+
+**Suspend Immediately:**
+- Terminates all running queries immediately
+- Suspends all warehouses
+- Most aggressive protection
+- May cause user disruption
+
+**Suspend After Current Queries (Recommended):**
+- Allows running queries to complete
+- Blocks new queries from starting
+- Suspends warehouses after current work finishes
+- Balances protection with user experience
+
+**Notify Only:**
+- Sends alert but doesn't suspend
+- Requires manual intervention
+- Costs can exceed limit
+
+**Recommendation:**
+Use "Suspend After Current Queries" for production.
+**Options:**
+- Suspend Immediately
+- Suspend After Current Queries
+- Notify Only
+
+#### What is the monthly credit limit for the resource monitor? (`account_resource_monitor_limit`: text)
 **What is this asking?**
 Set the maximum number of credits the account can consume before the configured action (at 100%) is taken.
 
@@ -68,7 +134,7 @@ This is your hard limit. The resource monitor will automatically set up tiered a
 - At 75% of this limit: First notification
 - At 90% of this limit: Second notification
 - At 100% of this limit: Your selected action (Suspend/Notify)
-- At 110%: Post-limit notification
+- At 110%: Same action as 100% (catches overruns)
 
 **How to determine your limit:**
 - Align with or slightly exceed your monthly budget
@@ -117,69 +183,3 @@ Always use an account resource monitor in production environments to prevent une
 **Options:**
 - Yes
 - No
-
-#### How often should the resource monitor reset? (`account_resource_monitor_reset_frequency`: multi-select)
-**What is this asking?**
-Choose when the credit counter resets to zero.
-
-**Why does this matter?**
-The reset frequency should align with your billing and budgeting cycles.
-
-**Options explained:**
-
-**Monthly (Recommended):**
-- Resets on the 1st of each month
-- Aligns with Snowflake billing cycles
-
-**Weekly:**
-- Resets every Monday
-- For tighter weekly cost control
-
-**Daily:**
-- Resets daily at midnight
-- For very tight cost control
-
-**Never:**
-- Manual reset only
-- For one-time credit allocations
-
-**Recommendation:**
-Use Monthly reset aligned with your billing cycle.
-**Options:**
-- Monthly
-- Weekly
-- Daily
-- Never (manual reset)
-
-#### What action should be taken when the limit is reached? (`account_resource_monitor_action`: multi-select)
-**What is this asking?**
-Choose what happens when the credit limit is reached.
-
-**Why does this matter?**
-Different actions balance cost protection against user disruption.
-
-**Options explained:**
-
-**Suspend Immediately:**
-- Terminates all running queries immediately
-- Suspends all warehouses
-- Most aggressive protection
-- May cause user disruption
-
-**Suspend After Current Queries (Recommended):**
-- Allows running queries to complete
-- Blocks new queries from starting
-- Suspends warehouses after current work finishes
-- Balances protection with user experience
-
-**Notify Only:**
-- Sends alert but doesn't suspend
-- Requires manual intervention
-- Costs can exceed limit
-
-**Recommendation:**
-Use "Suspend After Current Queries" for production.
-**Options:**
-- Suspend Immediately
-- Suspend After Current Queries
-- Notify Only

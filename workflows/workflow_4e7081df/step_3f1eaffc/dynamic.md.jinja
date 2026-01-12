@@ -1,0 +1,71 @@
+## Account Configuration Summary
+
+### Account Identity
+
+| Parameter | Value |
+|-----------|-------|
+| **Account Name** | `{{ new_account_name | upper }}` |
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+| **Domain** | {{ account_domain }} |
+| **Strategy** | Domain-based (environments at database level) |
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+| **Environment** | {{ account_environment }} |
+| **Strategy** | Environment-based (domains at database level) |
+{%- else %}
+| **Domain** | {{ account_domain }} |
+| **Environment** | {{ account_environment }} |
+| **Strategy** | Domain + Environment |
+{%- endif %}
+| **Description** | {{ account_description }} |
+
+### Account URL
+
+Once created, this account will be accessible at:
+
+`https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com`
+
+### Technical Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Edition** | {{ new_account_edition }} |
+| **Cloud Region** | {{ new_account_region }} |
+
+{%- if new_account_edition == "Standard" %}
+
+**Standard Edition** provides core Snowflake features suitable for development and cost-sensitive workloads.
+
+{%- elif new_account_edition == "Enterprise" %}
+
+**Enterprise Edition** provides advanced features including:
+- Multi-cluster warehouses
+- Up to 90-day Time Travel
+- Column-level security
+- Failover/Failback support
+
+{%- elif new_account_edition == "Business Critical" %}
+
+**Business Critical Edition** provides the highest level of security and compliance:
+- HIPAA and PCI DSS compliance
+- Customer-managed encryption keys
+- Private connectivity options
+
+{%- endif %}
+
+### Initial Administrator
+
+| Parameter | Value |
+|-----------|-------|
+| **Username** | {{ new_account_admin_name }} |
+| **Email** | {{ new_account_admin_email }} |
+| **Initial Role** | ACCOUNTADMIN |
+| **Password** | System-generated (must change on first login) |
+
+### Post-Creation Checklist
+
+After the account is created:
+- [ ] Initial administrator logs in and changes password
+- [ ] Enable MFA for the administrator
+- [ ] Add 1-2 additional ACCOUNTADMIN users for redundancy
+- [ ] Consume the infrastructure database share
+- [ ] Configure security policies (network, authentication)

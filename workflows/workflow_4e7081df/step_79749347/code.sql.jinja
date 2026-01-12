@@ -1,0 +1,33 @@
+-- ============================================================================
+-- SECURITY CONFIGURATION APPROACH - SELECTION ONLY
+-- ============================================================================
+-- Configuration Approach: {{ security_config_approach }}
+-- SAML/SSO: {{ account_configure_saml }}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- ============================================================================
+
+-- This step captures your security configuration choices.
+-- No SQL is generated here - configuration follows in subsequent steps.
+
+/*
+SECURITY CONFIGURATION SUMMARY
+==============================
+
+Configuration Approach: {{ security_config_approach }}
+SAML/SSO for This Account: {{ account_configure_saml }}
+
+Platform Foundation Reference:
+- Identity Provider: {{ identity_provider }}
+- SAML Configured: {{ configure_saml }}
+
+{%- if security_config_approach == "Use Organization Configuration" %}
+
+Security will be configured using the organization's standard settings.
+
+{%- else %}
+
+Custom configuration values will be required.
+
+{%- endif %}
+*/

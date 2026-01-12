@@ -1,0 +1,120 @@
+-- ============================================================================
+-- ASSIGN MONITORS TO WAREHOUSES
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- DETERMINE MONITOR NAME BASED ON NAMING CONVENTION
+-- ============================================================================
+
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set monitor_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_RESOURCE_MONITOR' %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set monitor_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_RESOURCE_MONITOR' %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set monitor_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_RESOURCE_MONITOR' %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set monitor_name = data_product_name | upper ~ '_RESOURCE_MONITOR' %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set monitor_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_RESOURCE_MONITOR' %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set monitor_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_RESOURCE_MONITOR' %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set monitor_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_RESOURCE_MONITOR' %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set monitor_name = data_product_name | upper ~ '_RESOURCE_MONITOR' %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set monitor_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_RESOURCE_MONITOR' %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set monitor_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_RESOURCE_MONITOR' %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set monitor_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_RESOURCE_MONITOR' %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set monitor_name = data_product_name | upper ~ '_RESOURCE_MONITOR' %}
+{%- endif %}
+{%- endif %}
+
+-- ============================================================================
+-- ASSIGN RESOURCE MONITOR TO WAREHOUSES
+-- ============================================================================
+
+{%- for wh in warehouse_definitions %}
+
+{#- Build warehouse name based on component order and account strategy -#}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- endif %}
+{%- endif %}
+
+-- Assign monitor to {{ wh_name }}
+ALTER WAREHOUSE {{ wh_name }}
+  SET RESOURCE_MONITOR = {{ monitor_name }};
+
+{%- endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify warehouse assignments
+SHOW WAREHOUSES LIKE '%{{ data_product_name | upper }}%';
+
+-- Check resource monitor status
+SELECT 
+  NAME AS monitor_name,
+  CREDIT_QUOTA AS quota,
+  USED_CREDITS AS used,
+  REMAINING_CREDITS AS remaining,
+  LEVEL AS scope
+FROM TABLE(INFORMATION_SCHEMA.RESOURCE_MONITORS())
+WHERE NAME = '{{ monitor_name }}';
+
+/*
+MONITORS ASSIGNED
+=================
+
+{{ monitor_name }} now monitors all data product warehouses.
+
+Credit tracking is now active. Usage will be tracked and thresholds enforced.
+*/

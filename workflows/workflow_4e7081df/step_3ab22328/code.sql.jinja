@@ -1,0 +1,95 @@
+-- ============================================================================
+-- CONSUME INFRASTRUCTURE SHARE
+-- ============================================================================
+-- Creating database from share: {{ infrastructure_share_name | upper }}
+-- Provider: {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}
+-- Local Database Name: {{ shared_database_name | upper }}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: VERIFY SHARE IS AVAILABLE
+-- ============================================================================
+
+-- List available shares from other accounts
+SHOW SHARES;
+
+-- You should see the infrastructure share from the Organization Account
+-- Look for: {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}.{{ infrastructure_share_name | upper }}
+
+-- ============================================================================
+-- STEP 2: CREATE DATABASE FROM SHARE
+-- ============================================================================
+
+CREATE DATABASE {{ shared_database_name | upper }}
+  FROM SHARE {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}.{{ infrastructure_share_name | upper }}
+  COMMENT = 'Shared infrastructure database from Organization Account';
+
+-- ============================================================================
+-- STEP 3: VERIFY DATABASE CONTENTS
+-- ============================================================================
+
+-- Show the database was created
+SHOW DATABASES LIKE '{{ shared_database_name | upper }}';
+
+-- Show schemas in the shared database
+SHOW SCHEMAS IN DATABASE {{ shared_database_name | upper }};
+
+-- Show tags available in the governance schema
+SHOW TAGS IN SCHEMA {{ shared_database_name | upper }}.{{ governance_name | upper }};
+
+-- Show views available (if any were created in Cost Management)
+SHOW VIEWS IN SCHEMA {{ shared_database_name | upper }}.{{ governance_name | upper }};
+
+-- ============================================================================
+-- STEP 4: TEST TAG ACCESS
+-- ============================================================================
+
+-- Verify you can reference the shared tags
+-- (This query just describes the tag - no objects are modified)
+
+DESCRIBE TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.DOMAIN;
+DESCRIBE TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT;
+
+-- ============================================================================
+-- INFRASTRUCTURE SHARE CONSUMED SUCCESSFULLY
+-- ============================================================================
+
+/*
+Shared Database Created!
+========================
+
+Database Name:   {{ shared_database_name | upper }}
+Source Share:    {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}.{{ infrastructure_share_name | upper }}
+
+This account now has access to centralized governance objects:
+- FinOps tags (DOMAIN, ENVIRONMENT, DATAPRODUCT, etc.)
+- Cost reporting views (if configured)
+- Naming convention standards
+
+Usage Example:
+--------------
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+-- Apply domain tag to a warehouse
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = '{{ account_domain }}';
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+-- Apply environment tag to a warehouse
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ account_environment }}';
+{%- else %}
+-- Apply domain and environment tags to a warehouse
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = '{{ account_domain }}';
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ account_environment }}';
+{%- endif %}
+
+Account Provisioning Complete!
+==============================
+Account provisioning complete. Infrastructure share consumed successfully.
+*/

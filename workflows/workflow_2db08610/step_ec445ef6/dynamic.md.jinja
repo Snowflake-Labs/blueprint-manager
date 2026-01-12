@@ -1,0 +1,144 @@
+## Privilege Grants
+
+### Database Role Assignments
+
+This step connects account roles to database roles. The database roles (DB_R, DB_W, DB_C) already contain all necessary privileges via schema roles.
+
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set reader_db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ reader_zone_access | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set reader_db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ reader_zone_access | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set reader_db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ reader_zone_access | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set reader_db_name = data_product_name | upper ~ '_' ~ reader_zone_access | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set reader_db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ reader_zone_access | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set reader_db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ reader_zone_access | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set reader_db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ reader_zone_access | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set reader_db_name = data_product_name | upper ~ '_' ~ reader_zone_access | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set reader_db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ reader_zone_access | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set reader_db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ reader_zone_access | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set reader_db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ reader_zone_access | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set reader_db_name = data_product_name | upper ~ '_' ~ reader_zone_access | upper %}
+{%- endif %}
+{%- endif %}
+
+#### {{ data_product_name | upper }}_READ
+
+| Database | Database Role | Access Level |
+|----------|---------------|--------------|
+| `{{ reader_db_name }}` | `DB_R` | Read access (via SC_R_* schema roles) |
+
+{%- if role_structure == 'Full (Admin + Create + Write + Read)' %}
+
+#### {{ data_product_name | upper }}_WRITE
+
+| Database | Database Role | Access Level |
+|----------|---------------|--------------|
+{%- for zone in zone_list %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+| `{{ db_name }}` | `DB_W` | Write access (via SC_W_* schema roles) |
+{%- endfor %}
+
+{%- endif %}
+
+#### {{ data_product_name | upper }}_ADMIN / {{ data_product_name | upper }}_ADMIN
+
+| Database | Database Role | Access Level |
+|----------|---------------|--------------|
+{%- for zone in zone_list %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+| `{{ db_name }}` | `DB_C` | Create access (via SC_C_* schema roles) |
+{%- endfor %}
+
+### Access Pattern Summary
+
+```
+{{ data_product_name | upper }}_READ
+└── {{ reader_db_name }}.DB_R
+      └── All SC_R_* roles in {{ reader_zone_access }} zone
+
+{%- if role_structure == 'Full (Admin + Create + Write + Read)' %}
+
+{{ data_product_name | upper }}_WRITE
+└── All DB_W roles (all zones)
+      └── All SC_W_* roles in all zones
+{%- endif %}
+
+{{ data_product_name | upper }}_ADMIN/ADMIN
+└── All DB_C roles (all zones)
+      └── All SC_C_* roles in all zones
+```

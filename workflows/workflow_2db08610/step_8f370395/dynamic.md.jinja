@@ -1,0 +1,56 @@
+## Monitor Assignment
+
+### Resource Monitor
+
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+`{{ data_product_domain | upper }}_{{ data_product_environment | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+`{{ data_product_domain | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+`{{ data_product_environment | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+`{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+`{{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ data_product_environment | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+`{{ data_product_domain | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+`{{ data_product_name | upper }}_{{ data_product_environment | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+`{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+`{{ data_product_environment | upper }}_{{ data_product_domain | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+`{{ data_product_domain | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+`{{ data_product_environment | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+`{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- endif %}
+{%- endif %}
+
+- Credit Limit: {{ resource_monitor_limit }} credits/month
+- 100% Action: {{ resource_monitor_action }}
+
+### Warehouses to Assign
+
+All data product warehouses will share this resource monitor:
+
+{%- for wh in warehouse_definitions %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}- `{{ data_product_domain | upper }}_{{ data_product_environment | upper }}_{{ data_product_name | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- elif account_strategy == 'Multi-Account (Environment-based)' %}- `{{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- elif account_strategy == 'Multi-Account (Domain-based)' %}- `{{ data_product_environment | upper }}_{{ data_product_name | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}- `{{ data_product_name | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}- `{{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ data_product_environment | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- elif account_strategy == 'Multi-Account (Environment-based)' %}- `{{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- elif account_strategy == 'Multi-Account (Domain-based)' %}- `{{ data_product_name | upper }}_{{ data_product_environment | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}- `{{ data_product_name | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}- `{{ data_product_environment | upper }}_{{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- elif account_strategy == 'Multi-Account (Environment-based)' %}- `{{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- elif account_strategy == 'Multi-Account (Domain-based)' %}- `{{ data_product_environment | upper }}_{{ data_product_name | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}- `{{ data_product_name | upper }}_{{ wh.warehouse_name | upper }}` ({{ wh.purpose }}){%- endif %}
+{%- endif %}
+{%- endfor %}
+
+### Shared Quota Impact
+
+All {{ warehouse_definitions | length }} warehouses will share the {{ resource_monitor_limit }} credit monthly quota. Heavy usage on any warehouse reduces available credits for others.

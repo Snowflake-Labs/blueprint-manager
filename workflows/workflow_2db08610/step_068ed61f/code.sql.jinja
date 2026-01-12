@@ -1,0 +1,116 @@
+-- ============================================================================
+-- APPLY ADDITIONAL WAREHOUSE TAGS
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+{%- if cost_center and cost_center != 'NONE' %}
+-- Cost Center: {{ cost_center }}
+{%- else %}
+-- Cost Center: Not specified (no additional tags to apply)
+{%- endif %}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: SYSADMIN (or {{ data_product_name | upper }}_ADMIN if ownership transferred)
+-- ============================================================================
+
+USE ROLE SYSADMIN;
+
+-- ============================================================================
+-- TAG DATABASE REFERENCE
+-- ============================================================================
+{%- if account_strategy == 'Single Account' %}
+{%- set tag_db = platform_database_name | upper %}
+{%- else %}
+{%- set tag_db = platform_database_name | upper ~ '_SHARED' %}
+{%- endif %}
+
+{%- if cost_center and cost_center != 'NONE' %}
+
+-- ============================================================================
+-- APPLY COST CENTER TAG TO WAREHOUSES
+-- ============================================================================
+
+{%- for wh in warehouse_definitions %}
+
+{#- Build warehouse name based on component order and account strategy -#}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper %}
+{%- endif %}
+{%- endif %}
+
+-- Add cost center to {{ wh_name }}
+ALTER WAREHOUSE {{ wh_name }} SET TAG
+  {{ tag_db }}.{{ governance_name | upper }}.COST_CENTER = '{{ cost_center | upper }}';
+
+{%- endfor %}
+
+{%- else %}
+
+-- ============================================================================
+-- NO ADDITIONAL TAGS TO APPLY
+-- ============================================================================
+-- Cost center was not specified.
+-- Core tags (DOMAIN, ENVIRONMENT, DATAPRODUCT, WORKLOAD) were already applied in the Create Warehouses step.
+--
+-- To add a cost center later, run:
+-- ALTER WAREHOUSE <warehouse_name> SET TAG
+--   {{ tag_db }}.{{ governance_name | upper }}.COST_CENTER = '<your_code>';
+
+{%- endif %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- View all tags on warehouses for this data product
+SELECT 
+  TAG_NAME,
+  TAG_VALUE,
+  OBJECT_NAME
+FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES
+WHERE OBJECT_DATABASE IS NULL  -- Warehouses have no database
+  AND TAG_VALUE LIKE '%{{ data_product_name | upper }}%'
+ORDER BY OBJECT_NAME, TAG_NAME;
+
+/*
+ADDITIONAL WAREHOUSE TAGS APPLIED
+=================================
+
+{%- if cost_center and cost_center != 'NONE' %}
+Cost center tag applied to {{ warehouse_definitions | length }} warehouse(s):
+{%- for wh in warehouse_definitions %}
+- {{ wh.warehouse_name | upper }}: COST_CENTER = '{{ cost_center | upper }}'
+{%- endfor %}
+{%- else %}
+No additional tags applied (cost center not specified).
+{%- endif %}
+*/

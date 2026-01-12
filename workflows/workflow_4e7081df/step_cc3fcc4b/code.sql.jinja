@@ -1,0 +1,91 @@
+-- ============================================================================
+-- CREATE ACCOUNT
+-- ============================================================================
+-- Account Name: {{ new_account_name | upper }}
+-- Edition: {{ new_account_edition }}
+-- Region: {{ new_account_region }}
+-- ============================================================================
+-- EXECUTE FROM: Organization Account
+-- REQUIRED ROLE: ORGADMIN
+-- ============================================================================
+
+USE ROLE ORGADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE THE ACCOUNT
+-- ============================================================================
+
+CREATE ACCOUNT {{ new_account_name | upper }}
+  ADMIN_NAME = '{{ new_account_admin_name }}'
+  ADMIN_PASSWORD = 'ChangeMe123!'  -- Initial password - MUST be changed on first login
+  EMAIL = '{{ new_account_admin_email }}'
+  MUST_CHANGE_PASSWORD = TRUE
+  EDITION = {{ new_account_edition | upper }}
+  REGION = '{{ new_account_region }}'
+  COMMENT = '{{ account_description }}';
+
+-- ============================================================================
+-- STEP 2: VERIFY ACCOUNT CREATION
+-- ============================================================================
+
+-- List all accounts in the organization to verify creation
+SHOW ORGANIZATION ACCOUNTS;
+
+-- Get details of the new account
+SHOW ORGANIZATION ACCOUNTS LIKE '{{ new_account_name | upper }}';
+
+-- ============================================================================
+-- STEP 3: GRANT INFRASTRUCTURE SHARE TO NEW ACCOUNT
+-- ============================================================================
+-- Grant the new account access to the shared infrastructure database
+
+ALTER SHARE {{ infrastructure_share_name | upper }} 
+  ADD ACCOUNTS = {{ snowflake_org_name | upper }}.{{ new_account_name | upper }};
+
+-- Verify the share was granted
+SHOW GRANTS OF SHARE {{ infrastructure_share_name | upper }};
+
+-- ============================================================================
+-- ACCOUNT CREATED
+-- ============================================================================
+
+/*
+Account Created Successfully!
+=============================
+
+Account Name:    {{ new_account_name | upper }}
+Account URL:     https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com
+
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+Domain:          {{ account_domain }}
+Strategy:        Domain-based (environments at database level)
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+Environment:     {{ account_environment }}
+Strategy:        Environment-based (domains at database level)
+{%- else %}
+Domain:          {{ account_domain }}
+Environment:     {{ account_environment }}
+Strategy:        Domain + Environment
+{%- endif %}
+Edition:         {{ new_account_edition }}
+Region:          {{ new_account_region }}
+
+Initial Admin:   {{ new_account_admin_name }}
+Admin Email:     {{ new_account_admin_email }}
+
+Infrastructure Share: {{ infrastructure_share_name | upper }} has been granted to this account.
+
+============================================================================
+⚠️  IMPORTANT: SWITCH TO THE NEW ACCOUNT
+============================================================================
+
+You must now LOG INTO THE NEW ACCOUNT to continue the setup:
+
+1. Open a new browser tab/window
+2. Navigate to: https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com
+3. Log in with: {{ new_account_admin_name }}
+4. Change the initial password immediately
+5. Continue with the Consume Infrastructure Share step from the NEW account
+
+The remaining steps in this workflow must be executed from the new account.
+*/

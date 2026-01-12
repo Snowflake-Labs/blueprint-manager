@@ -1,0 +1,79 @@
+-- ============================================================================
+-- CONFIGURE ACCOUNT RESOURCE MONITOR
+-- ============================================================================
+-- Account: {{ new_account_name | upper }}
+-- Credit Limit: {{ account_resource_monitor_limit }} credits
+-- Reset: {{ account_resource_monitor_reset_frequency }}
+-- Action: {{ account_resource_monitor_action }}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE RESOURCE MONITOR
+-- ============================================================================
+
+CREATE OR REPLACE RESOURCE MONITOR {{ new_account_name | upper }}_RESOURCE_MONITOR
+  WITH
+    CREDIT_QUOTA = {{ account_resource_monitor_limit }}
+    FREQUENCY = {{ account_resource_monitor_reset_frequency | upper }}
+    START_TIMESTAMP = IMMEDIATELY
+    TRIGGERS
+      ON 75 PERCENT DO NOTIFY
+      ON 90 PERCENT DO NOTIFY
+{%- if account_resource_monitor_action == "Suspend Immediately" %}
+      ON 100 PERCENT DO SUSPEND_IMMEDIATE
+      ON 110 PERCENT DO SUSPEND_IMMEDIATE;
+{%- elif account_resource_monitor_action == "Suspend After Current Queries" %}
+      ON 100 PERCENT DO SUSPEND
+      ON 110 PERCENT DO SUSPEND;
+{%- else %}
+      ON 100 PERCENT DO NOTIFY
+      ON 110 PERCENT DO NOTIFY;
+{%- endif %}
+
+-- ============================================================================
+-- STEP 2: APPLY RESOURCE MONITOR TO ACCOUNT
+-- ============================================================================
+
+ALTER ACCOUNT SET RESOURCE_MONITOR = {{ new_account_name | upper }}_RESOURCE_MONITOR;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify resource monitor was created
+SHOW RESOURCE MONITORS;
+
+-- Check resource monitor details
+DESCRIBE RESOURCE MONITOR {{ new_account_name | upper }}_RESOURCE_MONITOR;
+
+-- Verify account-level assignment
+SHOW PARAMETERS LIKE 'RESOURCE_MONITOR' IN ACCOUNT;
+
+-- ============================================================================
+-- RESOURCE MONITOR CONFIGURED
+-- ============================================================================
+
+/*
+Account Resource Monitor Configured!
+====================================
+
+Monitor Name: {{ new_account_name | upper }}_RESOURCE_MONITOR
+Credit Limit: {{ account_resource_monitor_limit }} credits
+Reset Frequency: {{ account_resource_monitor_reset_frequency }}
+
+Thresholds:
+- 75%: Notify
+- 90%: Notify
+- 100%: {{ account_resource_monitor_action }}
+- 110%: {{ account_resource_monitor_action }}
+
+The resource monitor is now active and tracking credit consumption.
+{%- if account_resource_monitor_action != "Notify Only" %}
+⚠️ Warehouses will be suspended when the 100% threshold is reached.
+{%- endif %}
+*/

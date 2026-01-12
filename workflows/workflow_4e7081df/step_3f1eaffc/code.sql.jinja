@@ -1,0 +1,37 @@
+-- ============================================================================
+-- CONFIGURE ACCOUNT PARAMETERS - DOCUMENTATION ONLY
+-- ============================================================================
+-- Account Name: {{ new_account_name | upper }}
+-- Edition: {{ new_account_edition }}
+-- Region: {{ new_account_region }}
+-- Admin: {{ new_account_admin_name }}
+-- ============================================================================
+
+-- This step captures account configuration parameters.
+-- The CREATE ACCOUNT command is generated separately.
+
+/*
+ACCOUNT CONFIGURATION SUMMARY
+=============================
+Account Name:    {{ new_account_name | upper }}
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+Domain:          {{ account_domain }}
+Strategy:        Domain-based (environments at database level)
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+Environment:     {{ account_environment }}
+Strategy:        Environment-based (domains at database level)
+{%- else %}
+Domain:          {{ account_domain }}
+Environment:     {{ account_environment }}
+Strategy:        Domain + Environment
+{%- endif %}
+Description:     {{ account_description }}
+
+Edition:         {{ new_account_edition }}
+Region:          {{ new_account_region }}
+
+Initial Admin:   {{ new_account_admin_name }}
+Admin Email:     {{ new_account_admin_email }}
+
+Account URL:     https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com
+*/

@@ -35,6 +35,31 @@ Creating and managing Snowflake users directly, without IdP integration. Users a
 
 ### Configuration Questions
 
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+**What is this asking?**
+Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
+
+**Why does this matter?**
+Different IdPs have different configuration steps and capabilities. Snowflake provides specific documentation for major IdPs like Okta and Azure AD, while other SCIM 2.0 compatible providers use a generic configuration.
+
+**Options explained:**
+- **Okta**: Enterprise IdP with native Snowflake SCIM integration
+- **Microsoft Entra ID (Azure AD)**: Microsoft's cloud identity service with gallery app for Snowflake
+- **Other SCIM 2.0 Compatible IdP**: Any IdP that supports SCIM 2.0 protocol
+- **None - Manual User Management**: Skip SCIM and manage users manually (not recommended)
+
+**Recommendation:**
+If your organization has an enterprise IdP, we strongly recommend configuring SCIM integration. The initial setup effort is minimal compared to the ongoing benefits of automated provisioning.
+
+**More Information:**
+* [SCIM Overview](https://docs.snowflake.com/en/user-guide/scim)
+* [Supported Identity Providers](https://docs.snowflake.com/en/user-guide/scim#supported-identity-providers)
+**Options:**
+- Okta
+- Microsoft Entra ID (Azure ID)
+- Other SCIM 2.0 Compatible IdP
+- None - Manual User Management
+
 #### Will you configure SAML/SSO for single sign-on? (`configure_saml`: multi-select)
 **What is this asking?**
 Decide whether to configure SAML-based Single Sign-On (SSO) as part of this setup, or defer it for later.
@@ -69,28 +94,3 @@ If you selected a SCIM provider and your IdP is ready, configure SAML now for a 
 **Options:**
 - Yes - Configure SAML now
 - No - Configure later or use password authentication
-
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
-**What is this asking?**
-Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
-
-**Why does this matter?**
-Different IdPs have different configuration steps and capabilities. Snowflake provides specific documentation for major IdPs like Okta and Azure AD, while other SCIM 2.0 compatible providers use a generic configuration.
-
-**Options explained:**
-- **Okta**: Enterprise IdP with native Snowflake SCIM integration
-- **Microsoft Entra ID (Azure AD)**: Microsoft's cloud identity service with gallery app for Snowflake
-- **Other SCIM 2.0 Compatible IdP**: Any IdP that supports SCIM 2.0 protocol
-- **None - Manual User Management**: Skip SCIM and manage users manually (not recommended)
-
-**Recommendation:**
-If your organization has an enterprise IdP, we strongly recommend configuring SCIM integration. The initial setup effort is minimal compared to the ongoing benefits of automated provisioning.
-
-**More Information:**
-* [SCIM Overview](https://docs.snowflake.com/en/user-guide/scim)
-* [Supported Identity Providers](https://docs.snowflake.com/en/user-guide/scim#supported-identity-providers)
-**Options:**
-- Okta
-- Microsoft Entra ID (Azure ID)
-- Other SCIM 2.0 Compatible IdP
-- None - Manual User Management

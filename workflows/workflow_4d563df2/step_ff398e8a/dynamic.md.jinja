@@ -1,15 +1,17 @@
-# Define Domains & Environments
+# Define Domains, Environments & Naming Conventions
 
 ## Overview
 
-This section defines the domains (business units/entities) and environments (SDLC stages) that will structure our Snowflake platform. These definitions serve as the foundation for account names, database names, warehouse names, role names, and FinOps tagging.
+This section defines the domains (business units/entities), environments (Software Development Lifecycle (SDLC) stages), and naming conventions that will structure our Snowflake platform. These definitions serve as the foundation for account names, database names, warehouse names, role names, and FinOps tagging.
 
 ## Decision Summary
 
-| Component | Defined Values | Usage Level |
-|-----------|----------------|-------------|
-| **Domains** | {% for domain in domain_list %}`{{ domain | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} | {% if account_strategy == "Single Account" or account_strategy == "Multi-Account (Environment-based)" %}Database{% else %}Account{% endif %} |
-| **Environments** | {% for env in environment_list %}`{{ env | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} | {% if account_strategy == "Single Account" or account_strategy == "Multi-Account (Domain-based)" %}Database{% else %}Account{% endif %} |
+| Decision | Selection |
+|----------|-----------|
+| **Account Strategy** | {{ account_strategy }} |
+| **Domains** | {% for domain in domain_list %}`{{ domain | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} |
+| **Environments** | {% for env in environment_list %}`{{ env | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} |
+| **Component Order** | `{{ object_component_order }}` |
 
 ## Domains
 
@@ -22,67 +24,140 @@ Domains represent logical groupings of business functions, data, or ownership. T
 {%- endfor %}
 
 {%- if account_strategy == "Single Account" %}
-**Usage:** Domains will appear at the **database level** in object names.
+**Usage:** Domains will appear in **database object names** (databases, warehouses, roles).
 {%- elif account_strategy == "Multi-Account (Environment-based)" %}
-**Usage:** Domains will appear at the **database level** within each environment account.
+**Usage:** Domains will appear in **database object names** within each environment account.
 {%- elif account_strategy == "Multi-Account (Domain-based)" %}
-**Usage:** Domains will appear at the **account level**.
+**Usage:** Domains will appear in **account names**.
 {%- elif account_strategy == "Multi-Account (Domain + Environment)" %}
-**Usage:** Domains will appear at the **account level** combined with environments.
+**Usage:** Domains will appear in **account names** combined with environments.
 {%- endif %}
 
 ## Environments
 
 Environments represent stages in the Software Development Lifecycle (SDLC), used to isolate data and application development based on maturity and stability.
 
-| Environment Abbreviation | Stage | Description |
-|--------------------------|-------|-------------|
+| Environment Abbreviation | Stage |
+|--------------------------|-------|
 {%- for env in environment_list %}
-| `{{ env | upper }}` | | |
+| `{{ env | upper }}` | |
 {%- endfor %}
 
 {%- if account_strategy == "Single Account" %}
-**Usage:** Environments will appear at the **database level** in object names.
+**Usage:** Environments will appear in **database object names** (databases, warehouses, roles).
 {%- elif account_strategy == "Multi-Account (Environment-based)" %}
-**Usage:** Environments will appear at the **account level**.
+**Usage:** Environments will appear in **account names**.
 {%- elif account_strategy == "Multi-Account (Domain-based)" %}
-**Usage:** Environments will appear at the **database level** within each domain account.
+**Usage:** Environments will appear in **database object names** within each domain account.
 {%- elif account_strategy == "Multi-Account (Domain + Environment)" %}
-**Usage:** Environments will appear at the **account level** combined with domains.
+**Usage:** Environments will appear in **account names** combined with domains.
 {%- endif %}
 
-## Example Names
+## Naming Convention
 
-Based on the **{{ account_strategy }}** strategy:
+**Selected Component Order:** `{{ object_component_order }}`
+
+{%- if object_component_order == "<domain>_<env>_<dataproduct>" %}
+Objects will be named with **Domain first, then Environment, then Data Product**.
+- Clusters objects by business domain first
+- Groups environments within each domain
+- Data products are the final differentiator
+{%- elif object_component_order == "<domain>_<dataproduct>_<env>" %}
+Objects will be named with **Domain first, then Data Product, then Environment**.
+- Clusters objects by business domain first
+- Groups data products within each domain
+- Environment is the final differentiator
+{%- elif object_component_order == "<env>_<domain>_<dataproduct>" %}
+Objects will be named with **Environment first, then Domain, then Data Product**.
+- Clusters objects by environment first (all prod together, all dev together)
+- Groups domains within each environment
+- Data products are the final differentiator
+{%- endif %}
+
+**Component Inclusion (based on {{ account_strategy }}):**
+{%- if account_strategy == 'Single Account' %}
+- Domain: ✅ Included in object names
+- Environment: ✅ Included in object names
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+- Domain: ✅ Included in object names
+- Environment: ❌ Omitted from object names (implicit in account)
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+- Domain: ❌ Omitted from object names (implicit in account)
+- Environment: ✅ Included in object names
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+- Domain: ❌ Omitted from object names (implicit in account)
+- Environment: ❌ Omitted from object names (implicit in account)
+{%- endif %}
+
+### Example Names
+
+Based on the **{{ account_strategy }}** strategy with component order `{{ object_component_order }}`:
 
 {%- if account_strategy == "Single Account" %}
-| Object Type | Example Names |
-|-------------|---------------|
-| Database | {% for domain in domain_list[:2] %}`{{ domain | upper }}_ANALYTICS_{{ environment_list[0] | upper if environment_list else 'PROD' }}`{% if not loop.last %}, {% endif %}{% endfor %} |
+| Object Type | Example Name | Components |
+|-------------|--------------|------------|
+{%- if object_component_order == "<domain>_<env>_<dataproduct>" %}
+| Database | `{{ domain_list[0] | upper }}_{{ environment_list[-1] | upper }}_ANALYTICS_RAW` | Domain, Env, DataProduct, Zone |
+| Warehouse | `{{ domain_list[0] | upper }}_{{ environment_list[-1] | upper }}_ANALYTICS_TRANSFORM` | Domain, Env, DataProduct, Workload |
+| Role | `{{ domain_list[0] | upper }}_{{ environment_list[-1] | upper }}_ANALYTICS_READ` | Domain, Env, DataProduct, Function |
+{%- elif object_component_order == "<domain>_<dataproduct>_<env>" %}
+| Database | `{{ domain_list[0] | upper }}_ANALYTICS_{{ environment_list[-1] | upper }}_RAW` | Domain, DataProduct, Env, Zone |
+| Warehouse | `{{ domain_list[0] | upper }}_ANALYTICS_{{ environment_list[-1] | upper }}_TRANSFORM` | Domain, DataProduct, Env, Workload |
+| Role | `{{ domain_list[0] | upper }}_ANALYTICS_{{ environment_list[-1] | upper }}_READ` | Domain, DataProduct, Env, Function |
+{%- elif object_component_order == "<env>_<domain>_<dataproduct>" %}
+| Database | `{{ environment_list[-1] | upper }}_{{ domain_list[0] | upper }}_ANALYTICS_RAW` | Env, Domain, DataProduct, Zone |
+| Warehouse | `{{ environment_list[-1] | upper }}_{{ domain_list[0] | upper }}_ANALYTICS_TRANSFORM` | Env, Domain, DataProduct, Workload |
+| Role | `{{ environment_list[-1] | upper }}_{{ domain_list[0] | upper }}_ANALYTICS_READ` | Env, Domain, DataProduct, Function |
+{%- endif %}
 {%- elif account_strategy == "Multi-Account (Environment-based)" %}
-| Object Type | Example Names |
-|-------------|---------------|
-| Account | {% for env in environment_list[:3] %}`{{ env | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} |
-| Database | {% for domain in domain_list[:2] %}`{{ domain | upper }}_ANALYTICS`{% if not loop.last %}, {% endif %}{% endfor %} |
+| Object Type | Example Name | Components |
+|-------------|--------------|------------|
+| Account | `{{ environment_list[-1] | upper }}` | Environment |
+{%- if object_component_order == "<domain>_<env>_<dataproduct>" or object_component_order == "<domain>_<dataproduct>_<env>" %}
+| Database | `{{ domain_list[0] | upper }}_ANALYTICS_RAW` | Domain, DataProduct, Zone |
+| Warehouse | `{{ domain_list[0] | upper }}_ANALYTICS_TRANSFORM` | Domain, DataProduct, Workload |
+{%- else %}
+| Database | `{{ domain_list[0] | upper }}_ANALYTICS_RAW` | Domain, DataProduct, Zone |
+| Warehouse | `{{ domain_list[0] | upper }}_ANALYTICS_TRANSFORM` | Domain, DataProduct, Workload |
+{%- endif %}
 {%- elif account_strategy == "Multi-Account (Domain-based)" %}
-| Object Type | Example Names |
-|-------------|---------------|
-| Account | {% for domain in domain_list[:3] %}`{{ domain | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} |
-| Database | `ANALYTICS_{{ environment_list[0] | upper if environment_list else 'PROD' }}` |
+| Object Type | Example Name | Components |
+|-------------|--------------|------------|
+| Account | `{{ domain_list[0] | upper }}` | Domain |
+{%- if object_component_order == "<domain>_<env>_<dataproduct>" or object_component_order == "<env>_<domain>_<dataproduct>" %}
+| Database | `{{ environment_list[-1] | upper }}_ANALYTICS_RAW` | Env, DataProduct, Zone |
+| Warehouse | `{{ environment_list[-1] | upper }}_ANALYTICS_TRANSFORM` | Env, DataProduct, Workload |
+{%- else %}
+| Database | `ANALYTICS_{{ environment_list[-1] | upper }}_RAW` | DataProduct, Env, Zone |
+| Warehouse | `ANALYTICS_{{ environment_list[-1] | upper }}_TRANSFORM` | DataProduct, Env, Workload |
+{%- endif %}
 {%- elif account_strategy == "Multi-Account (Domain + Environment)" %}
-| Object Type | Example Names |
-|-------------|---------------|
-| Account | {% for domain in domain_list[:2] %}{% for env in environment_list[:2] %}`{{ domain | upper }}_{{ env | upper }}`{% if not loop.last %}, {% endif %}{% endfor %}{% endfor %} |
-| Database | `ANALYTICS` |
+| Object Type | Example Name | Components |
+|-------------|--------------|------------|
+| Account | `{{ domain_list[0] | upper }}_{{ environment_list[-1] | upper }}` | Domain, Environment |
+| Database | `ANALYTICS_RAW` | DataProduct, Zone |
+| Warehouse | `ANALYTICS_TRANSFORM` | DataProduct, Workload |
 {%- endif %}
 
-## FinOps Tag Alignment
+## Tags Created
 
-These abbreviations will be used as values for FinOps tags to enable cost allocation and chargeback. The tags will be created in the Infrastructure Database (next step).
+The following tags will be created in the `{{ platform_database_name | upper }}.{{ governance_name | upper }}` schema:
 
-| Tag Name | Tag Values |
-|----------|------------|
-| `DOMAIN` | {% for domain in domain_list %}`{{ domain | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} |
-| `ENVIRONMENT` | {% for env in environment_list %}`{{ env | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} |
+| Tag Name | Allowed Values | Purpose |
+|----------|----------------|---------|
+| `DOMAIN` | {% for domain in domain_list %}`{{ domain | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} | Business unit for cost allocation |
+| `ENVIRONMENT` | {% for env in environment_list %}`{{ env | upper }}`{% if not loop.last %}, {% endif %}{% endfor %} | SDLC stage for cost allocation |
+| `DATAPRODUCT` | (Any value) | Data product identifier |
+| `WORKLOAD` | (Any value) | Warehouse workload type |
+| `ZONE` | (Any value) | Database data zone |
+| `DATA_CLASSIFICATION` | (Any value) | Data sensitivity level |
 
-> **Note:** The DOMAIN and ENVIRONMENT tags will be created after the Infrastructure Database is set up.
+**Why create all six tags now?**
+
+We create DATAPRODUCT, WORKLOAD, ZONE, and DATA_CLASSIFICATION tags in this step—even though you're only defining values for DOMAIN and ENVIRONMENT—to ensure:
+
+- **Immediate availability** — Tags are ready for use when you create data products in subsequent workflows
+- **Centralized governance** — All FinOps tags are stored together in the Governance schema
+- **Naming alignment** — Object naming components align directly with tags for consistent cost reporting
+
+> **Note:** DOMAIN and ENVIRONMENT tags have restricted allowed values based on your selections above. The other tags accept any value, allowing flexibility when defining data products, warehouses, and databases in later workflows.

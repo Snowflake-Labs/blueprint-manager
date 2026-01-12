@@ -1,0 +1,22 @@
+-- ============================================================================
+-- DEFINE ACCOUNT PURPOSE - DOMAIN-BASED STRATEGY
+-- ============================================================================
+-- Strategy: Domain-based Multi-Account
+-- Domain: {{ account_domain }}
+-- Description: {{ account_description }}
+-- ============================================================================
+
+-- This step captures account purpose information.
+-- No SQL is executed here - account creation follows in subsequent steps.
+
+/*
+ACCOUNT PURPOSE SUMMARY (Domain-Based)
+======================================
+Account Strategy: Domain-based Multi-Account
+Domain:           {{ account_domain }}
+Description:      {{ account_description }}
+
+This account will contain all environments (Dev, Test, Prod) for the
+{{ account_domain }} domain. Environments will be created at the database
+level in the Data Product workflow.
+*/

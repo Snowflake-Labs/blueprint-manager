@@ -9,12 +9,7 @@ This section documents the configuration for creating the Organization Account. 
 | Parameter | Value |
 |-----------|-------|
 | **Account Name** | `{{ org_account_name | upper }}` |
-{%- if account_name_prefix | upper != "NONE" %}
-| **Full Account Name** | `{{ account_name_prefix }}_{{ org_account_name }}` |
-| **Account URL** | `https://{{ snowflake_org_name | upper }}-{{ account_name_prefix }}_{{ org_account_name }}.snowflakecomputing.com` |
-{%- else %}
-| **Account URL** | `https://{{ snowflake_org_name | upper }}-{{ org_account_name }}.snowflakecomputing.com` |
-{%- endif %}
+| **Account URL** | `https://{{ snowflake_org_name | upper }}-{{ org_account_name | upper }}.snowflakecomputing.com` |
 | **Edition** | {{ org_account_edition }} |
 | **Cloud Region** | {{ org_account_region }} |
 
@@ -60,6 +55,30 @@ After the Organization Account is created:
 - [ ] Grant ORGADMIN role to appropriate administrators
 - [ ] Verify organization-level views are accessible
 - [ ] Document account credentials securely
+
+## Capabilities Enabled
+
+| Capability | Description |
+|------------|-------------|
+| Centralized View | Single pane of glass for all accounts in the organization |
+| Unified Billing | Consolidated cost management and billing across accounts |
+| Account Provisioning | Ability to create and manage child accounts programmatically |
+| Organization Policies | Apply governance policies across all accounts |
+| Cross-Account Features | Enable data sharing, replication, and failover between accounts |
+| ORGADMIN Role | Manage organization-level objects and users across accounts |
+
+**Requirements:**
+- ✅ Snowflake Enterprise Edition or higher
+- ✅ ORGADMIN role granted in the existing account
+
+## Key Terminology
+
+| Term | Definition |
+|------|------------|
+| Organization | A Snowflake object that links accounts owned by your business entity |
+| Organization Name | Your Snowflake organization identifier (e.g., `ACME` or `XY12345`) |
+| Organization Account | A special account type with ORGADMIN privileges for managing other accounts |
+| Organization Account Name | The name of your Organization Account (`{{ org_account_name | upper }}`) |
 
 ## Important Notes
 

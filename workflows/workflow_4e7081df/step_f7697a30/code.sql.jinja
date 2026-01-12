@@ -1,0 +1,63 @@
+-- ============================================================================
+-- SAML SSO CONFIGURATION
+-- ============================================================================
+-- This script configures SAML Single Sign-On for federated authentication
+-- Identity Provider: {{ identity_provider }}
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- CREATE SAML SECURITY INTEGRATION
+-- ============================================================================
+-- Note: The certificate should be the full PEM-encoded X.509 certificate
+-- from your Identity Provider
+
+CREATE OR REPLACE SECURITY INTEGRATION {{ saml_integration_name | upper }}
+  TYPE = SAML2
+  ENABLED = TRUE
+  SAML2_ISSUER = '{{ saml_issuer }}'
+  SAML2_SSO_URL = '{{ saml_sso_url }}'
+  SAML2_PROVIDER = 'CUSTOM'
+  SAML2_X509_CERT = '{{ saml_certificate }}'
+  SAML2_SP_INITIATED_LOGIN_PAGE_LABEL = '{{ identity_provider }} SSO'
+  SAML2_ENABLE_SP_INITIATED = TRUE
+  SAML2_SNOWFLAKE_ACS_URL = 'https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix | lower }}_{% endif %}{{ org_account_name | lower }}.snowflakecomputing.com/fed/login'
+  SAML2_SNOWFLAKE_ISSUER_URL = 'https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix | lower }}_{% endif %}{{ org_account_name | lower }}.snowflakecomputing.com'
+  COMMENT = '{{ identity_provider }} SAML SSO integration';
+
+-- ============================================================================
+-- CONFIGURE LOGIN PAGE (Optional)
+-- ============================================================================
+{%- if saml_sso_login_page == "Yes" %}
+-- Enable SSO button on the login page
+ALTER ACCOUNT SET SAML_IDENTITY_PROVIDER = '{{ saml_integration_name | upper }}';
+{%- else %}
+-- SSO button not shown on login page (IdP-initiated or direct URL only)
+{%- endif %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify the security integration was created
+SHOW SECURITY INTEGRATIONS LIKE '{{ saml_integration_name | upper }}';
+
+-- Get detailed integration settings
+DESC SECURITY INTEGRATION {{ saml_integration_name | upper }};
+
+-- ============================================================================
+-- TESTING INSTRUCTIONS
+-- ============================================================================
+-- To test the SAML integration:
+-- 
+-- 1. SP-Initiated SSO:
+--    Navigate to: https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix | lower }}_{% endif %}{{ org_account_name | lower }}.snowflakecomputing.com
+--    Click "Log in using {{ identity_provider }} SSO"
+--
+-- 2. IdP-Initiated SSO:
+--    Log into your IdP and click the Snowflake application tile
+--
+-- 3. Verify in Snowflake:
+--    SELECT CURRENT_USER(), CURRENT_ROLE(), CURRENT_SESSION();
+-- ============================================================================

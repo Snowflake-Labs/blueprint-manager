@@ -1,0 +1,57 @@
+## Ownership Transfer
+
+### Objects to Transfer
+
+The following objects will be transferred to `{{ data_product_name | upper }}_ADMIN`:
+
+#### Databases
+
+{%- for zone in zone_list %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+- `{{ db_name }}` ({{ zone }} zone)
+{%- endfor %}
+
+#### Schemas
+
+All schemas within each database will also be transferred.
+
+| Current Owner | New Owner |
+|---------------|-----------|
+| SYSADMIN | `{{ data_product_name | upper }}_ADMIN` |
+
+### Post-Transfer Privileges
+
+After transfer, `{{ data_product_name | upper }}_ADMIN` will:
+- Own all databases and schemas
+- Control all grants within managed access schemas
+- Be able to delegate access to ADMIN, WRITER, and READER roles

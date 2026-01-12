@@ -2,40 +2,25 @@
 
 ## Overview
 
-This section documents how the organization name is configured in Snowflake Account Identifiers. Account Identifiers are critical components of URLs and programmatic connections to Snowflake. Once established and in use, changes require coordinated updates across all connection configurations.
+This section documents how the organization name is configured in Snowflake Account Identifiers. Account Identifiers are critical components of URLs and programmatic connections to Snowflake. 
+
+**⚠️ Important:** Once your organization name is in use with users and systems securely connecting to Snowflake using your Account Identifiers and URLs, it is difficult to change the organization name in all the places that would require the change. For this reason, we strongly encourage customers to plan ahead and ensure that their Organization Name meets their future connectivity needs up front.
 
 ## Decision Summary
 
 | Configuration | Value |
 |---------------|-------|
 | **Organization Name** | `{{ snowflake_org_name | upper }}` |
-| **Account Name Prefix** | {% if account_name_prefix | upper != "NONE" %}`{{ account_name_prefix }}`{% else %}None{% endif %} |
 
 ## Account Identifier Structure
 
 Your Snowflake Account Identifiers will follow this pattern:
 
-{%- if account_name_prefix | upper != "NONE" %}
-**URL Structure (with prefix):**
-```
-https://{{ snowflake_org_name | upper }}-{{ account_name_prefix }}_<account_name>.snowflakecomputing.com
+**URL Structure:**
 ```
 
-**Example URLs:**
-| Account Purpose | Account Name | Full URL |
-|-----------------|--------------|----------|
-| Production | `{{ account_name_prefix }}_prod` | `https://{{ snowflake_org_name | upper }}-{{ account_name_prefix }}_prod.snowflakecomputing.com` |
-| Development | `{{ account_name_prefix }}_dev` | `https://{{ snowflake_org_name | upper }}-{{ account_name_prefix }}_dev.snowflakecomputing.com` |
-| Organization Account | `{{ account_name_prefix }}_org` | `https://{{ snowflake_org_name | upper }}-{{ account_name_prefix }}_org.snowflakecomputing.com` |
-
-**Benefits of using a prefix:**
-- Enforces consistent naming across all accounts
-- Makes organization identity visible in account names
-- Helps differentiate accounts when organization name is system-generated
-{%- else %}
-**URL Structure (no prefix):**
-```
 https://{{ snowflake_org_name | upper }}-<account_name>.snowflakecomputing.com
+
 ```
 
 **Example URLs:**
@@ -44,12 +29,7 @@ https://{{ snowflake_org_name | upper }}-<account_name>.snowflakecomputing.com
 | Production | `prod` | `https://{{ snowflake_org_name | upper }}-prod.snowflakecomputing.com` |
 | Development | `dev` | `https://{{ snowflake_org_name | upper }}-dev.snowflakecomputing.com` |
 | Organization Account | `org` | `https://{{ snowflake_org_name | upper }}-org.snowflakecomputing.com` |
-
-**Benefits of no prefix:**
-- Shorter, more concise account names
-- Organization identity already visible in organization name portion of URL
-- More flexibility for individual account naming
-{%- endif %}
+| Finance Domain | `finance` | `https://{{ snowflake_org_name | upper }}-finance.snowflakecomputing.com` |
 
 ## Connectivity Reference
 
@@ -61,5 +41,3 @@ All users and systems connecting to Snowflake will use these Account Identifiers
 | Snowflake CLI / SnowSQL | `{{ snowflake_org_name | upper }}-<account_name>` |
 | Drivers & Connectors | Account identifier: `{{ snowflake_org_name | upper }}-<account_name>` |
 | Third-party Integrations | Use account identifier in partner tool configuration |
-
-> **⚠️ Important:** Once users and systems are connecting with these identifiers, changes require coordinated updates across all connection configurations.

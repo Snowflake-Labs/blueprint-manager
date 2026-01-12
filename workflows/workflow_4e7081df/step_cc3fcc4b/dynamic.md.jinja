@@ -1,0 +1,56 @@
+## Create Account
+
+### Account Summary
+
+You are about to create the following account:
+
+| Parameter | Value |
+|-----------|-------|
+| **Account Name** | `{{ new_account_name | upper }}` |
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+| **Domain** | {{ account_domain }} |
+| **Strategy** | Domain-based (environments at database level) |
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+| **Environment** | {{ account_environment }} |
+| **Strategy** | Environment-based (domains at database level) |
+{%- else %}
+| **Domain** | {{ account_domain }} |
+| **Environment** | {{ account_environment }} |
+| **Strategy** | Domain + Environment |
+{%- endif %}
+| **Edition** | {{ new_account_edition }} |
+| **Region** | {{ new_account_region }} |
+
+### Initial Administrator
+
+| Parameter | Value |
+|-----------|-------|
+| **Username** | {{ new_account_admin_name }} |
+| **Email** | {{ new_account_admin_email }} |
+| **Initial Role** | ACCOUNTADMIN |
+
+### Account URL
+
+After creation, this account will be accessible at:
+
+`https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com`
+
+### Execution Instructions
+
+1. **Run the SQL below** from your Organization Account using the ORGADMIN role
+2. **Wait for confirmation** that the account was created successfully
+3. **Verify the account** appears in `SHOW ORGANIZATION ACCOUNTS`
+4. **Log into the new account** using the initial administrator credentials
+5. **Change the password** immediately upon first login
+6. **Continue with the next step** (Consume Infrastructure Share) from the NEW account
+
+### ⚠️ Important: Switch Accounts After Creation
+
+After executing the CREATE ACCOUNT command, you must:
+1. Open a new browser tab or window
+2. Navigate to the new account URL shown above
+3. Log in with the initial administrator credentials
+4. Change the temporary password
+5. Continue the workflow from the NEW account
+
+The remaining steps in this workflow must be executed from the newly created account.

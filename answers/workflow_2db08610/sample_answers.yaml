@@ -1,0 +1,31 @@
+data_product_environment: Sample option
+governance_name: Sample governance name
+object_component_order: <domain>_<env>_<dataproduct>
+warehouse_access_pattern: Dedicated (each role uses specific warehouses)
+cost_center: Sample cost center
+schema_definitions: null
+zone_list:
+- zone_list_Item 1
+- zone_list_Item 2
+- zone_list_Item 3
+resource_monitor_emails:
+- resource_monitor_emails_Item 1
+- resource_monitor_emails_Item 2
+- resource_monitor_emails_Item 3
+grant_account_access_roles: Yes - Grant account access roles (tasks, masking, tagging)
+role_structure: Simple (Admin + Read only)
+reader_zone_access: Sample option
+owner_users:
+- owner_users_Item 1
+- owner_users_Item 2
+- owner_users_Item 3
+account_strategy: Single Account
+warehouse_definitions: null
+data_retention_days: 0 (Transient - no Time Travel)
+data_product_name: Sample data product name
+data_product_description: Sample data product description
+target_account_name: Sample target account name
+platform_database_name: Sample platform database name
+resource_monitor_action: Notify Only (continue running)
+data_product_domain: Sample option
+admin_role_granted_to: Sample admin role granted to

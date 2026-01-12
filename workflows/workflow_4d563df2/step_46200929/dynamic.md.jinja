@@ -9,7 +9,7 @@
 
 After this step, you'll have the following tags:
 
-**Core Tags (from Platform Foundation task):**
+**Core Tags (from Task 1):**
 
 | Tag | Purpose |
 |-----|---------|
@@ -18,6 +18,7 @@ After this step, you'll have the following tags:
 | `dataproduct` | Data product ID |
 | `workload` | Workload type |
 | `zone` | Data zone |
+| `data_classification` | Data sensitivity level |
 
 **Additional Tags (this step):**
 
@@ -44,19 +45,19 @@ ALTER WAREHOUSE my_warehouse SET TAG
   domain = 'FINANCE',
   environment = 'PROD',
   owner = 'Data Team';
-```
+````
 
-## Task 3 Summary: Cost Management
+## **Task 3 Summary: Cost Management**
 
 | Step | Configuration | Status |
-|------|---------------|--------|
-| 3.1 | Spending Budgets | {% if enable_budgets == "Yes" %}Enabled{% else %}Not enabled{% endif %} |
-{%- if enable_budgets == "Yes" %}
-| 3.2 | Budget Amount | {{ account_monthly_budget }} credits/month |
-{%- endif %}
-| 3.3 | Resource Monitors | {% if enable_resource_monitors == "Yes" %}Enabled{% else %}Not enabled{% endif %} |
-{%- if enable_resource_monitors == "Yes" %}
-| 3.4 | Monitor Limit | {{ account_resource_monitor_limit }} credits |
-{%- endif %}
+| :---- | :---- | :---- |
+| 3.1 | Spending Budgets | {% if enable\_budgets \== "Yes" %}Enabled{% else %}Not enabled{% endif %} |
+| {%- if enable\_budgets \== "Yes" %} |  |  |
+| 3.2 | Budget Amount | {{ account\_monthly\_budget }} credits/month |
+| {%- endif %} |  |  |
+| 3.3 | Resource Monitors | {% if enable\_resource\_monitors \== "Yes" %}Enabled{% else %}Not enabled{% endif %} |
+| {%- if enable\_resource\_monitors \== "Yes" %} |  |  |
+| 3.4 | Monitor Limit | {{ account\_resource\_monitor\_limit }} credits |
+| {%- endif %} |  |  |
 | 3.5 | Cost Allocation Tags | Extended |
-| 3.6 | Additional Tags | {{ additional_tag_dimensions }} |
+| 3.6 | Additional Tags | {{ additional\_tag\_dimensions }} |

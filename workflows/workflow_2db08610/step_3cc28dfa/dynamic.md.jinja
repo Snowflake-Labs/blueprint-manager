@@ -1,0 +1,119 @@
+## Schema Creation
+
+### Schemas to Create
+
+{%- for zone in zone_list %}
+
+#### {{ zone | upper }} Zone
+
+{#- Build database name based on component order and account strategy -#}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+
+**Database:** `{{ db_name }}`
+
+| Schema | Purpose | Classification | Access Roles |
+|--------|---------|----------------|--------------|
+{%- for schema in schema_definitions if schema.zone == zone %}
+| `{{ schema.schema_name }}` | {{ schema.purpose }} | {{ schema.data_classification }} | `SC_R_{{ schema.schema_name }}`, `SC_W_{{ schema.schema_name }}`, `SC_C_{{ schema.schema_name }}` |
+{%- endfor %}
+
+{%- endfor %}
+
+### Schema Access Roles
+
+Each schema will have three database roles:
+
+| Role Pattern | Purpose | Privileges | Inherits From |
+|--------------|---------|------------|---------------|
+| `SC_R_<schema>` | Read access | SELECT on tables, views, functions | — |
+| `SC_W_<schema>` | Write access | INSERT, UPDATE, DELETE, EXECUTE, streams, tasks | SC_R |
+| `SC_C_<schema>` | Create access | CREATE TABLE, VIEW, PROCEDURE, etc. | SC_W |
+
+### Role Hierarchy
+
+Schema roles connect to database roles, which connect to account functional roles:
+
+```
+Account Role    Database Role    Schema Roles
+─────────────   ─────────────    ─────────────
+{%- for zone in zone_list %}
+{%- for schema in schema_definitions if schema.zone == zone %}
+DP_READ      →    DB_R     ←    SC_R_{{ schema.schema_name | upper }}
+DP_WRITE     →    DB_W     ←    SC_W_{{ schema.schema_name | upper }}
+DP_ADMIN     →    DB_C     ←    SC_C_{{ schema.schema_name | upper }}
+{%- endfor %}
+{%- endfor %}
+```
+
+### Schema Settings
+
+| Setting | Value |
+|---------|-------|
+| **Managed Access** | Yes (WITH MANAGED ACCESS) |
+| **Data Retention** | Inherited from database |
+| **Initial Owner** | SYSADMIN |
+| **Final Owner** | Data Product Owner (after Role & Access Control) |
+
+### Tags Applied
+
+Each schema will be tagged with:
+
+| Tag | Value |
+|-----|-------|
+| `DOMAIN` | {{ data_product_domain | upper }} |
+| `ENVIRONMENT` | {{ data_product_environment | upper }} |
+| `DATAPRODUCT` | {{ data_product_name | upper }} |
+| `ZONE` | (matches parent database) |
+| `DATA_CLASSIFICATION` | (per schema definition) |
+
+### Total Schemas: {{ schema_definitions | length }}
+
+### Alternative: Stored Procedure Approach
+
+If your organization uses centralized schema provisioning, you can call the provisioning stored procedure instead of running the inline SQL:
+
+```sql
+{%- for zone in zone_list %}
+{%- for schema in schema_definitions if schema.zone == zone %}
+CALL INFRA.UTL_PROVISION.PROVISION_SCHEMA_SP(
+  '<database_name>',
+  '{{ schema.schema_name | upper }}',
+  {{ data_retention_days | default(1) }},
+  '{{ schema.purpose }}',
+  TRUE
+);
+{%- endfor %}
+{%- endfor %}
+```
+
+Contact your platform team to confirm the stored procedure is available in your account.

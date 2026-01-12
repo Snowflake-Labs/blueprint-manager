@@ -1,0 +1,58 @@
+## Security Configuration Approach
+
+### Your Selections
+
+| Setting | Value |
+|---------|-------|
+| **Configuration Approach** | {{ security_config_approach }} |
+| **SAML/SSO** | {{ account_configure_saml }} |
+
+### Platform Foundation Settings (Reference)
+
+These are the settings from your Platform Foundation setup:
+
+| Setting | Platform Foundation Value |
+|---------|--------------------------|
+| **Identity Provider** | {{ identity_provider }} |
+| **SAML/SSO Configured** | {{ configure_saml }} |
+
+{%- if security_config_approach == "Use Organization Configuration" %}
+
+### Using Organization Configuration
+
+You've chosen to use the same security settings established in Platform Foundation:
+- **Identity Provider**: {{ identity_provider }}
+- **Network Rules**: Same IP ranges as Organization Account
+- **Authentication Policies**: Same requirements as Organization Account
+
+The following steps will create these configurations in this account using the organization's standard values.
+
+{%- else %}
+
+### Custom Configuration Selected
+
+You've chosen to configure custom security settings for this account. The following steps will ask for account-specific configuration values.
+
+**Note:** Custom settings provide flexibility but require additional configuration and may complicate administration if settings diverge significantly from the organization standard.
+
+{%- endif %}
+
+{%- if account_configure_saml == "Yes - Configure SAML for this account" %}
+
+### SAML/SSO Configuration
+
+A dedicated step will guide you through SAML configuration for this account. You'll need:
+- IdP metadata (certificate, SSO URL, issuer)
+- Application registration in your IdP for this Snowflake account
+
+{%- else %}
+
+### Password Authentication
+
+Users in this account will authenticate with:
+- Snowflake username and password
+- Multi-Factor Authentication (MFA)
+
+You can configure SAML later without rebuilding the account.
+
+{%- endif %}

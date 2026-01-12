@@ -1,30 +1,14 @@
-# Configure Organization Account
-
-## Overview
-
-This section documents the decision regarding the Organization Account for our Snowflake deployment. The Organization Account is a special account type that provides centralized management capabilities to oversee and manage multiple Snowflake accounts.
-
-## Decision Summary
-
 | Configuration | Value |
 |---------------|-------|
-| **Organization Account** | {% if org_account_name | upper != "NONE" %}`{{ org_account_name | upper }}`{% else %}Not configured{% endif %} |
-{%- if org_account_name | upper != "NONE" %}
-{%- if account_name_prefix | upper != "NONE" %}
-| **Account URL** | `https://{{ snowflake_org_name | upper }}-{{ account_name_prefix }}_{{ org_account_name }}.snowflakecomputing.com` |
-{%- else %}
-| **Account URL** | `https://{{ snowflake_org_name | upper }}-{{ org_account_name }}.snowflakecomputing.com` |
-{%- endif %}
-{%- endif %}
+| **Create Organization Account** | {{ enable_org_account }} |
 
-## Configuration Details
+{%- if enable_org_account == "Yes" %}
 
-{%- if org_account_name | upper != "NONE" %}
-### Organization Account: `{{ org_account_name | upper }}`
+## Organization Account: Enabled
 
 We have decided to **create an Organization Account** for centralized management of our Snowflake environment.
 
-**Capabilities Enabled:**
+**Capabilities That Will Be Enabled:**
 
 | Capability | Description |
 |------------|-------------|
@@ -44,17 +28,21 @@ We have decided to **create an Organization Account** for centralized management
 - It is used exclusively for administrative and management purposes
 - Additional ACCOUNTADMIN users should be added for redundancy
 
+**Next Step:** In the next step, you will create the actual Organization Account, including the account name, administrator details, edition, and region.
+
 {%- else %}
-### Organization Account Not Configured
+
+## Organization Account: Not Enabled
 
 We have decided **not to create an Organization Account** at this time.
 
 **Implications:**
 - Single-account deployment without centralized management features
 - Organization-level features are not available
-- Can be enabled later if ORGADMIN role is available
+- Can be enabled later if you select or upgrade to Snowflake edition Enterprise or higher
 
-> **⚠️ Note:** For multi-account strategies, an Organization Account is **required**. If you plan to expand to multiple accounts in the future, consider enabling the Organization Account for easier migration.
+**Next Step:** You will skip the Create Organization Account step and continue to the next configuration step.
+
 {%- endif %}
 
 ## Key Terminology
@@ -62,6 +50,6 @@ We have decided **not to create an Organization Account** at this time.
 | Term | Definition |
 |------|------------|
 | Organization | A Snowflake object that links accounts owned by your business entity |
-| Organization Name | Your Snowflake organization identifier (e.g., `ACME` or `XY12345`) |
+| Organization Name | Your Snowflake business entity identifier (e.g., `ACME` or `XY12345`) |
 | Organization Account | A special account type with ORGADMIN privileges for managing other accounts |
-| Organization Account Name | The name of your Organization Account{% if org_account_name | upper != "NONE" %} (`{{ org_account_name | upper }}`){% endif %} |
+| Organization Account Name | The name you assign to your Organization Account (configured in the next step if enabled) |

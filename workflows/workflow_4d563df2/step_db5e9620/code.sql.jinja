@@ -1,22 +1,30 @@
 -- ============================================================================
 -- CREATE ORGANIZATION ACCOUNT
 -- ============================================================================
--- This script creates the Organization Account for centralized management
--- Requires ORGADMIN role privileges
+-- This script creates the Organization Account with the specified configuration
+-- Run this from your current (initial) account with ORGADMIN privileges
 -- ============================================================================
+
+-- ============================================================================
+-- VERIFY ORGADMIN PRIVILEGES
+-- ============================================================================
+-- Before creating an Organization Account, verify you have ORGADMIN privileges
 
 USE ROLE ORGADMIN;
 
--- ============================================================================
--- STEP 1: CREATE THE ORGANIZATION ACCOUNT
--- ============================================================================
--- Note: This command creates a new organization account
--- Requires ORGADMIN role in the source account
--- See: https://docs.snowflake.com/en/sql-reference/sql/create-organization-account
+-- Check current organization
+SELECT CURRENT_ORGANIZATION_NAME() AS organization_name;
 
-CREATE ORGANIZATION ACCOUNT {% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix }}_{% endif %}{{ org_account_name | lower }}
+-- List existing accounts in the organization
+SHOW ORGANIZATION ACCOUNTS;
+
+-- ============================================================================
+-- CREATE ORGANIZATION ACCOUNT
+-- ============================================================================
+
+CREATE ORGANIZATION ACCOUNT {{ org_account_name | upper }}
   ADMIN_NAME = '{{ org_admin_name }}'
-  ADMIN_PASSWORD = 'ChangeMe123!'  -- Initial password - MUST be changed on first login
+  ADMIN_USER_TYPE = PERSON
   EMAIL = '{{ org_admin_email }}'
   MUST_CHANGE_PASSWORD = TRUE
   EDITION = {{ org_account_edition | upper }}
@@ -24,56 +32,27 @@ CREATE ORGANIZATION ACCOUNT {% if account_name_prefix | upper != "NONE" %}{{ acc
   COMMENT = 'Organization Account for centralized management';
 
 -- ============================================================================
--- STEP 2: VERIFY ACCOUNT CREATION
+-- VERIFY ACCOUNT CREATION
 -- ============================================================================
 
--- List all accounts in the organization to verify creation
+-- List accounts to verify the new Organization Account was created
 SHOW ORGANIZATION ACCOUNTS;
 
--- Get details of the new account
-SHOW ORGANIZATION ACCOUNTS LIKE '{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix }}_{% endif %}{{ org_account_name | lower }}';
-
--- ============================================================================
--- STEP 3: RECORD ACCOUNT DETAILS
--- ============================================================================
+-- View details of the new account
+SELECT * FROM SNOWFLAKE.ORGANIZATION_USAGE.ACCOUNTS 
+WHERE ACCOUNT_NAME = '{{ org_account_name | upper }}';
 
 /*
-Account Created:
-- Account Name: {% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix }}_{{ org_account_name }}{% else %}{{ org_account_name }}{% endif %}
-
-- Account URL: https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix }}_{% endif %}{{ org_account_name | lower }}.snowflakecomputing.com
-- Edition: {{ org_account_edition }}
-- Region: {{ org_account_region }}
-- Initial Admin: {{ org_admin_name }} ({{ org_admin_email }})
-
-IMPORTANT: SWITCH TO THE ORGANIZATION ACCOUNT
-
-After creating the Organization Account, you must LOG INTO IT to continue the setup.
-All remaining steps in this workflow will be executed from the Organization Account.
-
-1. Open a new browser tab/window
-2. Navigate to the Organization Account URL shown above
-3. Log in with the admin credentials ({{ org_admin_name }})
-4. Change the initial admin password immediately
-5. Continue with the Define Domains & Environments step from the Organization Account
-
-The remaining SQL in this workflow should be run from the ORGANIZATION ACCOUNT.
-*/
-
--- ============================================================================
--- ABOUT THE ORGANIZATION ACCOUNT ROLES
--- ============================================================================
--- The organization account uses GLOBALORGADMIN role for organization-level tasks
--- This is different from ORGADMIN which is used in regular ORGADMIN-enabled accounts
--- See: https://docs.snowflake.com/en/user-guide/organization-accounts
-
-/*
--- In the Organization Account, the GLOBALORGADMIN role is used to:
--- - View organization-level data from all accounts
--- - Manage organization-level objects (users, groups)
--- - Create and manage accounts in the organization
--- - Enable replication for accounts
-
--- The initial admin user will have ACCOUNTADMIN role
--- They can then use ACCOUNTADMIN to manage the organization account
+============================================================================
+NEXT STEPS
+============================================================================
+1. The initial administrator ({{ org_admin_name }}) will receive an email 
+   with login credentials
+2. Log into the new Organization Account at:
+   https://{{ snowflake_org_name | upper }}-{{ org_account_name | upper }}.snowflakecomputing.com
+3. Change the initial password on first login
+4. Set up MFA for the ACCOUNTADMIN user
+5. Add 1-2 additional ACCOUNTADMIN users for redundancy
+6. Continue the remaining workflow steps in the Organization Account
+============================================================================
 */

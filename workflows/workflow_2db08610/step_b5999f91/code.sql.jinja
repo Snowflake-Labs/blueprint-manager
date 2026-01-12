@@ -1,0 +1,48 @@
+-- ============================================================================
+-- WAREHOUSE REQUIREMENTS PLANNING
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+-- Domain: {{ data_product_domain }}
+-- Environment: {{ data_product_environment }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+
+/*
+WAREHOUSE REQUIREMENTS DEFINED
+==============================
+
+This step captures warehouse requirements. Warehouses will be created in the Compute Configuration task.
+
+Multi-Cluster: Enabled for all warehouses (1-3 clusters, scales on demand)
+
+Warehouses Planned ({{ warehouse_definitions | length }} total):
+{%- for wh in warehouse_definitions %}
+- {{ wh.warehouse_name }}{% if wh.modifier %} (modifier: {{ wh.modifier }}){% endif %}
+
+  Purpose: {{ wh.purpose }}
+  Size: {{ wh.size }}
+  Auto-Suspend: {{ wh.auto_suspend_seconds }} seconds
+  Multi-Cluster: Yes (1-3 clusters)
+{%- endfor %}
+
+Cost Allocation Tags:
+- DOMAIN: {{ data_product_domain }}
+- ENVIRONMENT: {{ data_product_environment }}
+- DATAPRODUCT: {{ data_product_name }}
+- WORKLOAD: <purpose per warehouse>
+
+DATA PRODUCT PLANNING COMPLETE
+==============================
+
+You have completed the Data Product Planning task.
+
+Summary:
+- Data Product: {{ data_product_name }}
+- Domain: {{ data_product_domain }}
+- Environment: {{ data_product_environment }}
+- Zones: {{ zone_list | length }}
+- Schemas: {{ schema_definitions | length }}
+- Warehouses: {{ warehouse_definitions | length }}
+*/

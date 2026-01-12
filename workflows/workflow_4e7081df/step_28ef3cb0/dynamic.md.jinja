@@ -1,0 +1,149 @@
+# Enable Multi-Factor Authentication
+
+## Overview
+
+This section provides guidance for enabling and enforcing Multi-Factor Authentication (MFA) for users in your Snowflake account.
+
+## MFA Configuration Summary
+
+| Setting | Value |
+|---------|-------|
+| **Enforcement Timeline** | {{ mfa_enforcement_timeline }} |
+| **Preferred Method** | {{ preferred_mfa_method }} |
+| **Support Contact** | {{ mfa_support_contact }} |
+
+## User Communication Template
+
+Use the following template to communicate MFA requirements to your users:
+
+---
+
+**Subject: Action Required: Enable MFA for Snowflake Access**
+
+Dear Snowflake User,
+
+As part of our security enhancements, Multi-Factor Authentication (MFA) is now required for accessing Snowflake.
+
+**Timeline:** {{ mfa_enforcement_timeline }}
+
+**What You Need to Do:**
+{%- if preferred_mfa_method == "TOTP (Authenticator Apps)" %}
+1. Download an authenticator app if you don't have one:
+   - Duo Mobile (recommended)
+   - Google Authenticator
+   - Microsoft Authenticator
+
+2. Log into Snowflake: `https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix | lower }}_{% endif %}{{ org_account_name | lower }}.snowflakecomputing.com`
+
+3. Go to your profile (click your name in the bottom left)
+
+4. Select "Security" → "Multi-factor Authentication"
+
+5. Click "Enroll" and scan the QR code with your authenticator app
+
+6. Enter the 6-digit code to complete enrollment
+{%- elif preferred_mfa_method == "Passkey (Security Keys/Biometrics)" %}
+1. Ensure you have a FIDO2-compatible device:
+   - Hardware security key (YubiKey, Titan)
+   - Laptop with fingerprint reader
+   - Phone with biometric capability
+
+2. Log into Snowflake: `https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix | lower }}_{% endif %}{{ org_account_name | lower }}.snowflakecomputing.com`
+
+3. Go to your profile (click your name in the bottom left)
+
+4. Select "Security" → "Multi-factor Authentication"
+
+5. Click "Enroll" and select "Passkey"
+
+6. Follow the prompts to register your device
+{%- else %}
+1. Choose your preferred MFA method:
+   - **Authenticator App**: Duo Mobile, Google Authenticator, Microsoft Authenticator
+   - **Passkey**: Hardware security key or device biometrics
+
+2. Log into Snowflake: `https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix | lower }}_{% endif %}{{ org_account_name | lower }}.snowflakecomputing.com`
+
+3. Go to your profile (click your name in the bottom left)
+
+4. Select "Security" → "Multi-factor Authentication"
+
+5. Click "Enroll" and follow the prompts for your chosen method
+{%- endif %}
+
+**Need Help?**
+Contact: {{ mfa_support_contact }}
+
+Thank you for helping keep our data secure!
+
+---
+
+## MFA Enrollment Status
+
+After users have been given time to enroll, verify MFA status with the following query:
+
+```sql
+-- Check MFA enrollment status for admin users
+SELECT 
+  name,
+  login_name,
+  email,
+  has_mfa,
+  CASE 
+    WHEN has_mfa = TRUE THEN 'Enrolled'
+    ELSE 'Not Enrolled'
+  END as mfa_status
+FROM snowflake.account_usage.users
+WHERE deleted_on IS NULL
+  AND name IN (
+{%- if identity_provider == 'None - Manual User Management' %}
+{%- for user in manual_admin_users %}
+    '{{ user.username | upper }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- else %}
+{%- for user in scim_admin_users %}
+    '{{ user.login_name }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- endif %}
+  )
+ORDER BY has_mfa, name;
+```
+
+## Users Requiring MFA Enrollment
+
+Based on your configuration, the following administrative users should enroll in MFA:
+
+| User | Role | MFA Required By |
+|------|------|-----------------|
+{%- if identity_provider == 'None - Manual User Management' %}
+{%- for user in manual_admin_users %}
+| `{{ user.username }}` | {{ user.admin_role | upper }} | {{ mfa_enforcement_timeline }} |
+{%- endfor %}
+{%- else %}
+{%- for user in scim_admin_users %}
+| `{{ user.login_name }}` | {{ user.admin_role | upper }} | {{ mfa_enforcement_timeline }} |
+{%- endfor %}
+{%- endif %}
+
+## Task Summary: Security & Identity Configuration
+
+This completes the **Security & Identity Configuration** task of the Platform Foundation Setup workflow. The following has been configured:
+
+| Step | Configuration | Status |
+|------|---------------|--------|
+| 2.1 | SCIM Integration | {{ identity_provider }} |
+| 2.2 | Account Administrators | {% if identity_provider == 'None - Manual User Management' %}{{ manual_admin_users | length }}{% else %}{{ scim_admin_users | length }}{% endif %} admin users provisioned |
+| 2.3 | SAML/SSO | {% if configure_saml == 'Yes - Configure SAML now' %}`{{ saml_integration_name | upper }}`{% else %}Deferred{% endif %} |
+| 2.4 | Break-Glass Access | {{ breakglass_accounts | length }} break-glass account(s) |
+| 2.5 | Network Policies | {{ enable_account_network_policy }} |
+| 2.6 | Authentication Policies | {{ human_auth_methods }} |
+| 2.7 | MFA Enforcement | {{ mfa_enforcement_timeline }} |
+
+## Next Steps
+
+1. Send the MFA communication to all administrative users
+2. Monitor MFA enrollment using the verification query
+3. Follow up with users who haven't enrolled before the deadline
+4. Test SSO and MFA login flows
+5. Validate break-glass access still works
+6. Proceed to the Cost Management task

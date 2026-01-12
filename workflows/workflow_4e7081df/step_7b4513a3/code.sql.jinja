@@ -1,0 +1,94 @@
+-- ============================================================================
+-- CREATE ACCOUNT ADMINISTRATORS
+-- ============================================================================
+-- This script creates administrator users directly in Snowflake
+-- (Manual user management - SCIM not configured)
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE ADMINISTRATOR USERS
+-- ============================================================================
+-- All users are created with MUST_CHANGE_PASSWORD = TRUE for security
+-- Initial password should be communicated securely to each user
+{%- for user in manual_admin_users %}
+
+-- Create user: {{ user.first_name }} {{ user.last_name }} ({{ user.admin_role | upper }})
+CREATE USER IF NOT EXISTS {{ user.username | upper }}
+  PASSWORD = 'TempPassword123!'  -- MUST be changed on first login
+  LOGIN_NAME = '{{ user.username }}'
+  DISPLAY_NAME = '{{ user.first_name }} {{ user.last_name }}'
+  FIRST_NAME = '{{ user.first_name }}'
+  LAST_NAME = '{{ user.last_name }}'
+  EMAIL = '{{ user.email }}'
+  MUST_CHANGE_PASSWORD = TRUE
+  DEFAULT_ROLE = '{% if user.admin_role | upper == "ACCOUNTADMIN" %}SYSADMIN{% else %}{{ user.admin_role | upper }}{% endif %}'
+  COMMENT = 'Administrator created during platform setup';
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 2: GRANT ADMINISTRATIVE ROLES
+-- ============================================================================
+{%- for user in manual_admin_users %}
+GRANT ROLE {{ user.admin_role | upper }} TO USER {{ user.username | upper }};
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 3: GRANT ROLE HIERARCHY (for ACCOUNTADMIN users)
+-- ============================================================================
+-- ACCOUNTADMIN users should also have SECURITYADMIN and SYSADMIN
+-- to enable proper role usage for day-to-day tasks
+{%- for user in manual_admin_users %}
+{%- if user.admin_role | upper == "ACCOUNTADMIN" %}
+GRANT ROLE SECURITYADMIN TO USER {{ user.username | upper }};
+GRANT ROLE SYSADMIN TO USER {{ user.username | upper }};
+{%- endif %}
+{%- endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- List all created users
+SHOW USERS;
+
+-- Verify admin role grants
+SELECT 
+  grantee_name,
+  role,
+  granted_by,
+  created_on
+FROM snowflake.account_usage.grants_to_users
+WHERE role IN ('ACCOUNTADMIN', 'SECURITYADMIN', 'SYSADMIN', 'USERADMIN')
+  AND deleted_on IS NULL
+ORDER BY role, grantee_name;
+
+-- ============================================================================
+-- POST-CREATION STEPS
+-- ============================================================================
+
+/*
+After running this script:
+
+1. COMMUNICATE INITIAL PASSWORDS SECURELY
+   - Use a secure password sharing tool or in-person communication
+   - Do NOT send passwords via email or unencrypted channels
+   
+2. VERIFY USER ACCESS
+   - Have each user log in and change their password
+   - Confirm they can access Snowflake with their assigned role
+
+3. ENABLE MFA (Enable Multi-Factor Authentication step)
+   - All administrative users should enroll in MFA
+   - This adds a critical layer of security
+
+4. DOCUMENT ACCESS
+   - Record who has administrative access and when it was granted
+   - Establish a process for periodic access reviews
+
+Users Created:
+{%- for user in manual_admin_users %}
+- {{ user.username }} ({{ user.first_name }} {{ user.last_name }}) - {{ user.admin_role | upper }}
+{%- endfor %}
+*/

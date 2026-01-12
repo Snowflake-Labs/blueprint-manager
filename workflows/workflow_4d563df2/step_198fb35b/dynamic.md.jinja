@@ -18,6 +18,11 @@ The following objects from `{{ platform_database_name | upper }}.{{ governance_n
 - `DATAPRODUCT` - Data product identifier
 - `WORKLOAD` - Workload type
 - `ZONE` - Data zone
+- `DATA_CLASSIFICATION` - Data sensitivity level
+
+**Network Rules (if created in Security & Identity task):**
+- Allowed network rules (e.g., `corporate_vpn`, `cloud_services`)
+- Blocked network rules (if configured)
 
 **Views (if created in Cost Management task):**
 - `cost_by_domain` - Credit usage by domain
@@ -31,15 +36,14 @@ When you create additional accounts in your organization, you'll need to create 
 ```sql
 -- Run in the target account
 CREATE DATABASE {{ platform_database_name | lower }}_shared FROM SHARE {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}.{{ infrastructure_share_name | upper }};
-```
+````
 
 This creates a read-only database that references the shared objects in real-time.
 
-### Accounts to Grant Access
+### **Accounts to Grant Access**
 
 When new accounts are created, grant them access to this share:
 
-```sql
+```
 -- Run in the Organization Account
 ALTER SHARE {{ infrastructure_share_name | upper }} ADD ACCOUNTS = {{ snowflake_org_name | upper }}.<new_account_name>;
-```

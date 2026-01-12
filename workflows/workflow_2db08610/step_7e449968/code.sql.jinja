@@ -1,0 +1,178 @@
+-- ============================================================================
+-- CREATE DATABASES
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+-- Domain: {{ data_product_domain }}
+-- Environment: {{ data_product_environment }}
+-- Account Strategy: {{ account_strategy }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: SYSADMIN
+-- ============================================================================
+
+USE ROLE SYSADMIN;
+
+-- ============================================================================
+-- TAG DATABASE REFERENCE
+-- ============================================================================
+-- Tags are stored in the Infrastructure Database (or shared copy for multi-account)
+{%- if account_strategy == 'Single Account' %}
+{%- set tag_db = platform_database_name | upper %}
+{%- else %}
+{%- set tag_db = platform_database_name | upper ~ '_SHARED' %}
+{%- endif %}
+
+{#- Extract numeric value from data retention selection -#}
+{%- set retention_days = data_retention_days | regex_replace('[^0-9].*', '') | int %}
+
+-- ============================================================================
+-- CREATE DATABASES FOR EACH ZONE
+-- ============================================================================
+-- Naming Pattern: {{ object_component_order }}_<zone>
+-- Components at account level are excluded from object names
+{%- if account_strategy == 'Single Account' %}
+-- Single Account: All components included
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+-- Environment-based: Environment excluded (at account level)
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+-- Domain-based: Domain excluded (at account level)
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+-- Domain + Environment: Both excluded (at account level)
+{%- endif %}
+
+{%- for zone in zone_list %}
+
+-- ----------------------------------------------------------------------------
+-- {{ zone | upper }} Zone Database
+-- ----------------------------------------------------------------------------
+
+{#- Build database name based on component order and account strategy -#}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+
+CREATE DATABASE IF NOT EXISTS {{ db_name }}
+  DATA_RETENTION_TIME_IN_DAYS = {{ retention_days }}
+  COMMENT = '{{ data_product_description }} ({{ zone | upper }} zone)';
+
+-- Drop the default PUBLIC schema (enforce explicit schema usage)
+DROP SCHEMA IF EXISTS {{ db_name }}.PUBLIC;
+
+-- Apply cost allocation tags to database
+ALTER DATABASE {{ db_name }} SET TAG
+  {{ tag_db }}.{{ governance_name | upper }}.DOMAIN = '{{ data_product_domain | upper }}',
+  {{ tag_db }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ data_product_environment | upper }}',
+  {{ tag_db }}.{{ governance_name | upper }}.DATAPRODUCT = '{{ data_product_name | upper }}',
+  {{ tag_db }}.{{ governance_name | upper }}.ZONE = '{{ zone | upper }}';
+
+-- Create database-level database roles for layered access control
+USE DATABASE {{ db_name }};
+
+CREATE DATABASE ROLE IF NOT EXISTS DB_R
+  COMMENT = 'Read access role for {{ db_name }}';
+
+CREATE DATABASE ROLE IF NOT EXISTS DB_W
+  COMMENT = 'Write access role for {{ db_name }}';
+
+CREATE DATABASE ROLE IF NOT EXISTS DB_C
+  COMMENT = 'Create access role for {{ db_name }}';
+
+-- Establish database role hierarchy: R <- W <- C
+GRANT DATABASE ROLE DB_R TO DATABASE ROLE DB_W;
+GRANT DATABASE ROLE DB_W TO DATABASE ROLE DB_C;
+
+{%- endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- List all databases for this data product
+SHOW DATABASES LIKE '%{{ data_product_name | upper }}%';
+
+-- Verify database roles
+{%- for zone in zone_list %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+SHOW DATABASE ROLES IN DATABASE {{ db_name }};
+{%- endfor %}
+
+/*
+DATABASES CREATED
+=================
+
+Created {{ zone_list | length }} database(s) for data product {{ data_product_name }}
+Naming Pattern: {{ object_component_order }}_<zone>
+
+All databases created with:
+- Data Retention: {{ retention_days }} days
+- Initial Owner: SYSADMIN
+- PUBLIC schema: Dropped
+- Database Roles: DB_R, DB_W, DB_C (with inheritance hierarchy)
+- Tags: DOMAIN, ENVIRONMENT, DATAPRODUCT, ZONE (applied to all)
+- Domain: {{ data_product_domain }} ({% if account_strategy == 'Multi-Account (Domain-based)' or account_strategy == 'Multi-Account (Domain + Environment)' %}at account level{% else %}in DB name{% endif %})
+- Environment: {{ data_product_environment }} ({% if account_strategy == 'Multi-Account (Environment-based)' or account_strategy == 'Multi-Account (Domain + Environment)' %}at account level{% else %}in DB name{% endif %})
+
+Database Role Hierarchy:
+  DB_C (Create) → inherits from → DB_W (Write) → inherits from → DB_R (Read)
+*/

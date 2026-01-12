@@ -35,11 +35,17 @@ GRANT SELECT ON ALL TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ gover
 -- Grant all views in the governance schema (for cost reporting views)
 GRANT SELECT ON ALL VIEWS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO SHARE {{ infrastructure_share_name | upper }};
 
+-- Grant all network rules in the governance schema (for consistent network policies)
+GRANT USAGE ON ALL NETWORK RULES IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO SHARE {{ infrastructure_share_name | upper }};
+
 -- Grant future tags (so new tags are automatically shared)
 GRANT SELECT ON FUTURE TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO SHARE {{ infrastructure_share_name | upper }};
 
 -- Grant future views (so new views are automatically shared)
 GRANT SELECT ON FUTURE VIEWS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO SHARE {{ infrastructure_share_name | upper }};
+
+-- Grant future network rules (so new rules are automatically shared)
+GRANT USAGE ON FUTURE NETWORK RULES IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }} TO SHARE {{ infrastructure_share_name | upper }};
 
 -- ============================================================================
 -- VERIFICATION

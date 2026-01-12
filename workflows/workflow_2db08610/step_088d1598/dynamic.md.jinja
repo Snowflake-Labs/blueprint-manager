@@ -1,0 +1,50 @@
+## Target Account Selection
+
+### Selected Account
+
+| Setting | Value |
+|---------|-------|
+| **Target Account** | {{ target_account_name | upper }} |
+| **Access Confirmed** | {{ target_account_access_confirmed }} |
+
+### Account Context
+
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+**Domain-Based Strategy**
+This account represents a business domain. In the next step, you'll confirm which domain this account belongs to.
+
+**Object Naming:** Since the domain is at the account level, database names will NOT include the domain (avoiding redundancy). Example: `<dataproduct>_<zone>_<env>`
+
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+**Environment-Based Strategy**
+This account represents an SDLC environment. In the next step, you'll confirm which environment this account belongs to.
+
+**Object Naming:** Since the environment is at the account level, database names will NOT include the environment (avoiding redundancy). Example: `<domain>_<dataproduct>_<zone>`
+
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+**Domain + Environment Strategy**
+This account represents a specific domain-environment combination. In the next step, you'll confirm both values.
+
+**Object Naming:** Since both domain and environment are at the account level, database names will NOT include them (avoiding redundancy). Example: `<dataproduct>_<zone>`
+
+{%- endif %}
+
+Account URL: `https://{{ snowflake_org_name | lower }}-{{ target_account_name | lower }}.snowflakecomputing.com`
+
+{%- if target_account_access_confirmed == 'No - I need to get access first' %}
+
+### ⚠️ Access Required
+
+You indicated that you need to get access to this account before proceeding. Please:
+1. Contact your platform team or account administrator
+2. Request SYSADMIN, SECURITYADMIN, and ACCOUNTADMIN roles
+3. Return to this workflow once access is granted
+
+{%- endif %}
+
+### Verification
+
+Before proceeding, confirm you can connect to this account:
+1. Log into Snowsight at the account URL above
+2. Run `SELECT CURRENT_ACCOUNT_NAME();` to verify you're in the correct account
+3. Run `USE ROLE SYSADMIN;` to verify you have the required role

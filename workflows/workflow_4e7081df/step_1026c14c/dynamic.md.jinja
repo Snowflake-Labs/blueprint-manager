@@ -1,0 +1,41 @@
+## Account Resource Monitor Configuration
+
+### Resource Monitor Settings
+
+| Setting | Value |
+|---------|-------|
+| **Account** | {{ new_account_name | upper }} |
+| **Credit Limit** | {{ account_resource_monitor_limit }} credits |
+| **Reset Frequency** | {{ account_resource_monitor_reset_frequency }} |
+| **Action at 100%** | {{ account_resource_monitor_action }} |
+
+### Threshold Configuration
+
+The resource monitor will be configured with tiered thresholds:
+
+| Threshold | Credits | Action |
+|-----------|---------|--------|
+| 75% | {{ (account_resource_monitor_limit | int * 0.75) | round | int }} | Notify |
+| 90% | {{ (account_resource_monitor_limit | int * 0.90) | round | int }} | Notify |
+| 100% | {{ account_resource_monitor_limit }} | {{ account_resource_monitor_action }} |
+{%- if account_resource_monitor_action == "Suspend Immediately" %}
+| 110% | {{ (account_resource_monitor_limit | int * 1.10) | round | int }} | Suspend Immediately |
+{%- elif account_resource_monitor_action == "Suspend After Current Queries" %}
+| 110% | {{ (account_resource_monitor_limit | int * 1.10) | round | int }} | Suspend After Current Queries |
+{%- else %}
+| 110% | {{ (account_resource_monitor_limit | int * 1.10) | round | int }} | Notify |
+{%- endif %}
+
+### How Budgets + Resource Monitors Work Together
+
+| Component | Purpose | Action |
+|-----------|---------|--------|
+| **Budget** | Visibility & forecasting | Alerts only |
+| **Resource Monitor** | Active cost control | Can suspend |
+
+**Example Timeline:**
+- Day 15: Budget forecasts overspend → Alert sent (no action)
+- Day 20: 75% of resource monitor limit → Notify alert
+- Day 25: 100% of resource monitor limit → {{ account_resource_monitor_action }}
+
+This layered approach provides early warning (budget) and a safety net (resource monitor).

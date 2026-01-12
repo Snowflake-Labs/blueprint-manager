@@ -1,0 +1,82 @@
+## Account Strategy Confirmation
+
+### Your Selection
+
+| Setting | Value |
+|---------|-------|
+| **Account Strategy** | {{ account_strategy }} |
+
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+
+### Domain-Based Strategy
+
+Your organization uses a **domain-based** multi-account approach:
+
+- Each account represents a **business domain** (e.g., Sales, Finance, HR)
+- Environments (Dev, Test, Prod) are organized as databases **within** each domain account
+- You will select which **domain** this account represents
+
+**Account Structure Example:**
+```
+Organization
+├── Sales Account
+│   ├── Dev databases
+│   ├── Test databases
+│   └── Prod databases
+├── Finance Account
+│   ├── Dev databases
+│   └── ...
+└── HR Account
+    └── ...
+```
+
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+
+### Environment-Based Strategy
+
+Your organization uses an **environment-based** multi-account approach:
+
+- Each account represents an **SDLC environment** (e.g., Dev, Test, Prod)
+- Domains (Sales, Finance, HR) are organized as databases **within** each environment account
+- You will select which **environment** this account represents
+
+**Account Structure Example:**
+```
+Organization
+├── Dev Account
+│   ├── Sales databases
+│   ├── Finance databases
+│   └── HR databases
+├── Test Account
+│   └── ...
+└── Prod Account
+    └── ...
+```
+
+{%- else %}
+
+### Domain + Environment Strategy
+
+Your organization uses a **domain + environment** multi-account approach:
+
+- Each account represents a specific **domain-environment combination**
+- This provides maximum isolation between both domains and environments
+- You will select both the **domain** and **environment** for this account
+
+**Account Structure Example:**
+```
+Organization
+├── Sales-Dev Account
+├── Sales-Test Account
+├── Sales-Prod Account
+├── Finance-Dev Account
+├── Finance-Test Account
+├── Finance-Prod Account
+└── ...
+```
+
+{%- endif %}
+
+### Organization-Level Setting
+
+This answer has been saved at the organization level. All future runs of the Account Creation workflow will use this same strategy, ensuring consistency across your organization.

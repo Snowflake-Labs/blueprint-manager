@@ -1,19 +1,132 @@
 -- ============================================================================
--- DOMAINS & ENVIRONMENTS CONFIGURATION
+-- DEFINE DOMAINS, ENVIRONMENTS & NAMING CONVENTIONS
 -- ============================================================================
--- This script documents the domain and environment definitions
--- FinOps tags will be created in the Infrastructure Database (Step 1.6)
+-- This script creates FinOps tags and documents naming conventions
+-- Execute in your Organization Account (if created) or primary account
 -- ============================================================================
 
 USE ROLE ACCOUNTADMIN;
+USE DATABASE {{ platform_database_name | upper }};
+USE SCHEMA {{ governance_name | upper }};
 
 -- ============================================================================
--- DOCUMENT CONFIGURATION
+-- STEP 1: CREATE DOMAIN AND ENVIRONMENT TAGS
 -- ============================================================================
--- The following domains and environments have been defined
--- Tags will be created in the Infrastructure Database after it is set up
+-- These tags have restricted ALLOWED_VALUES based on your selections
+
+-- DOMAIN tag - identifies business unit ownership
+CREATE TAG IF NOT EXISTS domain
+  ALLOWED_VALUES = (
+{%- for domain in domain_list %}
+    '{{ domain | upper }}'{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+  COMMENT = 'Business domain/unit for cost allocation and governance';
+
+-- ENVIRONMENT tag - identifies SDLC stage
+CREATE TAG IF NOT EXISTS environment
+  ALLOWED_VALUES = (
+{%- for env in environment_list %}
+    '{{ env | upper }}'{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+  COMMENT = 'Environment/SDLC stage for cost allocation and governance';
+
+-- ============================================================================
+-- STEP 2: CREATE ADDITIONAL FINOPS TAGS
+-- ============================================================================
+-- We create these tags now (even though values aren't defined yet) because:
+-- 1. They ensure immediate availability when data products are created
+-- 2. They centralize all FinOps tags in the same Governance schema
+-- 3. They align with naming convention components for consistent reporting
+--
+-- Unlike DOMAIN and ENVIRONMENT, these tags accept ANY value, allowing
+-- flexibility when defining data products in subsequent workflows.
+-- ============================================================================
+
+-- DATAPRODUCT tag - identifies the specific data product
+-- Values defined per data product (e.g., ANALYTICS, REPORTING, EDW)
+CREATE TAG IF NOT EXISTS dataproduct
+  COMMENT = 'Data product identifier for cost allocation';
+
+-- WORKLOAD tag - classifies warehouse workload types
+-- Recommended values: INGEST, TRANSFORM, BI, ADHOC, ML, ADMIN
+CREATE TAG IF NOT EXISTS workload
+  COMMENT = 'Workload type for warehouse cost allocation';
+
+-- ZONE tag - classifies database data zones
+-- Recommended values: RAW, CURATED, CONSUMPTION, WORKSPACE, ARCHIVE
+CREATE TAG IF NOT EXISTS zone
+  COMMENT = 'Data zone for database classification';
+
+-- DATA_CLASSIFICATION tag - indicates data sensitivity level
+-- Recommended values: PUBLIC, INTERNAL, CONFIDENTIAL, RESTRICTED
+CREATE TAG IF NOT EXISTS data_classification
+  COMMENT = 'Data classification level for governance';
+
+-- ============================================================================
+-- STEP 3: CREATE NAMING CONVENTION REFERENCE VIEW
+-- ============================================================================
+
+CREATE OR REPLACE VIEW naming_convention_reference AS
+SELECT
+  '{{ object_component_order }}' AS component_order,
+  '{{ account_strategy }}' AS account_strategy,
+  -- Component inclusion based on account strategy
+{%- if account_strategy == 'Single Account' %}
+  TRUE AS include_domain_in_objects,
+  TRUE AS include_environment_in_objects,
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+  TRUE AS include_domain_in_objects,
+  FALSE AS include_environment_in_objects,  -- Environment is implicit in account
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+  FALSE AS include_domain_in_objects,  -- Domain is implicit in account
+  TRUE AS include_environment_in_objects,
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+  FALSE AS include_domain_in_objects,  -- Domain is implicit in account
+  FALSE AS include_environment_in_objects,  -- Environment is implicit in account
+{%- endif %}
+  -- Naming patterns
+{%- if object_component_order == "<domain>_<env>_<dataproduct>" %}
+  '<DOMAIN>_<ENV>_<DATAPRODUCT>[_<ZONE>]' AS database_pattern,
+  '<DOMAIN>_<ENV>_<DATAPRODUCT>_<WORKLOAD>' AS warehouse_pattern,
+  '<DOMAIN>_<ENV>_<DATAPRODUCT>_<FUNCTION>' AS role_pattern
+{%- elif object_component_order == "<domain>_<dataproduct>_<env>" %}
+  '<DOMAIN>_<DATAPRODUCT>_<ENV>[_<ZONE>]' AS database_pattern,
+  '<DOMAIN>_<DATAPRODUCT>_<ENV>_<WORKLOAD>' AS warehouse_pattern,
+  '<DOMAIN>_<DATAPRODUCT>_<ENV>_<FUNCTION>' AS role_pattern
+{%- elif object_component_order == "<env>_<domain>_<dataproduct>" %}
+  '<ENV>_<DOMAIN>_<DATAPRODUCT>[_<ZONE>]' AS database_pattern,
+  '<ENV>_<DOMAIN>_<DATAPRODUCT>_<WORKLOAD>' AS warehouse_pattern,
+  '<ENV>_<DOMAIN>_<DATAPRODUCT>_<FUNCTION>' AS role_pattern
+{%- endif %}
+;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify all tags were created
+SHOW TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
+
+-- View DOMAIN tag allowed values
+DESC TAG domain;
+
+-- View ENVIRONMENT tag allowed values
+DESC TAG environment;
+
+-- View naming convention reference
+SELECT * FROM naming_convention_reference;
 
 /*
+============================================================================
+CONFIGURATION SUMMARY
+============================================================================
+Account Strategy: {{ account_strategy }}
+Component Order: {{ object_component_order }}
+
 Domains Configured:
 {%- for domain in domain_list %}
 - {{ domain | upper }}
@@ -24,35 +137,27 @@ Environments Configured:
 - {{ env | upper }}
 {%- endfor %}
 
-Account Strategy: {{ account_strategy }}
+Tags Created:
+- DOMAIN (with allowed values) - for cost allocation by business unit
+- ENVIRONMENT (with allowed values) - for cost allocation by SDLC stage
+- DATAPRODUCT (any value) - for cost allocation by data product
+- WORKLOAD (any value) - for warehouse classification
+- ZONE (any value) - for database zone classification
+- DATA_CLASSIFICATION (any value) - for data sensitivity governance
+
+Note: Additional tags (DATAPRODUCT, WORKLOAD, ZONE, DATA_CLASSIFICATION) are created
+now to ensure immediate availability when data products are configured in later
+workflows. These tags align with naming convention components for consistent
+FinOps reporting across your platform.
 
 {%- if account_strategy == "Single Account" %}
-Usage: Both domains and environments will appear at the database level in object names.
+Usage: Both domains and environments will appear in database object names.
 {%- elif account_strategy == "Multi-Account (Environment-based)" %}
-Usage: Environments will be at account level, domains at database level.
+Usage: Environments appear in account names; domains appear in object names.
 {%- elif account_strategy == "Multi-Account (Domain-based)" %}
-Usage: Domains will be at account level, environments at database level.
+Usage: Domains appear in account names; environments appear in object names.
 {%- elif account_strategy == "Multi-Account (Domain + Environment)" %}
-Usage: Both domains and environments will be at account level.
+Usage: Both domains and environments appear in account names.
 {%- endif %}
-*/
-
--- ============================================================================
--- NEXT STEPS
--- ============================================================================
--- FinOps tags (DOMAIN, ENVIRONMENT) will be created after the
--- Infrastructure Database and Governance Schema are set up.
--- This ensures all governance objects are centralized in one location.
-
--- Example of how tags will be applied (in Data Product Configuration):
-/*
--- Apply domain tag to a database
-ALTER DATABASE my_database SET TAG domain = 'FIN';
-
--- Apply environment tag to a warehouse
-ALTER WAREHOUSE my_warehouse SET TAG environment = 'PROD';
-
--- Query tagged resources
-SELECT *
-FROM TABLE(INFORMATION_SCHEMA.TAG_REFERENCES('domain', 'TAG'));
+============================================================================
 */

@@ -1,0 +1,295 @@
+-- ============================================================================
+-- CREATE SCHEMAS WITH ACCESS ROLES
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+-- Domain: {{ data_product_domain }}
+-- Environment: {{ data_product_environment }}
+-- Account Strategy: {{ account_strategy }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: SYSADMIN
+-- ============================================================================
+
+USE ROLE SYSADMIN;
+
+-- ============================================================================
+-- TAG DATABASE REFERENCE
+-- ============================================================================
+{%- if account_strategy == 'Single Account' %}
+{%- set tag_db = platform_database_name | upper %}
+{%- else %}
+{%- set tag_db = platform_database_name | upper ~ '_SHARED' %}
+{%- endif %}
+
+-- ============================================================================
+-- CREATE SCHEMAS FOR EACH ZONE
+-- ============================================================================
+
+{%- for zone in zone_list %}
+
+-- ----------------------------------------------------------------------------
+-- {{ zone | upper }} Zone Schemas
+-- ----------------------------------------------------------------------------
+
+{#- Build database name based on component order and account strategy -#}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+
+USE DATABASE {{ db_name }};
+
+{%- for schema in schema_definitions if schema.zone == zone %}
+
+-- ============================================================================
+-- SCHEMA: {{ schema.schema_name | upper }}
+-- ============================================================================
+
+CREATE SCHEMA IF NOT EXISTS {{ schema.schema_name | upper }}
+  WITH MANAGED ACCESS
+  COMMENT = '{{ schema.purpose }} (Classification: {{ schema.data_classification }})';
+
+-- Apply tags to schema
+ALTER SCHEMA {{ db_name }}.{{ schema.schema_name | upper }} SET TAG
+  {{ tag_db }}.{{ governance_name | upper }}.DOMAIN = '{{ data_product_domain | upper }}',
+  {{ tag_db }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ data_product_environment | upper }}',
+  {{ tag_db }}.{{ governance_name | upper }}.DATAPRODUCT = '{{ data_product_name | upper }}',
+  {{ tag_db }}.{{ governance_name | upper }}.ZONE = '{{ zone | upper }}',
+  {{ tag_db }}.{{ governance_name | upper }}.DATA_CLASSIFICATION = '{{ schema.data_classification | upper }}';
+
+-- ----------------------------------------------------------------------------
+-- CREATE SCHEMA ACCESS ROLES
+-- ----------------------------------------------------------------------------
+
+{%- set sar_r = 'SC_R_' ~ schema.schema_name | upper %}
+{%- set sar_w = 'SC_W_' ~ schema.schema_name | upper %}
+{%- set sar_c = 'SC_C_' ~ schema.schema_name | upper %}
+
+-- READ Access Database Role
+CREATE DATABASE ROLE IF NOT EXISTS {{ sar_r }}
+  COMMENT = 'Read access role for {{ schema.schema_name }} schema';
+
+-- Database and schema usage (required to see objects)
+GRANT USAGE ON DATABASE {{ db_name }} TO DATABASE ROLE {{ sar_r }};
+GRANT USAGE, MONITOR ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+
+-- Read privileges on all current objects
+GRANT SELECT ON ALL TABLES             IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+GRANT SELECT ON ALL VIEWS              IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+GRANT SELECT ON ALL EXTERNAL TABLES    IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+GRANT SELECT ON ALL DYNAMIC TABLES     IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+GRANT SELECT ON ALL MATERIALIZED VIEWS IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+GRANT USAGE  ON ALL FUNCTIONS          IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+
+-- Future grants for read access
+GRANT SELECT ON FUTURE TABLES             IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+GRANT SELECT ON FUTURE VIEWS              IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+GRANT SELECT ON FUTURE EXTERNAL TABLES    IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+GRANT SELECT ON FUTURE DYNAMIC TABLES     IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+GRANT SELECT ON FUTURE MATERIALIZED VIEWS IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+GRANT USAGE  ON FUTURE FUNCTIONS          IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_r }};
+
+
+-- WRITE Access Database Role
+CREATE DATABASE ROLE IF NOT EXISTS {{ sar_w }}
+  COMMENT = 'Write access role for {{ schema.schema_name }} schema';
+
+-- Write privileges on all current objects
+GRANT SELECT                           ON ALL STREAMS        IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES         IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT USAGE                            ON ALL PROCEDURES     IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT USAGE                            ON ALL SEQUENCES      IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT MONITOR, OPERATE                 ON ALL TASKS          IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT USAGE                            ON ALL FILE FORMATS   IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT USAGE, READ, WRITE               ON ALL STAGES         IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT MONITOR, OPERATE                 ON ALL DYNAMIC TABLES IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT MONITOR, OPERATE                 ON ALL ALERTS         IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+
+-- Future grants for write access
+GRANT SELECT                           ON FUTURE STREAMS        IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT INSERT, UPDATE, DELETE, TRUNCATE ON FUTURE TABLES         IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT USAGE                            ON FUTURE PROCEDURES     IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT USAGE                            ON FUTURE SEQUENCES      IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT MONITOR, OPERATE                 ON FUTURE TASKS          IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT USAGE                            ON FUTURE FILE FORMATS   IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT USAGE, READ, WRITE               ON FUTURE STAGES         IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT MONITOR, OPERATE                 ON FUTURE DYNAMIC TABLES IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+GRANT MONITOR, OPERATE                 ON FUTURE ALERTS         IN SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_w }};
+
+
+-- CREATE Access Database Role
+CREATE DATABASE ROLE IF NOT EXISTS {{ sar_c }}
+  COMMENT = 'Create access role for {{ schema.schema_name }} schema';
+
+-- Create privileges on schema
+GRANT CREATE TABLE             ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE VIEW              ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE STREAM            ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE FUNCTION          ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE PROCEDURE         ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE SEQUENCE          ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE TASK              ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE FILE FORMAT       ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE STAGE             ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE EXTERNAL TABLE    ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE PIPE              ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE DYNAMIC TABLE     ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE MATERIALIZED VIEW ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE STREAMLIT         ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE ALERT             ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE TAG               ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE MASKING POLICY    ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+GRANT CREATE ROW ACCESS POLICY ON SCHEMA {{ schema.schema_name | upper }} TO DATABASE ROLE {{ sar_c }};
+
+
+-- ----------------------------------------------------------------------------
+-- ESTABLISH SCHEMA ROLE HIERARCHY
+-- ----------------------------------------------------------------------------
+
+-- Schema role hierarchy: R <- W <- C
+GRANT DATABASE ROLE {{ sar_r }} TO DATABASE ROLE {{ sar_w }};
+GRANT DATABASE ROLE {{ sar_w }} TO DATABASE ROLE {{ sar_c }};
+
+-- Connect schema roles to database roles
+GRANT DATABASE ROLE {{ sar_r }} TO DATABASE ROLE DB_R;
+GRANT DATABASE ROLE {{ sar_w }} TO DATABASE ROLE DB_W;
+GRANT DATABASE ROLE {{ sar_c }} TO DATABASE ROLE DB_C;
+
+{%- endfor %}
+
+{%- endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- List all schemas in each database
+{%- for zone in zone_list %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+
+-- Schemas in {{ zone | upper }} zone
+SHOW SCHEMAS IN DATABASE {{ db_name }};
+
+-- Database roles in {{ zone | upper }} zone
+SHOW DATABASE ROLES IN DATABASE {{ db_name }};
+{%- endfor %}
+
+/*
+SCHEMAS AND ACCESS ROLES CREATED
+================================
+
+Created {{ schema_definitions | length }} schema(s) across {{ zone_list | length }} database(s):
+
+{%- for zone in zone_list %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set db_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set db_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ zone | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set db_name = data_product_name | upper ~ '_' ~ zone | upper %}
+{%- endif %}
+{%- endif %}
+
+{{ db_name }}:
+{%- for schema in schema_definitions if schema.zone == zone %}
+  - {{ schema.schema_name | upper }} ({{ schema.data_classification }})
+    └── SC_R_{{ schema.schema_name | upper }} → SC_W_{{ schema.schema_name | upper }} → SC_C_{{ schema.schema_name | upper }}
+{%- endfor %}
+{%- endfor %}
+
+All schemas created with:
+- Managed Access: Enabled
+- Initial Owner: SYSADMIN
+- Tags: DOMAIN, ENVIRONMENT, DATAPRODUCT, ZONE, DATA_CLASSIFICATION
+
+Schema Role Hierarchy:
+  SC_C (Create) → inherits from → SC_W (Write) → inherits from → SC_R (Read)
+  
+Schema roles connected to database roles:
+  SC_R_* → DB_R
+  SC_W_* → DB_W
+  SC_C_* → DB_C
+*/

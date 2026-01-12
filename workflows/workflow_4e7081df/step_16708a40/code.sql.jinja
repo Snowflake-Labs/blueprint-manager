@@ -1,0 +1,22 @@
+-- ============================================================================
+-- DEFINE ACCOUNT PURPOSE - ENVIRONMENT-BASED STRATEGY
+-- ============================================================================
+-- Strategy: Environment-based Multi-Account
+-- Environment: {{ account_environment }}
+-- Description: {{ account_description }}
+-- ============================================================================
+
+-- This step captures account purpose information.
+-- No SQL is executed here - account creation follows in subsequent steps.
+
+/*
+ACCOUNT PURPOSE SUMMARY (Environment-Based)
+===========================================
+Account Strategy: Environment-based Multi-Account
+Environment:      {{ account_environment }}
+Description:      {{ account_description }}
+
+This account will contain all domains for the {{ account_environment }}
+environment. Domains will be created at the database level in the
+Data Product workflow.
+*/

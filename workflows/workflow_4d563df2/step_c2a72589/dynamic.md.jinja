@@ -2,7 +2,7 @@
 
 ## Overview
 
-This section documents the configuration for the centralized Infrastructure Database. This database serves as the primary repository for platform-wide objects including FinOps Tags, Network Rules, governance policies, and shared procedures.
+This section documents the configuration for the centralized Infrastructure Database. This database serves as the primary repository for platform-wide objects including governance policies, network rules, and tags.
 
 ## Decision Summary
 
@@ -31,9 +31,9 @@ This section documents the configuration for the centralized Infrastructure Data
 | Domain | `PLAT` (or platform identifier) | Identifies central platform team ownership |
 | Data Product | `INFRA` (or infrastructure identifier) | Indicates infrastructure/administrative purpose |
 
-## Objects to be Created
+## Objects to be Created in Later Steps
 
-The `{{ governance_name | upper }}` schema will contain:
+The `{{ governance_name | upper }}` schema will be used to store objects created in subsequent workflow steps, for example:
 
 | Object Type | Purpose |
 |-------------|---------|
@@ -47,7 +47,7 @@ The `{{ governance_name | upper }}` schema will contain:
 
 {%- if account_strategy != "Single Account" %}
 **Multi-Account Deployment ({{ account_strategy }}):**
-- The Infrastructure Database will be created in the **Organization Account**
+- The Infrastructure Database should be created in the **Organization Account**
 - It will be **shared** to child accounts using Secure Data Sharing
 - All business units will use the same standardized metadata and security objects
 - Changes to governance objects propagate automatically to all accounts
@@ -85,4 +85,3 @@ SHOW SCHEMAS IN DATABASE {{ platform_database_name | upper }};
 -- Confirm Managed Access is enabled
 SELECT * FROM {{ platform_database_name | upper }}.INFORMATION_SCHEMA.SCHEMATA 
 WHERE SCHEMA_NAME = '{{ governance_name | upper }}';
-```

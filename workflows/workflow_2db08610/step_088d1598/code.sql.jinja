@@ -1,0 +1,35 @@
+-- ============================================================================
+-- TARGET ACCOUNT SELECTION
+-- ============================================================================
+-- Target Account: {{ target_account_name | upper }}
+-- Account Strategy: {{ account_strategy }}
+-- ============================================================================
+-- EXECUTE FROM: {{ target_account_name | upper }}
+-- REQUIRED ROLE: SYSADMIN (or higher)
+-- ============================================================================
+
+-- ============================================================================
+-- VERIFY ACCOUNT CONTEXT
+-- ============================================================================
+
+-- Confirm you are in the correct account
+SELECT CURRENT_ACCOUNT_NAME() AS current_account;
+
+-- Expected result: {{ target_account_name | upper }}
+
+-- If the result doesn't match, log into the correct account before proceeding.
+
+-- Verify you have the required role
+USE ROLE SYSADMIN;
+
+-- If this fails, you need to get SYSADMIN access before proceeding.
+
+/*
+ACCOUNT CONTEXT VERIFIED
+========================
+
+Target Account: {{ target_account_name | upper }}
+Account Strategy: {{ account_strategy }}
+
+All subsequent SQL in this workflow should be executed in this account.
+*/

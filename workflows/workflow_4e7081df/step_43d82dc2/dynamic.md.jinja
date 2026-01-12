@@ -1,0 +1,77 @@
+## Cost Allocation Tags Configuration
+
+### Account Strategy
+
+| Setting | Value |
+|---------|-------|
+| **Account Strategy** | {{ account_strategy }} |
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+| **Domain** | {{ account_domain }} |
+| **Tag Applied** | DOMAIN = {{ account_domain }} |
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+| **Environment** | {{ account_environment }} |
+| **Tag Applied** | ENVIRONMENT = {{ account_environment }} |
+{%- else %}
+| **Domain** | {{ account_domain }} |
+| **Environment** | {{ account_environment }} |
+| **Tags Applied** | DOMAIN = {{ account_domain }}, ENVIRONMENT = {{ account_environment }} |
+{%- endif %}
+
+### Tag Source
+
+Tags are referenced from the shared infrastructure database:
+- Database: `{{ shared_database_name | upper }}`
+- Schema: `{{ governance_name | upper }}`
+
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+
+### Domain-Based Strategy
+
+At the account level, only the **DOMAIN** tag is applied:
+- All resources in this account are associated with the **{{ account_domain }}** domain
+
+**Environment tagging** will be applied at the database level when you create data products. Each database can be tagged with its environment (Dev, Test, Prod).
+
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+
+### Environment-Based Strategy
+
+At the account level, only the **ENVIRONMENT** tag is applied:
+- All resources in this account are associated with the **{{ account_environment }}** environment
+
+**Domain tagging** will be applied at the database level when you create data products. Each database can be tagged with its domain (Sales, Finance, etc.).
+
+{%- else %}
+
+### Domain + Environment Strategy
+
+At the account level, both tags are applied:
+- `DOMAIN = {{ account_domain }}`
+- `ENVIRONMENT = {{ account_environment }}`
+
+All resources in this account are fully attributed to both dimensions.
+
+{%- endif %}
+
+### Tagging Warehouses
+
+When creating warehouses, apply the appropriate tag(s):
+
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+```sql
+ALTER WAREHOUSE <warehouse_name> 
+  SET TAG {{ shared_database_name }}.{{ governance_name }}.DOMAIN = '{{ account_domain }}';
+```
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+```sql
+ALTER WAREHOUSE <warehouse_name> 
+  SET TAG {{ shared_database_name }}.{{ governance_name }}.ENVIRONMENT = '{{ account_environment }}';
+```
+{%- else %}
+```sql
+ALTER WAREHOUSE <warehouse_name> 
+  SET TAG {{ shared_database_name }}.{{ governance_name }}.DOMAIN = '{{ account_domain }}';
+ALTER WAREHOUSE <warehouse_name> 
+  SET TAG {{ shared_database_name }}.{{ governance_name }}.ENVIRONMENT = '{{ account_environment }}';
+```
+{%- endif %}

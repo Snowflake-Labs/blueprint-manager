@@ -7,7 +7,7 @@ USE DATABASE {{ platform_database_name | upper }};
 USE SCHEMA {{ governance_name | upper }};
 
 -- ============================================================================
--- REVIEW EXISTING TAGS (from Platform Foundation task)
+-- REVIEW EXISTING TAGS (from Task 1)
 -- ============================================================================
 
 SHOW TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
@@ -27,7 +27,7 @@ Additional cost allocation tags will be created in the Configure Cost Allocation
 - application
 {%- else %}
 
-Using only the core tags from the Platform Foundation task:
-- domain, environment, dataproduct, workload, zone
+Using only the core tags from Task 1:
+- domain, environment, dataproduct, workload, zone, data_classification
 {%- endif %}
 */

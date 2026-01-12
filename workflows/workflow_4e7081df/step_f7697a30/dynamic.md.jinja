@@ -1,0 +1,51 @@
+# Configure SAML/SSO
+
+## Overview
+
+This section documents the SAML Single Sign-On configuration for federated authentication between your Identity Provider and Snowflake.
+
+## Configuration Summary
+
+| Setting | Value |
+|---------|-------|
+| **Integration Name** | `{{ saml_integration_name | upper }}` |
+| **Identity Provider** | {{ identity_provider }} |
+| **SSO URL** | `{{ saml_sso_url }}` |
+| **Issuer/Entity ID** | `{{ saml_issuer }}` |
+| **Login Page Button** | {{ saml_sso_login_page }} |
+
+## SAML Authentication Flow
+
+1. User navigates to Snowflake login page
+2. User clicks "Log in using SSO" (or is redirected automatically)
+3. User is redirected to {{ identity_provider }} for authentication
+4. After successful authentication, IdP sends SAML assertion to Snowflake
+5. Snowflake validates the assertion and creates a session
+
+## IdP Configuration Requirements
+
+Configure your Identity Provider with the following Snowflake details:
+
+| Setting | Value |
+|---------|-------|
+| **ACS URL** | `https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix | lower }}_{% endif %}{{ org_account_name | lower }}.snowflakecomputing.com/fed/login` |
+| **Entity ID** | `https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix | lower }}_{% endif %}{{ org_account_name | lower }}.snowflakecomputing.com` |
+| **Name ID Format** | `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress` |
+| **Name ID Value** | User's email address |
+
+## Attribute Mapping
+
+The following SAML attributes should be mapped in your IdP:
+
+| SAML Attribute | Source |
+|----------------|--------|
+| `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress` | User email |
+| `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname` | First name |
+| `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname` | Last name |
+
+## Security Considerations
+
+- SAML assertions are signed by your IdP and verified by Snowflake
+- Users are matched by email address (must match SCIM-provisioned users)
+- Session duration is controlled by Snowflake session policies
+- MFA should be enforced at the IdP level for enhanced security

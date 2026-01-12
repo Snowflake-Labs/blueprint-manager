@@ -1,0 +1,93 @@
+-- ============================================================================
+-- APPLY ORGANIZATION NETWORK CONFIGURATION
+-- ============================================================================
+-- Account: {{ new_account_name | upper }}
+-- Using shared network rules from: {{ shared_database_name | upper }}.{{ governance_name | upper }}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: VERIFY ACCESS TO SHARED NETWORK RULES
+-- ============================================================================
+
+-- List network rules available from the shared database
+SHOW NETWORK RULES IN SCHEMA {{ shared_database_name | upper }}.{{ governance_name | upper }};
+
+-- ============================================================================
+-- STEP 2: CREATE NETWORK POLICY REFERENCING SHARED RULES
+-- ============================================================================
+
+CREATE OR REPLACE NETWORK POLICY {{ new_account_name | upper }}_NETWORK_POLICY
+  ALLOWED_NETWORK_RULE_LIST = (
+{%- for rule in allowed_network_rules %}
+    {{ shared_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name | upper }}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+{%- if blocked_network_rules | length > 0 %}
+  BLOCKED_NETWORK_RULE_LIST = (
+{%- for rule in blocked_network_rules %}
+    {{ shared_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name | upper }}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+{%- endif %}
+  COMMENT = 'Network policy using organization-standard network rules';
+
+-- ============================================================================
+-- STEP 3: APPLY NETWORK POLICY TO ACCOUNT
+-- ============================================================================
+
+-- Apply the network policy to this account
+ALTER ACCOUNT SET NETWORK_POLICY = {{ new_account_name | upper }}_NETWORK_POLICY;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify the policy was created
+SHOW NETWORK POLICIES LIKE '{{ new_account_name | upper }}_NETWORK_POLICY';
+
+-- Verify account-level policy is set
+SHOW PARAMETERS LIKE 'NETWORK_POLICY' IN ACCOUNT;
+
+-- ============================================================================
+-- IMPORTANT: TEST YOUR ACCESS
+-- ============================================================================
+
+/*
+⚠️ BEFORE CLOSING THIS SESSION:
+
+1. Open a NEW browser tab/window
+2. Navigate to: https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com
+3. Log in with your credentials
+4. If you can log in, the network policy is correctly configured
+5. If you're blocked, use break-glass access to adjust the policy
+
+The network policy is now active. Connections from IPs not in the allowed
+rules will be blocked.
+*/
+
+-- ============================================================================
+-- CONFIGURATION COMPLETE
+-- ============================================================================
+
+/*
+Network Configuration Applied!
+==============================
+
+Policy Name: {{ new_account_name | upper }}_NETWORK_POLICY
+Configuration: Using organization-standard network rules
+
+Shared Rules Referenced:
+{%- for rule in allowed_network_rules %}
+- {{ shared_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name | upper }}
+{%- endfor %}
+
+The network policy is now enforcing organization-standard network access
+controls for this account.
+*/

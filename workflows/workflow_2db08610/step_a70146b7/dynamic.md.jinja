@@ -1,0 +1,59 @@
+## Role Structure
+
+### Roles to Create
+
+Based on your selection of **{{ role_structure }}** structure:
+
+{%- if role_structure == 'Full (Admin + Create + Write + Read)' %}
+| Role | Purpose | Granted To |
+|------|---------|------------|
+| `{{ data_product_name | upper }}_ADMIN` | Full ownership and administration | `{{ admin_role_granted_to | upper }}` |
+| `{{ data_product_name | upper }}_CREATE` | Object creation and grant management (delegated) | `{{ data_product_name | upper }}_ADMIN` |
+| `{{ data_product_name | upper }}_WRITE` | Data modification privileges | `{{ data_product_name | upper }}_CREATE` |
+| `{{ data_product_name | upper }}_READ` | Read-only access | `{{ data_product_name | upper }}_CREATE` |
+{%- elif role_structure == 'Standard (Admin + Create + Read)' %}
+| Role | Purpose | Granted To |
+|------|---------|------------|
+| `{{ data_product_name | upper }}_ADMIN` | Full ownership and administration | `{{ admin_role_granted_to | upper }}` |
+| `{{ data_product_name | upper }}_CREATE` | Object creation and grant management (delegated) | `{{ data_product_name | upper }}_ADMIN` |
+| `{{ data_product_name | upper }}_READ` | Read-only access | `{{ data_product_name | upper }}_CREATE` |
+{%- else %}
+| Role | Purpose | Granted To |
+|------|---------|------------|
+| `{{ data_product_name | upper }}_ADMIN` | Full ownership and administration | `{{ admin_role_granted_to | upper }}` |
+| `{{ data_product_name | upper }}_READ` | Read-only access | `{{ data_product_name | upper }}_ADMIN` |
+{%- endif %}
+
+{%- if grant_account_access_roles == 'Yes - Grant account access roles (tasks, masking, tagging)' %}
+
+### Account Access Roles
+
+The following account access roles will be granted to `{{ data_product_name | upper }}_{% if role_structure == 'Full (Admin + Create + Write + Read)' %}WRITE{% else %}ADMIN{% endif %}`:
+
+| Access Role | Purpose |
+|-------------|---------|
+| `_AR_VIEW_AUSG` | View Account Usage data |
+| `_AR_EXEC_TASK` | Execute Snowflake tasks |
+| `_AR_APPLY_DDM` | Apply dynamic data masking policies |
+| `_AR_APPLY_RAP` | Apply row access policies |
+| `_AR_APPLY_TAG` | Apply tags to objects |
+
+{%- endif %}
+
+### Role Hierarchy
+
+```
+{{ admin_role_granted_to | upper }}
+└── {{ data_product_name | upper }}_ADMIN
+{%- if role_structure == 'Full (Admin + Create + Write + Read)' %}
+      └── {{ data_product_name | upper }}_CREATE
+            ├── {{ data_product_name | upper }}_WRITE{% if grant_account_access_roles == 'Yes - Grant account access roles (tasks, masking, tagging)' %} ← _AR_EXEC_TASK, _AR_APPLY_*, _AR_VIEW_AUSG{% endif %}
+
+            └── {{ data_product_name | upper }}_READ
+{%- elif role_structure == 'Standard (Admin + Create + Read)' %}
+      └── {{ data_product_name | upper }}_CREATE
+            └── {{ data_product_name | upper }}_READ
+{%- else %}
+      └── {{ data_product_name | upper }}_READ
+{%- endif %}
+```

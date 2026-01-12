@@ -128,13 +128,13 @@ Resource Monitors:
 {%- if enable_resource_monitors == "Yes" %}
 - Status: Enabled
 - Credit Limit: {{ account_resource_monitor_limit }} credits
-- Action: {{ resource_monitor_action }}
+- Action: {{ account_resource_monitor_action }}
 {%- else %}
 - Status: Not enabled
 {%- endif %}
 
 Cost Allocation Tags:
-- Core tags: domain, environment, dataproduct, workload, zone
+- Core tags: domain, environment, dataproduct, workload, zone, data_classification
 - Additional tags: {{ additional_tag_dimensions }}
 
 NEXT STEPS:
@@ -142,4 +142,3 @@ NEXT STEPS:
 2. Set up regular cost review meetings
 3. Proceed to Data Product Configuration workflow
 */
--- ============================================================================

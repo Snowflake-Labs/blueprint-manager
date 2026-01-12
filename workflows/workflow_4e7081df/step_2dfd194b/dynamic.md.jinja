@@ -1,0 +1,54 @@
+## Account Purpose Definition
+
+### Domain + Environment Account
+
+| Setting | Value |
+|---------|-------|
+| **Account Strategy** | Domain + Environment Multi-Account |
+| **Domain** | {{ account_domain }} |
+| **Environment** | {{ account_environment }} |
+| **Description** | {{ account_description }} |
+
+### Account Identity
+
+This account represents: **{{ account_domain }} - {{ account_environment }}**
+
+### Generated Account Name
+
+Based on your Platform Foundation naming conventions:
+
+{%- if account_name_prefix | upper != "NONE" %}
+{%- if object_component_order.startswith("<domain>") %}
+`{{ account_name_prefix | lower }}_{{ account_domain | lower }}_{{ account_environment | lower }}`
+{%- else %}
+`{{ account_name_prefix | lower }}_{{ account_environment | lower }}_{{ account_domain | lower }}`
+{%- endif %}
+{%- else %}
+{%- if object_component_order.startswith("<domain>") %}
+`{{ account_domain | lower }}_{{ account_environment | lower }}`
+{%- else %}
+`{{ account_environment | lower }}_{{ account_domain | lower }}`
+{%- endif %}
+{%- endif %}
+
+### Account URL (Preview)
+
+{%- if account_name_prefix | upper != "NONE" %}
+{%- if object_component_order.startswith("<domain>") %}
+`https://{{ snowflake_org_name | lower }}-{{ account_name_prefix | lower }}_{{ account_domain | lower }}_{{ account_environment | lower }}.snowflakecomputing.com`
+{%- else %}
+`https://{{ snowflake_org_name | lower }}-{{ account_name_prefix | lower }}_{{ account_environment | lower }}_{{ account_domain | lower }}.snowflakecomputing.com`
+{%- endif %}
+{%- else %}
+{%- if object_component_order.startswith("<domain>") %}
+`https://{{ snowflake_org_name | lower }}-{{ account_domain | lower }}_{{ account_environment | lower }}.snowflakecomputing.com`
+{%- else %}
+`https://{{ snowflake_org_name | lower }}-{{ account_environment | lower }}_{{ account_domain | lower }}.snowflakecomputing.com`
+{%- endif %}
+{%- endif %}
+
+### Cost Allocation
+
+At the account level, both tags will be applied:
+- `DOMAIN = {{ account_domain }}`
+- `ENVIRONMENT = {{ account_environment }}`

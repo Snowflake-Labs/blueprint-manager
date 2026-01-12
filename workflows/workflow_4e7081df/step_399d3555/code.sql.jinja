@@ -1,0 +1,136 @@
+-- ============================================================================
+-- AUTHENTICATION POLICIES CONFIGURATION
+-- ============================================================================
+-- This script configures authentication policies for different user types
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE HUMAN USER AUTHENTICATION POLICY
+-- ============================================================================
+
+{%- if human_auth_methods == "SAML Only (SSO required)" %}
+CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
+  AUTHENTICATION_METHODS = (SAML)
+  MFA_AUTHENTICATION_METHODS = ()
+  CLIENT_TYPES = (SNOWFLAKE_UI, SNOWSIGHT, DRIVERS, SNOWSQL)
+  SECURITY_INTEGRATIONS = ({{ saml_integration_name | upper }})
+  COMMENT = 'Human user policy - SAML SSO only';
+{%- elif human_auth_methods == "SAML or Password with MFA" %}
+CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
+  AUTHENTICATION_METHODS = (SAML, PASSWORD)
+{%- if mfa_method == "TOTP (Authenticator Apps)" %}
+  MFA_AUTHENTICATION_METHODS = (TOTP)
+{%- elif mfa_method == "Passkey (FIDO2/WebAuthn)" %}
+  MFA_AUTHENTICATION_METHODS = (PASSKEY)
+{%- else %}
+  MFA_AUTHENTICATION_METHODS = (TOTP, PASSKEY)
+{%- endif %}
+  CLIENT_TYPES = (SNOWFLAKE_UI, SNOWSIGHT, DRIVERS, SNOWSQL)
+  SECURITY_INTEGRATIONS = ({{ saml_integration_name | upper }})
+  COMMENT = 'Human user policy - SAML or Password with MFA';
+{%- else %}
+CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
+  AUTHENTICATION_METHODS = (PASSWORD)
+{%- if mfa_method == "TOTP (Authenticator Apps)" %}
+  MFA_AUTHENTICATION_METHODS = (TOTP)
+{%- elif mfa_method == "Passkey (FIDO2/WebAuthn)" %}
+  MFA_AUTHENTICATION_METHODS = (PASSKEY)
+{%- else %}
+  MFA_AUTHENTICATION_METHODS = (TOTP, PASSKEY)
+{%- endif %}
+  CLIENT_TYPES = (SNOWFLAKE_UI, SNOWSIGHT, DRIVERS, SNOWSQL)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Human user policy - Password with MFA';
+{%- endif %}
+
+-- ============================================================================
+-- STEP 2: CREATE SERVICE ACCOUNT AUTHENTICATION POLICY
+-- ============================================================================
+
+{%- if service_auth_methods == "OAuth Only" %}
+CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
+  AUTHENTICATION_METHODS = (OAUTH)
+  MFA_AUTHENTICATION_METHODS = ()
+  CLIENT_TYPES = (DRIVERS)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Service account policy - OAuth only, no UI access';
+{%- elif service_auth_methods == "Key Pair Only" %}
+CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
+  AUTHENTICATION_METHODS = (KEYPAIR)
+  MFA_AUTHENTICATION_METHODS = ()
+  CLIENT_TYPES = (DRIVERS)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Service account policy - Key pair only, no UI access';
+{%- elif service_auth_methods == "OAuth or Key Pair" %}
+CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
+  AUTHENTICATION_METHODS = (OAUTH, KEYPAIR)
+  MFA_AUTHENTICATION_METHODS = ()
+  CLIENT_TYPES = (DRIVERS)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Service account policy - OAuth or Key pair, no UI access';
+{%- else %}
+CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
+  AUTHENTICATION_METHODS = (OAUTH, KEYPAIR)
+  MFA_AUTHENTICATION_METHODS = ()
+  CLIENT_TYPES = (DRIVERS)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Service account policy - OAuth, Key pair, or PAT, no UI access';
+{%- endif %}
+
+-- ============================================================================
+-- STEP 3: APPLY AUTHENTICATION POLICIES
+-- ============================================================================
+
+{%- if apply_auth_policies_account_level == "Yes - Apply default policy to all users" %}
+-- Apply human user policy at account level
+ALTER ACCOUNT SET AUTHENTICATION POLICY human_user_auth_policy;
+{%- else %}
+-- Apply policies to specific users (phased rollout)
+-- Uncomment the users you want to apply the authentication policy to:
+{%- if identity_provider == 'None - Manual User Management' %}
+{%- for user in manual_admin_users %}
+-- ALTER USER "{{ user.username | upper }}" SET AUTHENTICATION POLICY human_user_auth_policy;
+{%- endfor %}
+{%- else %}
+{%- for user in scim_admin_users %}
+-- ALTER USER "{{ user.login_name }}" SET AUTHENTICATION POLICY human_user_auth_policy;
+{%- endfor %}
+{%- endif %}
+{%- endif %}
+
+-- Note: Break-glass user already has breakglass_auth_policy applied (from Step 2.4)
+
+-- ============================================================================
+-- STEP 4: DOCUMENT POLICY ASSIGNMENTS
+-- ============================================================================
+
+-- For service accounts created in Data Product Configuration:
+-- ALTER USER <service_account> SET AUTHENTICATION POLICY service_account_auth_policy;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- List all authentication policies
+SHOW AUTHENTICATION POLICIES;
+
+-- Describe each policy
+DESC AUTHENTICATION POLICY human_user_auth_policy;
+DESC AUTHENTICATION POLICY service_account_auth_policy;
+DESC AUTHENTICATION POLICY breakglass_auth_policy;
+
+-- Check account-level authentication policy
+SHOW PARAMETERS LIKE 'AUTHENTICATION_POLICY' IN ACCOUNT;
+
+-- List users and their authentication policies
+SELECT 
+  name,
+  login_name,
+  email,
+  authentication_policy,
+  has_mfa
+FROM snowflake.account_usage.users
+WHERE deleted_on IS NULL
+ORDER BY name;

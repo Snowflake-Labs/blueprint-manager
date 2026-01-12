@@ -1,0 +1,36 @@
+## Warehouse Creation
+
+### Warehouses to Create
+
+Based on your warehouse definitions:
+
+| Warehouse | Purpose | Size | Auto-Suspend |
+|-----------|---------|------|--------------|
+{%- for wh in warehouse_definitions %}
+| `{{ wh.warehouse_name | upper }}` | {{ wh.purpose }} | {{ wh.size }} | {{ wh.auto_suspend_seconds }}s |
+{%- endfor %}
+
+### Configuration Summary
+
+{%- set timeout_seconds = warehouse_statement_timeout | regex_replace('[^0-9].*', '') | int %}
+
+| Setting | Value |
+|---------|-------|
+| **Multi-Cluster** | Enabled (1-3 clusters) |
+| **Initially Suspended** | Yes (no cost until use) |
+| **Auto-Resume** | Enabled |
+| **Statement Timeout** | {{ timeout_seconds }} seconds ({{ (timeout_seconds / 60) | int }} minutes) |
+| **Owner** | `{{ data_product_name | upper }}_ADMIN` |
+
+### Tags Applied
+
+Each warehouse will be tagged with:
+
+| Tag | Value |
+|-----|-------|
+| `DOMAIN` | {{ data_product_domain | upper }} |
+| `ENVIRONMENT` | {{ data_product_environment | upper }} |
+| `DATAPRODUCT` | {{ data_product_name | upper }} |
+| `WORKLOAD` | (varies per warehouse) |
+
+**Note:** Tags enable cost allocation by domain, environment, and data product for all compute usage.

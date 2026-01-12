@@ -1,0 +1,176 @@
+-- ============================================================================
+-- APPLY COST ALLOCATION TAGS
+-- ============================================================================
+-- Account: {{ new_account_name | upper }}
+-- Strategy: {{ account_strategy }}
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+-- Domain: {{ account_domain }}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+-- Environment: {{ account_environment }}
+{%- else %}
+-- Domain: {{ account_domain }}
+-- Environment: {{ account_environment }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: VERIFY ACCESS TO SHARED TAGS
+-- ============================================================================
+
+-- Verify the shared infrastructure database is accessible
+SHOW DATABASES LIKE '{{ shared_database_name | upper }}';
+
+-- Verify tags are available
+SHOW TAGS IN SCHEMA {{ shared_database_name | upper }}.{{ governance_name | upper }};
+
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+
+-- Describe the DOMAIN tag
+DESCRIBE TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.DOMAIN;
+
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+
+-- Describe the ENVIRONMENT tag
+DESCRIBE TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT;
+
+{%- else %}
+
+-- Describe both tags
+DESCRIBE TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.DOMAIN;
+DESCRIBE TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT;
+
+{%- endif %}
+
+-- ============================================================================
+-- STEP 2: CREATE SAMPLE WAREHOUSE FOR DEMONSTRATION
+-- ============================================================================
+
+-- Create a sample warehouse to demonstrate tagging
+CREATE WAREHOUSE IF NOT EXISTS {{ new_account_name | upper }}_WH
+  WAREHOUSE_SIZE = 'X-SMALL'
+  AUTO_SUSPEND = 60
+  AUTO_RESUME = TRUE
+  INITIALLY_SUSPENDED = TRUE
+  COMMENT = 'Default warehouse for {{ new_account_name }} account';
+
+-- ============================================================================
+-- STEP 3: APPLY APPROPRIATE TAG(S) TO THE WAREHOUSE
+-- ============================================================================
+
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+
+-- Apply DOMAIN tag (Environment will be applied at database level in Data Product workflow)
+ALTER WAREHOUSE {{ new_account_name | upper }}_WH 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = '{{ account_domain }}';
+
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+
+-- Apply ENVIRONMENT tag (Domain will be applied at database level in Data Product workflow)
+ALTER WAREHOUSE {{ new_account_name | upper }}_WH 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ account_environment }}';
+
+{%- else %}
+
+-- Apply both DOMAIN and ENVIRONMENT tags
+ALTER WAREHOUSE {{ new_account_name | upper }}_WH 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = '{{ account_domain }}';
+
+ALTER WAREHOUSE {{ new_account_name | upper }}_WH 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ account_environment }}';
+
+{%- endif %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify tags were applied to the warehouse
+SELECT 
+  OBJECT_NAME,
+  TAG_NAME,
+  TAG_VALUE
+FROM TABLE(INFORMATION_SCHEMA.TAG_REFERENCES('{{ new_account_name | upper }}_WH', 'WAREHOUSE'));
+
+-- ============================================================================
+-- TEMPLATE FOR FUTURE RESOURCES
+-- ============================================================================
+
+/*
+When creating additional warehouses in this account, apply the appropriate tag(s):
+
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+
+-- For Domain-based strategy (this account = {{ account_domain }} domain):
+ALTER WAREHOUSE <warehouse_name> 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = '{{ account_domain }}';
+
+-- Environment tags will be applied to databases in the Data Product workflow.
+
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+
+-- For Environment-based strategy (this account = {{ account_environment }} environment):
+ALTER WAREHOUSE <warehouse_name> 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ account_environment }}';
+
+-- Domain tags will be applied to databases in the Data Product workflow.
+
+{%- else %}
+
+-- For Domain + Environment strategy:
+ALTER WAREHOUSE <warehouse_name> 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = '{{ account_domain }}';
+ALTER WAREHOUSE <warehouse_name> 
+  SET TAG {{ shared_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ account_environment }}';
+
+{%- endif %}
+*/
+
+-- ============================================================================
+-- COST ALLOCATION COMPLETE
+-- ============================================================================
+
+/*
+Cost Allocation Tags Applied!
+=============================
+
+Account: {{ new_account_name | upper }}
+Strategy: {{ account_strategy }}
+
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+Tag Applied: DOMAIN = {{ account_domain }}
+
+Note: ENVIRONMENT tags will be applied at the database level when you
+create data products in this account.
+
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+Tag Applied: ENVIRONMENT = {{ account_environment }}
+
+Note: DOMAIN tags will be applied at the database level when you
+create data products in this account.
+
+{%- else %}
+Tags Applied:
+- DOMAIN = {{ account_domain }}
+- ENVIRONMENT = {{ account_environment }}
+
+{%- endif %}
+
+============================================================================
+ACCOUNT CREATION WORKFLOW COMPLETE!
+============================================================================
+
+This account is now fully configured with:
+✅ Account created in your organization
+✅ Infrastructure share consumed
+✅ Security & identity configured (SCIM, SAML, Network, Auth policies)
+✅ Break-glass emergency access
+✅ Budget and resource monitor for cost control
+✅ Cost allocation tags applied
+
+The account is ready for use!
+*/

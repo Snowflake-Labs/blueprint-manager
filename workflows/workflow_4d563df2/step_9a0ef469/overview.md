@@ -56,6 +56,25 @@ For multiple thresholds (e.g., 50%, 75%, 90%), use Resource Monitors (Configure 
 
 ### Configuration Questions
 
+#### What email address(es) should receive budget alerts? (`budget_alert_emails`: list)
+**What is this asking?**
+Provide the email addresses that should receive budget alert notifications.
+
+**Why does this matter?**
+Budget alerts need to reach people who can investigate and take action on spending issues.
+
+**Best practices:**
+- Use distribution lists for team visibility (e.g., `finops-team@company.com`)
+- Include both technical and financial stakeholders
+- Ensure 24/7 monitoring for critical budgets
+
+**Examples:**
+- `finops-team@company.com`
+- `data-platform-leads@company.com`
+
+**Alternative notification methods:**
+This step configures email notifications, which is the simplest approach. If you need webhook notifications (Slack/Teams) or cloud service queues (SNS/Event Grid), see the "Upgrading to Webhook Notifications" section in the generated documentation.
+
 #### At what percentage of your budget should alerts be triggered? (`budget_notification_threshold`: multi-select)
 **What is this asking?**
 Select the percentage of your budget limit at which Snowflake will send notifications when *projected* spending exceeds this threshold.
@@ -88,6 +107,25 @@ The threshold determines how early you receive warnings. Lower thresholds give m
 - 100
 - 110
 
+#### What is your monthly account budget (in credits)? (`account_monthly_budget`: text)
+**What is this asking?**
+Set the total monthly credit budget for your Snowflake account. This is the spending limit used to calculate when alerts are triggered.
+
+**Why does this matter?**
+A well-set budget provides meaningful alerts without being too restrictive. Setting it too low causes alert fatigue; too high means late warnings.
+
+**How to determine your budget:**
+- Base it on your Snowflake contract or expected usage
+- Include a buffer for growth (recommend 20-30% above expected usage)
+- Consider seasonal variations in workload
+
+**Example:**
+If you expect to use 1,000 credits/month, set budget to 1,200-1,300 credits.
+
+**Note:** 1 credit ≈ $2-4 depending on your Snowflake edition and region.
+
+**Important:** This is for alerting purposes only. Snowflake will not automatically stop services when the budget is exceeded. Use Resource Monitors (Configure Resource Monitors step) for hard limits.
+
 #### Do you want to set up spending budgets? (`enable_budgets`: multi-select)
 **What is this asking?**
 Decide whether to use Snowflake's native budget feature for automated spending monitoring and alerts.
@@ -118,25 +156,6 @@ Use Snowflake's native budgets for automated monitoring and alerts. They're easy
 - Yes
 - No
 
-#### What email address(es) should receive budget alerts? (`budget_alert_emails`: list)
-**What is this asking?**
-Provide the email addresses that should receive budget alert notifications.
-
-**Why does this matter?**
-Budget alerts need to reach people who can investigate and take action on spending issues.
-
-**Best practices:**
-- Use distribution lists for team visibility (e.g., `finops-team@company.com`)
-- Include both technical and financial stakeholders
-- Ensure 24/7 monitoring for critical budgets
-
-**Examples:**
-- `finops-team@company.com`
-- `data-platform-leads@company.com`
-
-**Alternative notification methods:**
-This step configures email notifications, which is the simplest approach. If you need webhook notifications (Slack/Teams) or cloud service queues (SNS/Event Grid), see the "Upgrading to Webhook Notifications" section in the generated documentation.
-
 #### How frequently should the budget check for updated spending? (`budget_refresh_interval`: multi-select)
 **What is this asking?**
 Choose how often the budget updates its spending data and performs forecasting.
@@ -161,22 +180,3 @@ Start with 6.5 hours (default). Switch to 1 hour only during critical cost monit
 **Options:**
 - 6.5 hours (default)
 - 1 hour (frequent monitoring)
-
-#### What is your monthly account budget (in credits)? (`account_monthly_budget`: text)
-**What is this asking?**
-Set the total monthly credit budget for your Snowflake account. This is the spending limit used to calculate when alerts are triggered.
-
-**Why does this matter?**
-A well-set budget provides meaningful alerts without being too restrictive. Setting it too low causes alert fatigue; too high means late warnings.
-
-**How to determine your budget:**
-- Base it on your Snowflake contract or expected usage
-- Include a buffer for growth (recommend 20-30% above expected usage)
-- Consider seasonal variations in workload
-
-**Example:**
-If you expect to use 1,000 credits/month, set budget to 1,200-1,300 credits.
-
-**Note:** 1 credit ≈ $2-4 depending on your Snowflake edition and region.
-
-**Important:** This is for alerting purposes only. Snowflake will not automatically stop services when the budget is exceeded. Use Resource Monitors (Configure Resource Monitors step) for hard limits.

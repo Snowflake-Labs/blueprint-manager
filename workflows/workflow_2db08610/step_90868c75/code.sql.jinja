@@ -1,0 +1,304 @@
+-- ============================================================================
+-- GRANT WAREHOUSE ACCESS (WITH ACCESS ROLES)
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+-- Domain: {{ data_product_domain }}
+-- Environment: {{ data_product_environment }}
+-- Access Pattern: {{ warehouse_access_pattern }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: USERADMIN (create roles), then {{ data_product_name | upper }}_CREATE
+-- ============================================================================
+
+-- ============================================================================
+-- CREATE WAREHOUSE ACCESS ROLES
+-- ============================================================================
+
+USE ROLE USERADMIN;
+
+{%- for wh in warehouse_definitions %}
+
+{#- Build warehouse name based on component order and account strategy -#}
+{%- set modifier_suffix = ('_' ~ wh.modifier | upper) if wh.modifier else '' %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- endif %}
+
+-- Warehouse access role for {{ wh_name }}
+CREATE ROLE IF NOT EXISTS _WH_U_{{ wh_name }}
+  COMMENT = 'Warehouse usage access role for {{ wh_name }}';
+
+{%- endfor %}
+
+-- ============================================================================
+-- GRANT PRIVILEGES TO ACCESS ROLES
+-- ============================================================================
+
+USE ROLE SECURITYADMIN;
+
+{%- for wh in warehouse_definitions %}
+
+{%- set modifier_suffix = ('_' ~ wh.modifier | upper) if wh.modifier else '' %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- endif %}
+
+-- Grant warehouse privileges to access role
+GRANT MONITOR, USAGE ON WAREHOUSE {{ wh_name }} TO ROLE _WH_U_{{ wh_name }};
+
+-- Transfer access role ownership to data product admin for self-service
+GRANT OWNERSHIP ON ROLE _WH_U_{{ wh_name }} 
+  TO ROLE {{ data_product_name | upper }}_ADMIN 
+  COPY CURRENT GRANTS;
+
+{%- endfor %}
+
+-- ============================================================================
+-- GRANT ACCESS ROLES TO DATA PRODUCT ROLES
+-- ============================================================================
+
+USE ROLE {{ data_product_name | upper }}_ADMIN;
+
+{%- if warehouse_access_pattern == 'Shared (all roles use all warehouses)' %}
+
+-- Shared Access: All roles receive all warehouse access roles
+{%- for wh in warehouse_definitions %}
+
+{%- set modifier_suffix = ('_' ~ wh.modifier | upper) if wh.modifier else '' %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- endif %}
+
+GRANT ROLE _WH_U_{{ wh_name }} TO ROLE {{ data_product_name | upper }}_READ;
+
+{%- if role_structure == 'Full (Admin + Create + Write + Read)' %}
+GRANT ROLE _WH_U_{{ wh_name }} TO ROLE {{ data_product_name | upper }}_WRITE;
+{%- endif %}
+
+{%- if role_structure == 'Standard (Admin + Create + Read)' or role_structure == 'Full (Admin + Create + Write + Read)' %}
+GRANT ROLE _WH_U_{{ wh_name }} TO ROLE {{ data_product_name | upper }}_CREATE;
+-- Admin also gets OPERATE for warehouse control
+GRANT OPERATE ON WAREHOUSE {{ wh_name }} TO ROLE {{ data_product_name | upper }}_CREATE;
+{%- endif %}
+
+{%- endfor %}
+
+{%- else %}
+
+-- Dedicated Access: Roles get specific warehouse access roles based on workload
+{%- for wh in warehouse_definitions %}
+
+{%- set modifier_suffix = ('_' ~ wh.modifier | upper) if wh.modifier else '' %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- endif %}
+
+{%- set purpose_lower = wh.purpose | lower %}
+{%- set is_query_wh = 'query' in purpose_lower or 'analytics' in purpose_lower or 'report' in purpose_lower %}
+{%- set is_load_wh = 'load' in purpose_lower or 'etl' in purpose_lower or 'elt' in purpose_lower or 'transform' in purpose_lower %}
+
+-- {{ wh_name }} ({{ wh.purpose }})
+{%- if is_query_wh %}
+-- Query warehouse → Reader access
+GRANT ROLE _WH_U_{{ wh_name }} TO ROLE {{ data_product_name | upper }}_READ;
+{%- endif %}
+
+{%- if is_load_wh and role_structure == 'Full (Admin + Create + Write + Read)' %}
+-- Load/Transform warehouse → Writer access
+GRANT ROLE _WH_U_{{ wh_name }} TO ROLE {{ data_product_name | upper }}_WRITE;
+{%- endif %}
+
+{%- if role_structure == 'Standard (Admin + Create + Read)' or role_structure == 'Full (Admin + Create + Write + Read)' %}
+-- Admin gets all warehouses with OPERATE
+GRANT ROLE _WH_U_{{ wh_name }} TO ROLE {{ data_product_name | upper }}_CREATE;
+GRANT OPERATE ON WAREHOUSE {{ wh_name }} TO ROLE {{ data_product_name | upper }}_CREATE;
+{%- endif %}
+
+{%- endfor %}
+
+{%- endif %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Show warehouse access roles
+SHOW ROLES LIKE '_WH_U_%{{ data_product_name | upper }}%';
+
+-- Show grants on each warehouse
+{%- for wh in warehouse_definitions %}
+{%- set modifier_suffix = ('_' ~ wh.modifier | upper) if wh.modifier else '' %}
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_environment | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.warehouse_name | upper ~ modifier_suffix %}
+{%- endif %}
+{%- endif %}
+SHOW GRANTS ON WAREHOUSE {{ wh_name }};
+SHOW GRANTS TO ROLE _WH_U_{{ wh_name }};
+{%- endfor %}
+
+/*
+WAREHOUSE ACCESS GRANTED (WITH ACCESS ROLES)
+=============================================
+
+Access Pattern: {{ warehouse_access_pattern }}
+
+Warehouse Access Roles Created:
+{%- for wh in warehouse_definitions %}
+- _WH_U_{{ wh.warehouse_name | upper }} (owned by {{ data_product_name | upper }}_CREATE)
+{%- endfor %}
+
+{%- if warehouse_access_pattern == 'Shared (all roles use all warehouses)' %}
+All roles have access to all data product warehouses via access roles.
+{%- else %}
+Dedicated access configured:
+- Readers: Query warehouse access roles only
+- Writers: Load/Transform warehouse access roles
+- Admin: All warehouse access roles + OPERATE
+{%- endif %}
+
+Self-Service Administration:
+The data product owner can grant warehouse access to additional roles:
+  GRANT ROLE _WH_U_<warehouse> TO ROLE <other_role>;
+*/

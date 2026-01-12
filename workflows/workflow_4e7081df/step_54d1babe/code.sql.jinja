@@ -1,0 +1,90 @@
+-- ============================================================================
+-- CONFIGURE ACCOUNT BUDGET
+-- ============================================================================
+-- Account: {{ new_account_name | upper }}
+-- Monthly Limit: {{ account_budget_limit }} credits
+-- Threshold: {{ account_budget_threshold }}%
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE ACCOUNT BUDGET
+-- ============================================================================
+
+-- Create a budget for this account
+CREATE OR REPLACE SNOWFLAKE.CORE.BUDGET {{ new_account_name | upper }}_BUDGET();
+
+-- ============================================================================
+-- STEP 2: SET SPENDING LIMIT
+-- ============================================================================
+
+-- Set the monthly spending limit
+CALL {{ new_account_name | upper }}_BUDGET!SET_SPENDING_LIMIT({{ account_budget_limit }});
+
+-- ============================================================================
+-- STEP 3: SET NOTIFICATION THRESHOLD
+-- ============================================================================
+
+-- Configure the alert threshold percentage
+CALL {{ new_account_name | upper }}_BUDGET!SET_NOTIFICATION_THRESHOLD({{ account_budget_threshold }});
+
+-- ============================================================================
+-- STEP 4: CONFIGURE EMAIL NOTIFICATIONS
+-- ============================================================================
+
+-- Set up email notifications for budget alerts
+CALL {{ new_account_name | upper }}_BUDGET!SET_EMAIL_NOTIFICATIONS(
+  ARRAY_CONSTRUCT(
+{%- for email in account_budget_emails %}
+    '{{ email | trim }}'{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+);
+
+-- ============================================================================
+-- STEP 5: ACTIVATE THE BUDGET
+-- ============================================================================
+
+-- Activate the budget to start monitoring
+CALL {{ new_account_name | upper }}_BUDGET!ACTIVATE();
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify budget was created
+SHOW BUDGETS;
+
+-- Check budget details
+CALL {{ new_account_name | upper }}_BUDGET!GET_CONFIG();
+
+-- View current spending status
+CALL {{ new_account_name | upper }}_BUDGET!GET_SPENDING_STATUS();
+
+-- ============================================================================
+-- BUDGET CONFIGURED
+-- ============================================================================
+
+/*
+Account Budget Configured!
+==========================
+
+Budget Name: {{ new_account_name | upper }}_BUDGET
+Monthly Limit: {{ account_budget_limit }} credits
+Alert Threshold: {{ account_budget_threshold }}%
+
+Alert Recipients:
+{%- for email in account_budget_emails %}
+- {{ email | trim }}
+{%- endfor %}
+
+The budget is now active and monitoring credit consumption.
+Alerts will be sent when:
+- Actual spend reaches {{ account_budget_threshold }}% of limit
+- Forecasted spend is projected to exceed {{ account_budget_threshold }}% of limit
+*/

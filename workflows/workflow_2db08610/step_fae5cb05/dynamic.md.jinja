@@ -1,0 +1,67 @@
+## Role Assignments
+
+### Owner Assignment
+
+The following users will be granted the `{{ data_product_name | upper }}_ADMIN` role:
+
+{%- for user in owner_users %}
+- `{{ user | upper }}`
+{%- endfor %}
+
+These users will have full administrative control over:
+- All databases and schemas in this data product
+- Grant management for all data product roles
+- Warehouse operations and monitoring
+
+### Managing Reader and Writer Access
+
+Reader and writer access should be managed separately through your organization's access management process.
+
+#### Example Commands for Future Access Grants
+
+**Grant reader access to a user:**
+```sql
+USE ROLE SECURITYADMIN;
+GRANT ROLE {{ data_product_name | upper }}_READ TO USER <username>;
+```
+
+**Grant reader access to a group/parent role:**
+```sql
+USE ROLE SECURITYADMIN;
+GRANT ROLE {{ data_product_name | upper }}_READ TO ROLE <team_role>;
+```
+
+{%- if role_structure == 'Full (Admin + Create + Write + Read)' %}
+
+**Grant writer access to a user or service account:**
+```sql
+USE ROLE SECURITYADMIN;
+GRANT ROLE {{ data_product_name | upper }}_WRITE TO USER <username>;
+```
+
+{%- endif %}
+
+{%- if role_structure == 'Standard (Admin + Create + Read)' or role_structure == 'Full (Admin + Create + Write + Read)' %}
+
+**Grant admin access for delegated management:**
+```sql
+USE ROLE SECURITYADMIN;
+GRANT ROLE {{ data_product_name | upper }}_ADMIN TO USER <username>;
+```
+
+{%- endif %}
+
+**Revoke access:**
+```sql
+USE ROLE SECURITYADMIN;
+REVOKE ROLE {{ data_product_name | upper }}_READ FROM USER <username>;
+```
+
+### Best Practice: SCIM Integration
+
+For ongoing access management, consider integrating with your Identity Provider:
+- Map IdP groups to Snowflake roles
+- Automate onboarding/offboarding
+- Maintain audit trail in your IdP
+
+See [SCIM Integration](https://docs.snowflake.com/en/user-guide/scim) for setup instructions.

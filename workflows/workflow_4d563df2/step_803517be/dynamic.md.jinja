@@ -1,9 +1,9 @@
 {%- if enable_cost_tags == "Yes" %}
-## Additional Cost Allocation Tags Enabled
+## Additional Cost Allocation Tags: Enabled
 
-You've chosen to extend your tagging framework with additional cost allocation tags.
+You've chosen to extend your tagging framework. In the **next step**, you'll select which additional tags to create.
 
-### Existing Tags (from Platform Foundation task)
+### Existing Tags (from Task 1)
 
 These tags were created in `{{ platform_database_name }}.{{ governance_name }}`:
 
@@ -14,19 +14,24 @@ These tags were created in `{{ platform_database_name }}.{{ governance_name }}`:
 | `dataproduct` | Data product ID |
 | `workload` | Workload type |
 | `zone` | Data zone |
+| `data_classification` | Data sensitivity level |
 
-### Additional Tags (this step)
+### Available Additional Tags (configured in next step)
 
-| Tag | Purpose |
-|-----|---------|
-| `cost_center` | Accounting code |
-| `owner` | Responsible party |
-| `project` | Initiative name |
-| `application` | System name |
+In the next step, you'll choose from:
+
+| Tag | Purpose | Options |
+|-----|---------|---------|
+| `owner` | Responsible party | All options |
+| `cost_center` | Accounting code | Essential, All |
+| `project` | Initiative name | All only |
+| `application` | System name | All only |
+
+**Next Step:** Configure Cost Allocation Tags — select which additional tags to create.
 {%- else %}
-## Additional Cost Allocation Tags Not Enabled
+## Additional Cost Allocation Tags: Not Enabled
 
-You've chosen to use only the core tags from the Platform Foundation task.
+You've chosen to use only the core platform tags.
 
 ### Available Tags
 
@@ -37,6 +42,7 @@ You've chosen to use only the core tags from the Platform Foundation task.
 | `dataproduct` | Data product allocation |
 | `workload` | Workload type tracking |
 | `zone` | Data zone classification |
+| `data_classification` | Data sensitivity level |
 
-These provide sufficient cost allocation for most organizations.
+You can add more tags later for FinOps and cost allocation purposes if needed.
 {%- endif %}
