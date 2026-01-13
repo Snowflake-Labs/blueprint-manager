@@ -22,6 +22,7 @@ try:
         FileSystemLoader,
         StrictUndefined,
         TemplateError,
+        meta,
     )
 except ImportError as e:
     sys.stderr.write(f"Error: Required library not found: {e}\n")
@@ -112,60 +113,49 @@ def get_step_title(step_path):
     return None
 
 
-def get_all_missing_vars(template_content, answers):
+def find_template_variables(template_source, jinja_env):
     """
-    Find all missing variables in a template by checking which Jinja variables are not in answers.
-    Returns a list of missing variable names.
+    Use Jinja2's AST parser to find all undeclared variables in a template.
+
+    Returns a set of variable names referenced in the template.
     """
-    import re
-
-    # Match {{ var }} and {{ var | filter }} patterns
-    var_pattern = r"\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)"
-    found_vars = set(re.findall(var_pattern, template_content))
-
-    # Also match {% if var %}, {% for item in var %}, etc.
-    control_pattern = r"\{%\s*(?:if|for\s+\w+\s+in|elif)\s+([a-zA-Z_][a-zA-Z0-9_]*)"
-    found_vars.update(re.findall(control_pattern, template_content))
-
-    # Filter to only variables missing from answers
-    missing = [
-        v for v in found_vars if v not in answers and v not in ("True", "False", "None")
-    ]
-    return sorted(missing)
+    try:
+        ast = jinja_env.parse(template_source)
+        return meta.find_undeclared_variables(ast)
+    except TemplateError:
+        # If parsing fails, return empty set - the actual render will catch the error
+        return set()
 
 
-def get_none_valued_vars(template_content, answers):
-    """
-    Find variables used in iteration contexts (for loops) that have None values in answers.
-    These will cause TypeError when Jinja tries to iterate over them.
-    Returns a list of variable names that are None but used in iteration.
-    """
-    import re
-
-    # Match {% for item in var %} patterns - extract the iterable variable
-    for_pattern = r"\{%[-]?\s*for\s+\w+\s+in\s+([a-zA-Z_][a-zA-Z0-9_]*)"
-    iterable_vars = set(re.findall(for_pattern, template_content))
-
-    # Filter to variables that exist but are None
-    none_vars = [v for v in iterable_vars if v in answers and answers[v] is None]
-    return sorted(none_vars)
-
-
-def check_template_renderable(template_path, answers):
+def check_template_renderable(template_path, answers, jinja_env):
     """
     Pre-check if a template can be rendered with the given answers.
-    This prevents errors by checking for missing and null variables before rendering.
+    Uses Jinja2's AST parser to find all referenced variables, then checks
+    if they exist in answers and have non-None values where needed.
 
     Returns tuple: (can_render, missing_vars, null_vars)
     - can_render: True if template can be safely rendered
     - missing_vars: list of variables not in answers
-    - null_vars: list of iterable variables that are None
+    - null_vars: list of variables that are None in answers
     """
     with open(template_path, "r", encoding="utf-8") as f:
-        template_content = f.read()
+        template_source = f.read()
 
-    missing_vars = get_all_missing_vars(template_content, answers)
-    null_vars = get_none_valued_vars(template_content, answers)
+    # Use Jinja2's AST to find all undeclared variables
+    referenced_vars = find_template_variables(template_source, jinja_env)
+
+    # Separate into missing (not in answers) and null (in answers but None)
+    missing_vars = []
+    null_vars = []
+
+    for var in referenced_vars:
+        if var not in answers:
+            missing_vars.append(var)
+        elif answers[var] is None:
+            null_vars.append(var)
+
+    missing_vars = sorted(missing_vars)
+    null_vars = sorted(null_vars)
 
     can_render = len(missing_vars) == 0 and len(null_vars) == 0
     return can_render, missing_vars, null_vars
@@ -185,8 +175,10 @@ def render_step_code(step_path, lang, answers, jinja_env, base_dir):
     if not code_file.exists():
         return None, step_id, []
 
-    # Pre-check if template can be rendered
-    can_render, missing_vars, null_vars = check_template_renderable(code_file, answers)
+    # Pre-check if template can be rendered using Jinja2's AST parser
+    can_render, missing_vars, null_vars = check_template_renderable(
+        code_file, answers, jinja_env
+    )
     if not can_render:
         all_issues = missing_vars + null_vars
         issue_details = []
@@ -226,9 +218,9 @@ def render_step_guidance(step_path, answers, jinja_env, base_dir):
     if not overview_file.exists():
         return None, step_id, []
 
-    # Pre-check if template can be rendered
+    # Pre-check if template can be rendered using Jinja2's AST parser
     can_render, missing_vars, null_vars = check_template_renderable(
-        overview_file, answers
+        overview_file, answers, jinja_env
     )
     if not can_render:
         all_issues = missing_vars + null_vars
