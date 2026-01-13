@@ -206,21 +206,21 @@ def render_step_code(step_path, lang, answers, jinja_env, base_dir):
 
 def render_step_guidance(step_path, answers, jinja_env, base_dir):
     """
-    Render overview/guidance markdown for a step.
+    Render dynamic guidance markdown for a step from dynamic.md.jinja.
     Returns tuple: (rendered_content, step_id, missing_vars)
     - rendered_content: the rendered content or None if file doesn't exist
     - step_id: the step identifier
     - missing_vars: list of missing variable names (empty if successful)
     """
     step_id = step_path.name
-    overview_file = step_path / "overview.md"
+    dynamic_file = step_path / "dynamic.md.jinja"
 
-    if not overview_file.exists():
+    if not dynamic_file.exists():
         return None, step_id, []
 
     # Pre-check if template can be rendered using Jinja2's AST parser
     can_render, missing_vars, null_vars = check_template_renderable(
-        overview_file, answers, jinja_env
+        dynamic_file, answers, jinja_env
     )
     if not can_render:
         all_issues = missing_vars + null_vars
@@ -230,20 +230,20 @@ def render_step_guidance(step_path, answers, jinja_env, base_dir):
         if null_vars:
             issue_details.append(f"null values {null_vars}")
         sys.stderr.write(
-            f"  Skipping {step_id}/overview.md: {', '.join(issue_details)}\n"
+            f"  Skipping {step_id}/dynamic.md.jinja: {', '.join(issue_details)}\n"
         )
         return None, step_id, all_issues
 
     try:
         # Load template using the shared Jinja2 environment
-        template = jinja_env.get_template(str(overview_file.relative_to(base_dir)))
+        template = jinja_env.get_template(str(dynamic_file.relative_to(base_dir)))
 
         # Render the template (pre-check should have caught issues)
         rendered = template.render(**answers)
         return rendered, step_id, []
 
     except TemplateError as e:
-        sys.stderr.write(f"Warning: Template error in {overview_file}: {e}\n")
+        sys.stderr.write(f"Warning: Template error in {dynamic_file}: {e}\n")
         return None, step_id, []
 
 
@@ -415,9 +415,9 @@ def render_workflow_guidance(workflow_dir, answers, base_dir):
         )
 
         if rendered_guidance is None:
-            # No overview file or missing variables - add skip note if file existed
-            overview_file = step_path / "overview.md"
-            if overview_file.exists() and missing_vars:
+            # No dynamic template or missing variables - add skip note if file existed
+            dynamic_file = step_path / "dynamic.md.jinja"
+            if dynamic_file.exists() and missing_vars:
                 # Determine if vars are missing or null
                 null_vars = [
                     v for v in missing_vars if v in answers and answers[v] is None

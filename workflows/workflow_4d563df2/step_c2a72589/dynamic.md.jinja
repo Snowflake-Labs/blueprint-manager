@@ -85,3 +85,4 @@ SHOW SCHEMAS IN DATABASE {{ platform_database_name | upper }};
 -- Confirm Managed Access is enabled
 SELECT * FROM {{ platform_database_name | upper }}.INFORMATION_SCHEMA.SCHEMATA 
 WHERE SCHEMA_NAME = '{{ governance_name | upper }}';
+```
