@@ -1,12 +1,12 @@
-workflow_id: workflow_2db08610
+blueprint_id: blueprint_2db08610
 name: Data Product Configuration
 summary: Configure a complete data product with databases, roles, warehouses, and
   cost controls
-overview: This repeatable workflow guides you through configuring a complete data
+overview: This repeatable blueprint guides you through configuring a complete data
   product in Snowflake. You'll plan the data product structure, create databases and
   schemas organized by zones, establish role-based access control with owner, writer,
   and reader roles, provision compute warehouses sized for your workload, and configure
-  resource monitors for cost management. Run this workflow once for each data product
+  resource monitors for cost management. Run this blueprint once for each data product
   you need to deploy.
 is_repeatable: true
 steps:

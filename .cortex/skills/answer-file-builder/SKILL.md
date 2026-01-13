@@ -1,67 +1,67 @@
 ---
 name: answer-file-builder
-description: "Guide users through constructing answer files for Snowflake Landing Zone workflows. Use when: user wants to create or complete an answer file, configure a landing zone workflow, or understand configuration questions. Triggers: create answer file, build answers, configure workflow, landing zone setup, fill out questionnaire, set up landing zone."
+description: "Guide users through constructing answer files for Snowflake Blueprint Manager blueprints. Use when: user wants to create or complete an answer file, configure a blueprint, or understand configuration questions. Triggers: create answer file, build answers, configure blueprint, blueprint setup, fill out questionnaire, set up blueprint."
 ---
 
 # Answer File Builder
 
-This skill guides users through constructing answer files for Snowflake Landing Zone workflows by first understanding their organization through an open-ended description, then intelligently generating all configuration answers, and finally offering an optional step-by-step review.
+This skill guides users through constructing answer files for Snowflake Blueprint Manager blueprints by first understanding their organization through an open-ended description, then intelligently generating all configuration answers, and finally offering an optional step-by-step review.
 
 ## When to Use
 
 Invoke this skill when users:
-- Want to set up a Snowflake landing zone
-- Need to create or complete an answer file for a workflow
-- Ask about workflow configuration
+- Want to set up a Snowflake blueprint
+- Need to create or complete an answer file for a blueprint
+- Ask about blueprint configuration
 - Want to configure their Snowflake environment
 - Mention setting up infrastructure or governance
 
 ## Prerequisites
 
 1. **Repository structure exists:**
-   - `workflows/` directory with workflow definitions
+   - `blueprints/` directory with blueprint definitions
    - `definitions/questions.yaml` with question definitions
    - `answers/` directory for storing answer files
 
-2. **Workflow components:**
-   - Each workflow has a `meta.yaml` with workflow metadata
+2. **Blueprint components:**
+   - Each blueprint has a `meta.yaml` with blueprint metadata
    - Steps have `overview.md` files with context and guidance
    - Questions are defined with types: `multi-select`, `list`, or `text`
 
 ## Workflow
 
-### Step 1: Discover Available Workflows
+### Step 1: Discover Available Blueprints
 
-**Goal:** Identify which workflows are available and which one the user wants to work with
+**Goal:** Identify which blueprints are available and which one the user wants to work with
 
 **Actions:**
 
-1. **List workflows** in the repository:
+1. **List blueprints** in the repository:
    ```bash
-   find workflows -name "meta.yaml" -type f
+   find blueprints -name "meta.yaml" -type f
    ```
 
-2. **Read workflow metadata** for each workflow:
-   - Load `workflows/<workflow_id>/meta.yaml`
+2. **Read blueprint metadata** for each blueprint:
+   - Load `blueprints/<blueprint_id>/meta.yaml`
    - Extract: `name`, `summary`, `overview`, `is_repeatable`, `steps`
 
-3. **Present workflows** to user:
+3. **Present blueprints** to user:
    ```
-   Available workflows:
+   Available blueprints:
    
-   1. [Workflow Name]
+   1. [Blueprint Name]
       Summary: [Brief description]
       Steps: [Number of steps]
    
-   2. [Workflow Name 2]
+   2. [Blueprint Name 2]
       ...
    
-   Which workflow would you like to work with?
+   Which blueprint would you like to work with?
    ```
 
-**⚠️ MANDATORY STOPPING POINT**: Wait for user to select a workflow.
+**⚠️ MANDATORY STOPPING POINT**: Wait for user to select a blueprint.
 
-**Output:** Selected workflow ID and metadata
+**Output:** Selected blueprint ID and metadata
 
 ### Step 2: Initialize or Select Answer File
 
@@ -71,7 +71,7 @@ Invoke this skill when users:
 
 1. **Check for existing answer files:**
    ```bash
-   find answers/<workflow_id> -name "*.yaml" -type f 2>/dev/null | sort -r
+   find answers/<blueprint_id> -name "*.yaml" -type f 2>/dev/null | sort -r
    ```
 
 2. **Present options to user:**
@@ -95,12 +95,12 @@ Invoke this skill when users:
 
 2. **Create answer file directory:**
    ```bash
-   mkdir -p answers/<workflow_id>
+   mkdir -p answers/<blueprint_id>
    ```
 
 3. **Create initial answer file:**
-   - Path: `answers/<workflow_id>/answers_<timestamp>.yaml`
-   - Initialize with header comments (workflow name, date, workflow ID)
+   - Path: `answers/<blueprint_id>/answers_<timestamp>.yaml`
+   - Initialize with header comments (blueprint name, date, blueprint ID)
 
 4. **Proceed to Step 3** (Collect User Context)
 
@@ -110,10 +110,10 @@ Invoke this skill when users:
    ```
    Existing answer files for this workflow:
    
-   1. answers/<workflow_id>/answers_20251221214657.yaml
+   1. answers/<blueprint_id>/answers_20251221214657.yaml
       Created: 2025-12-21 21:46:57
       
-   2. answers/<workflow_id>/answers_20251221222441.yaml
+   2. answers/<blueprint_id>/answers_20251221222441.yaml
       Created: 2025-12-21 22:24:41
    
    Which file would you like to work with? (1-N):
@@ -172,14 +172,14 @@ Invoke this skill when users:
    read definitions/questions.yaml
    ```
 
-2. **Parse questions** to understand what information is needed across the entire workflow
+2. **Parse questions** to understand what information is needed across the entire blueprint
 
 3. **Present open-ended request with suggested topics AND step-by-step option:**
    
    **Request Template - Adapt based on workflow:**
    
    ```
-   I can help you configure your Snowflake Landing Zone in one of two ways:
+   I can help you configure your Snowflake Blueprint in one of two ways:
    
    ---
    
@@ -245,14 +245,14 @@ Invoke this skill when users:
 
 **Output:** Either user context for auto-generation, or indication to use step-by-step mode
 
-### Step 4: Generate All Workflow Answers
+### Step 4: Generate All Blueprint Answers
 
-**Goal:** Intelligently fill out workflow answers based on user's context, being honest about what can and cannot be determined
+**Goal:** Intelligently fill out blueprint answers based on user's context, being honest about what can and cannot be determined
 
 **Actions:**
 
-1. **Load workflow steps:**
-   - Read `workflows/<workflow_id>/meta.yaml` for step order
+1. **Load blueprint steps:**
+   - Read `blueprints/<blueprint_id>/meta.yaml` for step order
    - Load each step's `overview.md` to understand questions
 
 2. **For each step, extract questions:**
@@ -422,9 +422,9 @@ Invoke this skill when users:
 
 ### Step 6: Interactive Step-by-Step Walkthrough
 
-**Goal:** Walk through each workflow step, showing questions, answers, reasoning, and allowing updates
+**Goal:** Walk through each blueprint step, showing questions, answers, reasoning, and allowing updates
 
-**For each step in workflow.steps:**
+**For each step in blueprint.steps:**
 
 #### Step 6.1: Display Step Overview and Questions
 
@@ -432,7 +432,7 @@ Invoke this skill when users:
 
 1. **Read step overview:**
    ```bash
-   read workflows/<workflow_id>/<step_id>/overview.md
+   read blueprints/<blueprint_id>/<step_id>/overview.md
    ```
 
 2. **Extract questions for this step** (parse overview.md for question IDs)
@@ -672,7 +672,7 @@ Invoke this skill when users:
    ```bash
    python scripts/render_journey.py \
      [answer_file_path] \
-     --workflow [workflow_id] \
+     --blueprint [blueprint_id] \
      --lang sql
    ```
    
@@ -680,7 +680,7 @@ Invoke this skill when users:
    ```bash
    ./venv/bin/python scripts/render_journey.py \
      [answer_file_path] \
-     --workflow [workflow_id] \
+     --blueprint [blueprint_id] \
      --lang sql
    ```
 
@@ -713,7 +713,7 @@ Invoke this skill when users:
    ```bash
    python scripts/render_journey.py \
      [answer_file_path] \
-     --workflow [workflow_id] \
+     --blueprint [blueprint_id] \
      --lang sql
    ```
    
@@ -722,11 +722,11 @@ Invoke this skill when users:
    ```bash
    ./venv/bin/python scripts/render_journey.py \
      [answer_file_path] \
-     --workflow [workflow_id] \
+     --blueprint [blueprint_id] \
      --lang sql
    ```
    
-   Output will be saved to: iac/sql/[workflow_id]_[timestamp].sql
+   Output will be saved to: iac/sql/[blueprint_id]_[timestamp].sql
    ```
 
 **If user selects "Go back":**
@@ -778,7 +778,7 @@ The generated answer file follows this structure:
 ```yaml
 # Platform Foundation Setup - Answer File
 # Created: YYYY-MM-DD
-# Workflow ID: workflow_id
+# Blueprint ID: blueprint_id
 # Organization: [user context summary]
 
 # ============================================================================
@@ -897,19 +897,19 @@ Dynamically produce this at the initiation of the workflow based on the current 
 - Provide manual command for user to debug
 - Check for missing required answers
 
-**User wants to change workflow:**
+**User wants to change blueprint:**
 - Save current progress
-- Return to Step 1 to select different workflow
-- Offer to carry over relevant answers if workflows overlap
+- Return to Step 1 to select different blueprint
+- Offer to carry over relevant answers if blueprints overlap
 
 ## Output
 
 Upon completion, this skill produces:
-- An answer file at `answers/<workflow_id>/answers_<timestamp>.yaml` with:
+- An answer file at `answers/<blueprint_id>/answers_<timestamp>.yaml` with:
   - ✅ Auto-answered questions (where user context was sufficient)
   - ❓ User-specific questions marked as `null` with guidance on what's needed
   - ⚠️ Insufficient context questions marked as `null` with explanation of missing information
 - Clear inline comments explaining reasoning for each answered question
 - Explicit tracking of which questions were answered vs not answered (and why)
-- Optional: Generated SQL infrastructure code at `output/iac/sql/<workflow_id>_<timestamp>.sql`
+- Optional: Generated SQL infrastructure code at `output/iac/sql/<blueprint_id>_<timestamp>.sql`
 - Summary showing exact breakdown: auto-answered, needs user input, needs more context
