@@ -20,7 +20,7 @@ The easiest way to configure your Snowflake Blueprint is using the **Answer File
 
 In order to get the guided Cortex Code experience you will first need to setup the command line interface on your machine. Those instructions can be found here: https://docs.snowflake.com/LIMITEDACCESS/cortex-code/cortex-code-overview.
 
-2. **Clone the repository:**
+1. **Clone the repository:**
 
 ```bash
 
