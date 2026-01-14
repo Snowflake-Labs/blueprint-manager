@@ -1,4 +1,4 @@
-# Blueprint
+# Blueprint Manager
 
 This repository contains infrastructure-as-code templates and blueprints for setting up Snowflake blueprints.
 
@@ -24,9 +24,9 @@ In order to get the guided Cortex Code experience you will first need to setup t
 
 ```bash
 
-git clone https://github.com/Snowflake-Labs/snowflake-landing-zone.git
+git clone https://github.com/Snowflake-Labs/blueprint-manager.git
 
-cd snowflake-landing-zone
+cd blueprint-manager
 ```
 
 2. **Start Cortex CLI:**
