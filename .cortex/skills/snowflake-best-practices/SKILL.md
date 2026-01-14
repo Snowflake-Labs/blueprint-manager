@@ -1,6 +1,6 @@
 ---
 name: snowflake-best-practices
-description: "Snowflake best practices, guidance, recommendations, setup, and configuration advice curated by Snowflake subject matter experts. Use when: user asks about Snowflake best practices, setup recommendations, configuration guidance, architecture decisions, security patterns, cost management, RBAC design, account strategy, naming conventions, or how to implement Snowflake features correctly. Triggers: best practice, recommendation, guidance, how should I, what's the best way, setup advice, configuration help, Snowflake architecture, landing zone."
+description: "Snowflake best practices, guidance, recommendations, setup, and configuration advice curated by Snowflake subject matter experts. Use when: user asks about Snowflake best practices, setup recommendations, configuration guidance, architecture decisions, security patterns, cost management, RBAC design, account strategy, naming conventions, or how to implement Snowflake features correctly. Triggers: best practice, recommendation, guidance, how should I, what's the best way, setup advice, configuration help, Snowflake architecture, blueprint."
 ---
 
 # Snowflake Best Practices
@@ -25,27 +25,27 @@ Invoke this skill when users ask about:
 
 **CRITICAL:** This skill prioritizes curated SME content over general documentation:
 
-1. **FIRST** - Search workflow, step, and question definitions in this repository
+1. **FIRST** - Search blueprint, step, and question definitions in this repository
 2. **THEN** - Only use `snowflake_product_docs` or `system_instructions` for topics not covered locally
 
 ## Content Sources (Priority Order)
 
-### 1. Workflow Overviews (Highest Authority)
-Location: `workflows/*/overview.md`
+### 1. Blueprint Overviews (Highest Authority)
+Location: `blueprints/*/overview.md`
 
-Workflow overviews provide strategic guidance on major topics. **Discover available workflows at runtime:**
+Blueprint overviews provide strategic guidance on major topics. **Discover available blueprints at runtime:**
 ```bash
-# List all workflows and their titles
-for f in workflows/*/overview.md; do echo "=== $f ==="; head -5 "$f"; done
+# List all blueprints and their titles
+for f in blueprints/*/overview.md; do echo "=== $f ==="; head -5 "$f"; done
 ```
 
-Each workflow directory contains:
+Each blueprint directory contains:
 - `overview.md` - Strategic guidance and context
-- `meta.yaml` - Workflow metadata (title, description)
+- `meta.yaml` - Blueprint metadata (title, description)
 - `step_*/` - Individual step directories
 
 ### 2. Step Overviews (Detailed Guidance)
-Location: `workflows/*/step_*/overview.md`
+Location: `blueprints/*/step_*/overview.md`
 
 Each step provides detailed best practices on specific topics including:
 - Why the topic is important
@@ -58,7 +58,7 @@ Each step provides detailed best practices on specific topics including:
 **Discover steps at runtime:**
 ```bash
 # Search steps for a topic
-grep -r -l -i "<topic>" workflows/*/step_*/overview.md
+grep -r -l -i "<topic>" blueprints/*/step_*/overview.md
 ```
 
 ### 3. Question Definitions (Practical Recommendations)
@@ -70,7 +70,7 @@ Contains detailed guidance for configuration decisions including:
 - Examples and common patterns
 - Format guidance and validation rules
 
-## Workflow
+## Blueprint
 
 ### Step 1: Understand the User's Question
 
@@ -92,14 +92,14 @@ Contains detailed guidance for configuration decisions including:
 
 **Actions:**
 
-1. **Search workflow overviews** for the topic:
+1. **Search blueprint overviews** for the topic:
    ```bash
-   grep -r -i "<topic_keywords>" workflows/*/overview.md
+   grep -r -i "<topic_keywords>" blueprints/*/overview.md
    ```
 
 2. **Search step overviews** for detailed guidance:
    ```bash
-   grep -r -i "<topic_keywords>" workflows/*/step_*/overview.md
+   grep -r -i "<topic_keywords>" blueprints/*/step_*/overview.md
    ```
 
 3. **Search question definitions** for practical recommendations:
@@ -114,11 +114,11 @@ Contains detailed guidance for configuration decisions including:
 Rather than hardcoded paths, **search at runtime** to find relevant content:
 
 ```bash
-# Search workflow overviews for strategic guidance
-grep -r -l -i "<topic>" workflows/*/overview.md
+# Search blueprint overviews for strategic guidance
+grep -r -l -i "<topic>" blueprints/*/overview.md
 
 # Search step overviews for detailed best practices
-grep -r -l -i "<topic>" workflows/*/step_*/overview.md
+grep -r -l -i "<topic>" blueprints/*/step_*/overview.md
 
 # Search question definitions for configuration recommendations
 grep -A 50 -i "<topic>" definitions/questions.yaml
@@ -205,7 +205,7 @@ grep -A 50 -i "<topic>" definitions/questions.yaml
 
 ## Content Authority Hierarchy
 
-1. **Workflow/Step overviews** - Strategic guidance, architecture decisions
+1. **Blueprint/Step overviews** - Strategic guidance, architecture decisions
 2. **Question definitions** - Practical recommendations, configuration choices
 3. **snowflake_product_docs** - Feature documentation, syntax, capabilities
 4. **system_instructions** - Tool-specific guidance (RBAC, Streamlit, dbt)

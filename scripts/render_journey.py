@@ -2,8 +2,8 @@
 """
 render_journey.py
 
-Generates consolidated IaC and guidance files based on a workflow and an answers file.
-This script renders all code templates and overview documents from steps within a workflow,
+Generates consolidated IaC and guidance files based on a blueprint and an answers file.
+This script renders all code templates and overview documents from steps within a blueprint,
 concatenating them in order into output files.
 
 Only steps where ALL required variables are provided in the answers file will be rendered.
@@ -46,9 +46,9 @@ def parse_args():
         help="Path to the answers YAML file (e.g., answers/sample_answers.yaml)",
     )
     parser.add_argument(
-        "--workflow",
+        "--blueprint",
         required=True,
-        help="Workflow name/id (e.g., base_landing_zone)",
+        help="Blueprint name/id (e.g., base_blueprint)",
     )
     parser.add_argument(
         "--lang",
@@ -247,25 +247,25 @@ def render_step_guidance(step_path, answers, jinja_env, base_dir):
         return None, step_id, []
 
 
-def render_workflow_code(workflow_dir, lang, answers, base_dir):
+def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
     """
     Render all code templates in a workflow.
     Only renders steps where all required variables are available.
     Steps with missing variables include a skip note in the output.
     Returns the concatenated rendered code and count of rendered/skipped steps.
     """
-    workflow_id = workflow_dir.name
+    blueprint_id = blueprint_dir.name
 
     # Load meta.yaml for workflow metadata and step ordering
-    meta_file = workflow_dir / "meta.yaml"
+    meta_file = blueprint_dir / "meta.yaml"
     if not meta_file.exists():
         sys.stderr.write(
-            f"Error: meta.yaml not found in workflow directory: {workflow_dir}\n"
+            f"Error: meta.yaml not found in blueprint directory: {blueprint_dir}\n"
         )
         sys.exit(1)
 
     meta = load_yaml(meta_file)
-    workflow_name = meta.get("name", workflow_id)
+    blueprint_name = meta.get("name", blueprint_id)
     step_order = meta.get("steps", [])
 
     # Create Jinja2 environment once for all steps
@@ -283,9 +283,9 @@ def render_workflow_code(workflow_dir, lang, answers, base_dir):
     # Add header
     header = [
         f"{comment_char} ============================================================",
-        f"{comment_char} RENDERED JOURNEY: {workflow_name}",
+        f"{comment_char} RENDERED JOURNEY: {blueprint_name}",
         f"{comment_char} Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"{comment_char} Workflow: {workflow_id}",
+        f"{comment_char} Blueprint: {blueprint_id}",
         f"{comment_char} Language: {lang}",
         f"{comment_char} ============================================================\n",
     ]
@@ -293,7 +293,7 @@ def render_workflow_code(workflow_dir, lang, answers, base_dir):
 
     # Process steps in the order defined in meta.yaml
     for step_id in step_order:
-        step_path = workflow_dir / step_id
+        step_path = blueprint_dir / step_id
         if not step_path.exists():
             sys.stderr.write(f"Warning: Step directory not found: {step_path}\n")
             continue
@@ -350,26 +350,26 @@ def render_workflow_code(workflow_dir, lang, answers, base_dir):
     return "\n".join(rendered_sections), rendered_count, skipped_count
 
 
-def render_workflow_guidance(workflow_dir, answers, base_dir):
+def render_blueprint_guidance(blueprint_dir, answers, base_dir):
     """
     Render all guidance/overview documents in a workflow.
     Only renders steps where all required variables are available.
     Steps with missing variables include a skip note in the output.
     Returns the concatenated rendered guidance markdown and count of rendered/skipped steps.
     """
-    workflow_id = workflow_dir.name
+    blueprint_id = blueprint_dir.name
 
     # Load meta.yaml for workflow metadata and step ordering
-    meta_file = workflow_dir / "meta.yaml"
+    meta_file = blueprint_dir / "meta.yaml"
     if not meta_file.exists():
         sys.stderr.write(
-            f"Error: meta.yaml not found in workflow directory: {workflow_dir}\n"
+            f"Error: meta.yaml not found in blueprint directory: {blueprint_dir}\n"
         )
         sys.exit(1)
 
     meta = load_yaml(meta_file)
-    workflow_name = meta.get("name", workflow_id)
-    workflow_overview = meta.get("overview", "")
+    blueprint_name = meta.get("name", blueprint_id)
+    blueprint_overview = meta.get("overview", "")
     step_order = meta.get("steps", [])
 
     # Create Jinja2 environment with strict undefined checking
@@ -385,17 +385,17 @@ def render_workflow_guidance(workflow_dir, answers, base_dir):
 
     # Add header
     header = [
-        f"# {workflow_name}",
+        f"# {blueprint_name}",
         "",
         f"> Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"> Workflow: {workflow_id}",
+        f"> Blueprint: {blueprint_id}",
         "",
         "---",
         "",
     ]
 
-    if workflow_overview:
-        header.append(workflow_overview)
+    if blueprint_overview:
+        header.append(blueprint_overview)
         header.append("")
         header.append("---")
         header.append("")
@@ -405,7 +405,7 @@ def render_workflow_guidance(workflow_dir, answers, base_dir):
     # Process steps in the order defined in meta.yaml
     step_num = 1
     for step_id in step_order:
-        step_path = workflow_dir / step_id
+        step_path = blueprint_dir / step_id
         if not step_path.exists():
             sys.stderr.write(f"Warning: Step directory not found: {step_path}\n")
             continue
@@ -493,12 +493,12 @@ def main():
     script_dir = Path(__file__).parent
     base_dir = script_dir.parent
 
-    workflows_dir = base_dir / "workflows"
+    blueprints_dir = base_dir / "blueprints"
 
     # Find workflow directory (external repo structure)
-    workflow_dir = workflows_dir / args.workflow
-    if not workflow_dir.exists() or not workflow_dir.is_dir():
-        sys.stderr.write(f"Error: Workflow directory not found: {workflow_dir}\n")
+    blueprint_dir = blueprints_dir / args.blueprint
+    if not blueprint_dir.exists() or not blueprint_dir.is_dir():
+        sys.stderr.write(f"Error: Blueprint directory not found: {blueprint_dir}\n")
         sys.exit(1)
 
     # Load answers
@@ -506,9 +506,9 @@ def main():
     answers = load_yaml(answers_path) or {}
 
     # Render IaC code
-    print(f"Rendering workflow '{args.workflow}' for language '{args.lang}'...")
-    rendered_code, code_rendered, code_skipped = render_workflow_code(
-        workflow_dir, args.lang, answers, base_dir
+    print(f"Rendering blueprint '{args.blueprint}' for language '{args.lang}'...")
+    rendered_code, code_rendered, code_skipped = render_blueprint_code(
+        blueprint_dir, args.lang, answers, base_dir
     )
 
     # Generate IaC output filename
@@ -517,7 +517,7 @@ def main():
 
     date_str = datetime.now().strftime("%Y%m%d")
     extension = get_language_extension(args.lang)
-    output_file = output_dir / f"{args.workflow}_{date_str}.{extension}"
+    output_file = output_dir / f"{args.blueprint}_{date_str}.{extension}"
 
     # Write IaC output
     with open(output_file, "w", encoding="utf-8") as f:
@@ -530,15 +530,15 @@ def main():
     # Render guidance documents (unless skipped)
     if not args.skip_guidance:
         print("\nRendering guidance documents...")
-        rendered_guidance, guide_rendered, guide_skipped = render_workflow_guidance(
-            workflow_dir, answers, base_dir
+        rendered_guidance, guide_rendered, guide_skipped = render_blueprint_guidance(
+            blueprint_dir, answers, base_dir
         )
 
         # Generate guidance output filename
         guidance_dir = base_dir / args.guidance_dir
         guidance_dir.mkdir(parents=True, exist_ok=True)
 
-        guidance_file = guidance_dir / f"{args.workflow}_{date_str}.md"
+        guidance_file = guidance_dir / f"{args.blueprint}_{date_str}.md"
 
         # Write guidance output
         with open(guidance_file, "w", encoding="utf-8") as f:

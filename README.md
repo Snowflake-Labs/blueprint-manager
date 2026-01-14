@@ -1,18 +1,18 @@
-# Landing Zone
+# Blueprint
 
-This repository contains infrastructure-as-code templates and workflows for setting up Snowflake landing zones.
+This repository contains infrastructure-as-code templates and blueprints for setting up Snowflake blueprints.
 
 ## Structure
 
 - `definitions/` - Question definitions for configuration
-- `workflows/` - Available workflow configurations
+- `blueprints/` - Available blueprint configurations
 - `scripts/` - Utility scripts for rendering templates
-- `answers/` - Answer files for workflows
+- `answers/` - Answer files for blueprints
 - `output/` - Generated infrastructure code and documentation
 
-## Setting Up Your Landing Zone using Snowflake Cortex (Recommended)
+## Setting Up Your Blueprint using Snowflake Cortex (Recommended)
 
-The easiest way to configure your Snowflake Landing Zone is using the **Answer File Builder** skill with Snowflake Cortex. This provides a guided, interactive experience.
+The easiest way to configure your Snowflake Blueprint is using the **Answer File Builder** skill with Snowflake Cortex. This provides a guided, interactive experience.
 
 ### Getting Started
 
@@ -38,7 +38,7 @@ cortex
 3. **Launch the skill:**
 
 ```bash
-> Help me set up my Snowflake landing zone
+> Help me set up my Snowflake blueprint
 ```
 
 ### How it works:
@@ -64,21 +64,21 @@ cortex
 
 If you prefer to manage files directly without the guided experience:
 
-### 1. Choose a workflow
+### 1. Choose a blueprint
 
 ```bash
-ls workflows/
+ls blueprints/
 ```
 
-Review the workflow's `meta.yaml` and step `overview.md` files to understand what will be configured.
+Review the blueprint's `meta.yaml` and step `overview.md` files to understand what will be configured.
 
 ### 2. Create an answer file
 
-Copy an existing sample or create a new YAML file in `answers/<workflow_id>/`:
+Copy an existing sample or create a new YAML file in `answers/<blueprint_id>/`:
 
 ```bash
-mkdir -p answers/<workflow_id>
-cp answers/<workflow_id>/sample.yaml answers/<workflow_id>/my_answers.yaml
+mkdir -p answers/<blueprint_id>
+cp answers/<blueprint_id>/sample.yaml answers/<blueprint_id>/my_answers.yaml
 ```
 
 Edit the answer file to provide values for each question. See `definitions/questions.yaml` for question details and valid options.
@@ -87,8 +87,8 @@ Edit the answer file to provide values for each question. See `definitions/quest
 
 ```bash
 python scripts/render_journey.py \
-  answers/<workflow_id>/my_answers.yaml \
-  --workflow <workflow_id> \
+  answers/<blueprint_id>/my_answers.yaml \
+  --blueprint <blueprint_id> \
   --lang sql
 ```
 
