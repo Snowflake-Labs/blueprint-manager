@@ -138,8 +138,18 @@ def find_template_set_variables(template_source, jinja_env):
         ast = jinja_env.parse(template_source)
         set_vars = set()
         for node in ast.find_all(nodes.Assign):
-            if hasattr(node.target, "name"):
-                set_vars.add(node.target.name)
+            target = node.target
+            # Handle tuple unpacking: {% set x, y = values %}
+            if isinstance(target, nodes.Tuple):
+                for item in target.items:
+                    if isinstance(item, nodes.Name):
+                        set_vars.add(item.name)
+            # Handle simple assignments: {% set x = value %}
+            elif isinstance(target, nodes.Name):
+                set_vars.add(target.name)
+            # Fallback for any other target node that still has a name attribute
+            elif hasattr(target, "name"):
+                set_vars.add(target.name)
         return set_vars
     except TemplateError:
         return set()
