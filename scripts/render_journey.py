@@ -23,6 +23,7 @@ try:
         StrictUndefined,
         TemplateError,
         meta,
+        nodes,
     )
 except ImportError as e:
     sys.stderr.write(f"Error: Required library not found: {e}\n")
@@ -127,6 +128,30 @@ def find_template_variables(template_source, jinja_env):
         return set()
 
 
+def find_template_set_variables(template_source, jinja_env):
+    """
+    Find variables that are set within the template using {% set %}.
+
+    Returns a set of variable names defined internally in the template.
+    """
+    try:
+        ast = jinja_env.parse(template_source)
+        set_vars = set()
+        for node in ast.find_all(nodes.Assign):
+            target = node.target
+            # Handle tuple unpacking: {% set x, y = values %}
+            if isinstance(target, nodes.Tuple):
+                for item in target.items:
+                    if isinstance(item, nodes.Name):
+                        set_vars.add(item.name)
+            # Handle simple assignments: {% set x = value %}
+            elif isinstance(target, nodes.Name):
+                set_vars.add(target.name)
+        return set_vars
+    except TemplateError:
+        return set()
+
+
 def check_template_renderable(template_path, answers, jinja_env):
     """
     Pre-check if a template can be rendered with the given answers.
@@ -144,11 +169,17 @@ def check_template_renderable(template_path, answers, jinja_env):
     # Use Jinja2's AST to find all undeclared variables
     referenced_vars = find_template_variables(template_source, jinja_env)
 
+    # Find variables set internally within the template ({% set %})
+    set_vars = find_template_set_variables(template_source, jinja_env)
+
+    # Only check external variables (exclude internally-set variables)
+    external_vars = referenced_vars - set_vars
+
     # Separate into missing (not in answers) and null (in answers but None)
     missing_vars = []
     null_vars = []
 
-    for var in referenced_vars:
+    for var in external_vars:
         if var not in answers:
             missing_vars.append(var)
         elif answers[var] is None:
