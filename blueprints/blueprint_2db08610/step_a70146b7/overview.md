@@ -76,71 +76,6 @@ Role names follow the data product naming pattern:
 
 ### Configuration Questions
 
-#### Should the data product roles receive account-level access roles? (`grant_account_access_roles`: multi-select)
-Account access roles provide special account-level privileges needed for common data product operations.
-
-**Select "Yes" if your data product needs to:**
-- Execute Snowflake tasks (scheduled jobs)
-- Apply dynamic data masking policies
-- Apply row access policies
-- Apply tags to objects
-- Query Account Usage views
-
-**Select "No" if:**
-- This is a read-only data product
-- Account access roles don't exist in this account
-- You'll manually grant these privileges later
-
-**Note:** Account access roles must exist in the account. They are typically created in the Account Creation workflow with names like `_AR_EXEC_TASK`, `_AR_APPLY_DDM`, etc. These will be granted to the WRITE role (Full structure) or ADMIN role (Simple/Standard structure).
-**Options:**
-- Yes - Grant account access roles (tasks, masking, tagging)
-- No - Skip account access roles
-
-#### Which role structure do you want for this data product? (`role_structure`: multi-select)
-Choose based on your team's needs:
-
-- **Simple**: Best for small teams or single-purpose data products. The ADMIN handles all modifications, READ users consume.
-- **Standard**: Adds a CREATE role for delegated object creation and grant management. Good for medium teams.
-- **Full**: Includes a WRITE role for ETL/ELT processes that need to modify data without full admin access.
-
-**Why does this matter?**
-More roles mean finer-grained control but also more management overhead. Start with the simplest structure that meets your needs — you can always add roles later.
-
-**More Information:**
-* [Access Control Best Practices](https://docs.snowflake.com/en/user-guide/security-access-control-considerations) — Role design patterns
-**Options:**
-- Simple (Admin + Read only)
-- Standard (Admin + Create + Read)
-- Full (Admin + Create + Write + Read)
-
-#### Which environment is this data product being deployed to? (`data_product_environment`: multi-select)
-**What is this asking?**
-Select the SDLC environment for this data product deployment.
-
-**Auto-Detection for Multi-Account Strategies:**
-- **Environment-based accounts**: Your environment is determined by your target account. Select the matching value.
-- **Domain + Environment accounts**: Your environment is derived from the second part of your account name. Select the matching value.
-- **Domain-based accounts**: Environment is not determined by your account. Select from the available options.
-- **Single Account**: Environment is not determined by your account. Select from the available options.
-
-**Why does this matter?**
-Environment assignment determines:
-- **Isolation**: Resources are created in the appropriate context
-- **Access Controls**: Production typically has stricter access
-- **Resource Sizing**: Dev environments may use smaller warehouses
-- **Data Sensitivity**: Production may have real data vs. synthetic in dev
-
-**Common Environments:**
-| Abbreviation | Full Name | Purpose |
-|--------------|-----------|---------|
-| `dev` | Development | Building and testing code |
-| `test` | Testing/QA | Quality assurance |
-| `stg` | Staging | Pre-production validation |
-| `prod` | Production | Live environment |
-
-**Recommendation:**
-For environment-based and domain+environment strategies, select the environment that matches your target account name.
-
 #### What is the name of this data product? (`data_product_name`: text)
 **What is this asking?**
 Provide a descriptive name for your data product. This name will be used in database names, role names, and resource tags.
@@ -178,38 +113,81 @@ Choose a name that business users would recognize. Ask: "If someone searched for
 **More Information:**
 * [Identifier Requirements](https://docs.snowflake.com/en/sql-reference/identifiers-syntax) — Valid characters and length limits
 
-#### Which account will this data product be deployed to? (`target_account_name`: text)
-
+#### Which domain does this data product belong to? (`data_product_domain`: multi-select)
 **What is this asking?**
-Enter the name of the Snowflake account where this data product will be created.
+Select the business domain (team, department, or organizational unit) that owns this data product.
+
+**Auto-Detection for Multi-Account Strategies:**
+- **Domain-based accounts**: Your domain is determined by your target account. Select the matching value.
+- **Domain + Environment accounts**: Your domain is derived from the first part of your account name. Select the matching value.
+- **Environment-based accounts**: Domain is not determined by your account. Select from the available options.
+- **Single Account**: Domain is not determined by your account. Select from the available options.
 
 **Why does this matter?**
-This ensures all generated SQL is clearly documented with the target account, preventing deployment errors and providing clear audit trails.
+Domain assignment determines:
+- **Cost Allocation**: Credits consumed are attributed to this domain
+- **Ownership**: The domain team is responsible for the data product
+- **Access Patterns**: Domain-based roles may have different access levels
+- **Governance**: Domain-specific policies may apply
 
-**How to find your account name:**
-- In Snowsight: Click your account name in the bottom-left corner
-- Run SQL: `SELECT CURRENT_ACCOUNT_NAME();`
-- From your URL: `https://<org>-<account>.snowflakecomputing.com`
+**How domains are used:**
+- Object names may include the domain abbreviation
+- The `DOMAIN` tag is applied to all resources
+- Cost reports can filter by domain
 
-**Examples based on strategy:**
+**Available Domains:**
+Your organization defined these domains in Platform Foundation. If you need a new domain, update Platform Foundation first.
 
-**Domain-based strategy:**
-- `ACME_SALES` - Sales domain account
-- `ACME_FINANCE` - Finance domain account
-
-**Environment-based strategy:**
-- `ACME_DEV` - Development environment account
-- `ACME_PROD` - Production environment account
-
-**Domain + Environment strategy:**
-- `ACME_SALES_DEV` - Sales domain, Development environment
-- `ACME_FINANCE_PROD` - Finance domain, Production environment
+**If your domain isn't listed:**
+Work with your platform team to add the domain to Platform Foundation, then return to this workflow.
 
 **Recommendation:**
-Copy the exact account name from your Snowflake session to avoid typos.
+For domain-based and domain+environment strategies, select the domain that matches your target account name.
+
+#### Which environment is this data product being deployed to? (`data_product_environment`: multi-select)
+**What is this asking?**
+Select the SDLC environment for this data product deployment.
+
+**Auto-Detection for Multi-Account Strategies:**
+- **Environment-based accounts**: Your environment is determined by your target account. Select the matching value.
+- **Domain + Environment accounts**: Your environment is derived from the second part of your account name. Select the matching value.
+- **Domain-based accounts**: Environment is not determined by your account. Select from the available options.
+- **Single Account**: Environment is not determined by your account. Select from the available options.
+
+**Why does this matter?**
+Environment assignment determines:
+- **Isolation**: Resources are created in the appropriate context
+- **Access Controls**: Production typically has stricter access
+- **Resource Sizing**: Dev environments may use smaller warehouses
+- **Data Sensitivity**: Production may have real data vs. synthetic in dev
+
+**Common Environments:**
+| Abbreviation | Full Name | Purpose |
+|--------------|-----------|---------|
+| `dev` | Development | Building and testing code |
+| `test` | Testing/QA | Quality assurance |
+| `stg` | Staging | Pre-production validation |
+| `prod` | Production | Live environment |
+
+**Recommendation:**
+For environment-based and domain+environment strategies, select the environment that matches your target account name.
+
+#### Which role structure do you want for this data product? (`role_structure`: multi-select)
+Choose based on your team's needs:
+
+- **Simple**: Best for small teams or single-purpose data products. The ADMIN handles all modifications, READ users consume.
+- **Standard**: Adds a CREATE role for delegated object creation and grant management. Good for medium teams.
+- **Full**: Includes a WRITE role for ETL/ELT processes that need to modify data without full admin access.
+
+**Why does this matter?**
+More roles mean finer-grained control but also more management overhead. Start with the simplest structure that meets your needs — you can always add roles later.
 
 **More Information:**
-* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) — Understanding account names
+* [Access Control Best Practices](https://docs.snowflake.com/en/user-guide/security-access-control-considerations) — Role design patterns
+**Options:**
+- Simple (Admin + Read only)
+- Standard (Admin + Create + Read)
+- Full (Admin + Create + Write + Read)
 
 #### What account strategy do you wish to implement? (`account_strategy`: multi-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
@@ -246,36 +224,38 @@ Choose the account strategy that best fits your organization. Your choice determ
 - Multi-Account (Domain-based)
 - Multi-Account (Domain + Environment)
 
-#### Which domain does this data product belong to? (`data_product_domain`: multi-select)
-**What is this asking?**
-Select the business domain (team, department, or organizational unit) that owns this data product.
+#### Which account will this data product be deployed to? (`target_account_name`: text)
 
-**Auto-Detection for Multi-Account Strategies:**
-- **Domain-based accounts**: Your domain is determined by your target account. Select the matching value.
-- **Domain + Environment accounts**: Your domain is derived from the first part of your account name. Select the matching value.
-- **Environment-based accounts**: Domain is not determined by your account. Select from the available options.
-- **Single Account**: Domain is not determined by your account. Select from the available options.
+**What is this asking?**
+Enter the name of the Snowflake account where this data product will be created.
 
 **Why does this matter?**
-Domain assignment determines:
-- **Cost Allocation**: Credits consumed are attributed to this domain
-- **Ownership**: The domain team is responsible for the data product
-- **Access Patterns**: Domain-based roles may have different access levels
-- **Governance**: Domain-specific policies may apply
+This ensures all generated SQL is clearly documented with the target account, preventing deployment errors and providing clear audit trails.
 
-**How domains are used:**
-- Object names may include the domain abbreviation
-- The `DOMAIN` tag is applied to all resources
-- Cost reports can filter by domain
+**How to find your account name:**
+- In Snowsight: Click your account name in the bottom-left corner
+- Run SQL: `SELECT CURRENT_ACCOUNT_NAME();`
+- From your URL: `https://<org>-<account>.snowflakecomputing.com`
 
-**Available Domains:**
-Your organization defined these domains in Platform Foundation. If you need a new domain, update Platform Foundation first.
+**Examples based on strategy:**
 
-**If your domain isn't listed:**
-Work with your platform team to add the domain to Platform Foundation, then return to this workflow.
+**Domain-based strategy:**
+- `ACME_SALES` - Sales domain account
+- `ACME_FINANCE` - Finance domain account
+
+**Environment-based strategy:**
+- `ACME_DEV` - Development environment account
+- `ACME_PROD` - Production environment account
+
+**Domain + Environment strategy:**
+- `ACME_SALES_DEV` - Sales domain, Development environment
+- `ACME_FINANCE_PROD` - Finance domain, Production environment
 
 **Recommendation:**
-For domain-based and domain+environment strategies, select the domain that matches your target account name.
+Copy the exact account name from your Snowflake session to avoid typos.
+
+**More Information:**
+* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) — Understanding account names
 
 #### Which role should the ADMIN role be granted to? (`admin_role_granted_to`: text)
 Enter the name of the role that should be the parent of the data product ADMIN role.
@@ -292,3 +272,23 @@ Role hierarchy determines who can assume data product administration. Granting t
 
 **More Information:**
 * [System-Defined Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#system-defined-roles) — Role hierarchy
+
+#### Should the data product roles receive account-level access roles? (`grant_account_access_roles`: multi-select)
+Account access roles provide special account-level privileges needed for common data product operations.
+
+**Select "Yes" if your data product needs to:**
+- Execute Snowflake tasks (scheduled jobs)
+- Apply dynamic data masking policies
+- Apply row access policies
+- Apply tags to objects
+- Query Account Usage views
+
+**Select "No" if:**
+- This is a read-only data product
+- Account access roles don't exist in this account
+- You'll manually grant these privileges later
+
+**Note:** Account access roles must exist in the account. They are typically created in the Account Creation workflow with names like `_AR_EXEC_TASK`, `_AR_APPLY_DDM`, etc. These will be granted to the WRITE role (Full structure) or ADMIN role (Simple/Standard structure).
+**Options:**
+- Yes - Grant account access roles (tasks, masking, tagging)
+- No - Skip account access roles

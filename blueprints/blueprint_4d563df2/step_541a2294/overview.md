@@ -37,51 +37,6 @@ A network policy that restricts SCIM API access to only your IdP's IP addresses.
 
 ### Configuration Questions
 
-#### What do you want to name your organization account? (`org_account_name`: text)
-**Recommended Name:** ORG  
-  Since there can be only one Organization Account per organization, the name should clearly indicate this special purpose. We recommend simply naming it ORG.  
-  
-  **Example URLs with Organization Account name ORG:**  
-  * With Custom Org Name: [https://ACME-ORG.snowflakecomputing.com](https://ACME-ORG.snowflakecomputing.com)  
-    * Org Name \= ACME  
-    * Org Account Name \= Org  
-  * System-generated Org Name: [https://XY12345-ORG.snowflakecomputing.com](https://XY12345-ORG.snowflakecomputing.com)  
-    * Org Name \= XY12345  
-    * Org Account Name \= Org  
-* **Requirements:**  
-  * Snowflake Enterprise Edition or higher  
-  * ORGADMIN role granted in the existing account  
-* **More Information:**  
-  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
-  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
-
-#### What prefix (if any) should be added to all account names? (`account_name_prefix`: text)
-An account name prefix is an optional string added to the beginning of every account name for consistency and organization identification.  
-
-**When to use a prefix:**  
-* If your organization name is system-generated (e.g., `XY12345`) and you want your company name visible in account names  
-* If you want to enforce consistent naming across all accounts  
-* If you have multiple organizations or business units sharing Snowflake and need differentiation  
-
-**Example with prefix:**  
-* Prefix: `acme`  
-* Account names become: `acme_prod`, `acme_dev`, `acme_finance`  
-* URL: `https://XY12345-acme_prod.snowflakecomputing.com`  
-
-**Example without prefix:**  
-* Account names: `prod`, `dev`, `finance`  
-* URL: `https://ACME-prod.snowflakecomputing.com`  
-
-**Recommendations:**  
-* If you have a **custom organization name** (like `ACME`), a prefix is typically unnecessary since your identity is already in the URL  
-* If you have a **system-generated name**, consider using an abbreviated company name as a prefix  
-* Keep prefixes short (3-8 characters) with no underscores  
-
-**Enter `NONE` if you do not want to use an account name prefix.**  
-
-**More Information:**  
-* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
-
 #### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
@@ -106,6 +61,53 @@ If your organization has an enterprise IdP, we strongly recommend configuring SC
 - Microsoft Entra ID (Azure ID)
 - Other SCIM 2.0 Compatible IdP
 - None - Manual User Management
+
+#### What name would you like to use for the SCIM integration? (`scim_integration_name`: text)
+**What is this asking?**
+Provide a name for the SCIM security integration that will be created in Snowflake.
+
+**Why does this matter?**
+The integration name appears in audit logs and when managing the integration. A descriptive name helps identify which IdP the integration connects to.
+
+**Format:**
+- Use uppercase letters and underscores
+- Include the IdP name for clarity
+
+**Examples:**
+- `OKTA_SCIM_INTEGRATION`
+- `AZURE_AD_SCIM`
+- `PING_SCIM_INTEGRATION`
+
+**Recommendation:**
+Use a format like `<IDP>_SCIM_INTEGRATION` where `<IDP>` is your Identity Provider name.
+
+**More Information:**
+* [CREATE SECURITY INTEGRATION (SCIM)](https://docs.snowflake.com/en/sql-reference/sql/create-security-integration-scim) — SQL command reference
+
+#### Which role should own the SCIM integration and provisioned users? (`scim_provisioner_role`: multi-select)
+**What is this asking?**
+Select the role that will own the SCIM integration and be granted ownership of users provisioned through SCIM.
+
+**Why does this matter?**
+Snowflake recommends using a dedicated role for SCIM provisioning rather than using ACCOUNTADMIN directly. This provides better security isolation and clearer audit trails.
+
+**Options explained:**
+
+| Role | Use When |
+|------|----------|
+| **OKTA_PROVISIONER** | Using Okta as your IdP (follows Snowflake documentation) |
+| **AAD_PROVISIONER** | Using Microsoft Entra ID / Azure AD (follows Snowflake documentation) |
+| **GENERIC_SCIM_PROVISIONER** | Using any other SCIM 2.0 compatible IdP |
+
+**Recommendation:**
+Use the IdP-specific role name if available, as this follows Snowflake's documentation patterns and makes the configuration clearer.
+
+**More Information:**
+* [SCIM Role Requirements](https://docs.snowflake.com/en/user-guide/scim#step-1-create-a-scim-role-in-snowflake) — Required role setup
+**Options:**
+- OKTA_PROVISIONER
+- AAD_PROVISIONER
+- GENERIC_SCIM_PROVISIONER
 
 #### What IP addresses should be allowed to access the SCIM API? (`scim_allowed_ips`: list)
 **What is this asking?**
@@ -150,49 +152,47 @@ Your Snowflake organization name is the first part of your account URL and conne
   **More Information:**  
   * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
 
-#### Which role should own the SCIM integration and provisioned users? (`scim_provisioner_role`: multi-select)
-**What is this asking?**
-Select the role that will own the SCIM integration and be granted ownership of users provisioned through SCIM.
+#### What prefix (if any) should be added to all account names? (`account_name_prefix`: text)
+An account name prefix is an optional string added to the beginning of every account name for consistency and organization identification.  
 
-**Why does this matter?**
-Snowflake recommends using a dedicated role for SCIM provisioning rather than using ACCOUNTADMIN directly. This provides better security isolation and clearer audit trails.
+**When to use a prefix:**  
+* If your organization name is system-generated (e.g., `XY12345`) and you want your company name visible in account names  
+* If you want to enforce consistent naming across all accounts  
+* If you have multiple organizations or business units sharing Snowflake and need differentiation  
 
-**Options explained:**
+**Example with prefix:**  
+* Prefix: `acme`  
+* Account names become: `acme_prod`, `acme_dev`, `acme_finance`  
+* URL: `https://XY12345-acme_prod.snowflakecomputing.com`  
 
-| Role | Use When |
-|------|----------|
-| **OKTA_PROVISIONER** | Using Okta as your IdP (follows Snowflake documentation) |
-| **AAD_PROVISIONER** | Using Microsoft Entra ID / Azure AD (follows Snowflake documentation) |
-| **GENERIC_SCIM_PROVISIONER** | Using any other SCIM 2.0 compatible IdP |
+**Example without prefix:**  
+* Account names: `prod`, `dev`, `finance`  
+* URL: `https://ACME-prod.snowflakecomputing.com`  
 
-**Recommendation:**
-Use the IdP-specific role name if available, as this follows Snowflake's documentation patterns and makes the configuration clearer.
+**Recommendations:**  
+* If you have a **custom organization name** (like `ACME`), a prefix is typically unnecessary since your identity is already in the URL  
+* If you have a **system-generated name**, consider using an abbreviated company name as a prefix  
+* Keep prefixes short (3-8 characters) with no underscores  
 
-**More Information:**
-* [SCIM Role Requirements](https://docs.snowflake.com/en/user-guide/scim#step-1-create-a-scim-role-in-snowflake) — Required role setup
-**Options:**
-- OKTA_PROVISIONER
-- AAD_PROVISIONER
-- GENERIC_SCIM_PROVISIONER
+**Enter `NONE` if you do not want to use an account name prefix.**  
 
-#### What name would you like to use for the SCIM integration? (`scim_integration_name`: text)
-**What is this asking?**
-Provide a name for the SCIM security integration that will be created in Snowflake.
+**More Information:**  
+* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
 
-**Why does this matter?**
-The integration name appears in audit logs and when managing the integration. A descriptive name helps identify which IdP the integration connects to.
-
-**Format:**
-- Use uppercase letters and underscores
-- Include the IdP name for clarity
-
-**Examples:**
-- `OKTA_SCIM_INTEGRATION`
-- `AZURE_AD_SCIM`
-- `PING_SCIM_INTEGRATION`
-
-**Recommendation:**
-Use a format like `<IDP>_SCIM_INTEGRATION` where `<IDP>` is your Identity Provider name.
-
-**More Information:**
-* [CREATE SECURITY INTEGRATION (SCIM)](https://docs.snowflake.com/en/sql-reference/sql/create-security-integration-scim) — SQL command reference
+#### What do you want to name your organization account? (`org_account_name`: text)
+**Recommended Name:** ORG  
+  Since there can be only one Organization Account per organization, the name should clearly indicate this special purpose. We recommend simply naming it ORG.  
+  
+  **Example URLs with Organization Account name ORG:**  
+  * With Custom Org Name: [https://ACME-ORG.snowflakecomputing.com](https://ACME-ORG.snowflakecomputing.com)  
+    * Org Name \= ACME  
+    * Org Account Name \= Org  
+  * System-generated Org Name: [https://XY12345-ORG.snowflakecomputing.com](https://XY12345-ORG.snowflakecomputing.com)  
+    * Org Name \= XY12345  
+    * Org Account Name \= Org  
+* **Requirements:**  
+  * Snowflake Enterprise Edition or higher  
+  * ORGADMIN role granted in the existing account  
+* **More Information:**  
+  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
+  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)

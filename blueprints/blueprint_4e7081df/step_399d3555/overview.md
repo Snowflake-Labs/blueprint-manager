@@ -56,93 +56,6 @@ Different user types need different policies—like having VIP entrances, employ
 
 ### Configuration Questions
 
-#### Should authentication policies be applied at the account level? (`apply_auth_policies_account_level`: multi-select)
-**What is this asking?**
-Decide whether to enforce the human user authentication policy for all users by default.
-
-**Why does this matter?**
-- **Yes**: All users must comply with the policy unless they have a specific override (like break-glass)
-- **No**: Policies only apply to users you explicitly assign them to
-
-**Recommendation:**
-- Start with **No** during initial rollout and testing
-- Move to **Yes** once you've validated policies work correctly
-- Ensure break-glass accounts have their own policy first
-
-**More Information:**
-* [Activating Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies#activating-an-authentication-policy)
-**Options:**
-- Yes - Apply default policy to all users
-- No - Apply only to specific users
-
-#### What authentication methods should be allowed for service accounts? (`service_auth_methods`: multi-select)
-**What is this asking?**
-Define how service accounts (automated processes, applications) should authenticate.
-
-**Why does this matter?**
-Service accounts should not use password authentication, which is less secure and harder to rotate.
-
-**Options explained:**
-- **OAuth Only**: Services must use OAuth tokens. Best for cloud applications with OAuth support.
-- **Key Pair Only**: Services must use RSA key pairs. Best for on-premise or custom applications.
-- **OAuth or Key Pair**: Either method allowed. Recommended for flexibility.
-- **OAuth, Key Pair, or PAT**: Adds Personal Access Tokens. PATs are easier to manage but less secure.
-
-**Recommendation:**
-**OAuth or Key Pair** provides security while accommodating different integration patterns.
-
-**More Information:**
-* [Key Pair Authentication](https://docs.snowflake.com/en/user-guide/key-pair-auth)
-* [OAuth](https://docs.snowflake.com/en/user-guide/oauth)
-**Options:**
-- OAuth Only
-- Key Pair Only
-- OAuth or Key Pair
-- OAuth, Key Pair, or PAT
-
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
-**What is this asking?**
-Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
-
-**Why does this matter?**
-Different IdPs have different configuration steps and capabilities. Snowflake provides specific documentation for major IdPs like Okta and Azure AD, while other SCIM 2.0 compatible providers use a generic configuration.
-
-**Options explained:**
-- **Okta**: Enterprise IdP with native Snowflake SCIM integration
-- **Microsoft Entra ID (Azure AD)**: Microsoft's cloud identity service with gallery app for Snowflake
-- **Other SCIM 2.0 Compatible IdP**: Any IdP that supports SCIM 2.0 protocol
-- **None - Manual User Management**: Skip SCIM and manage users manually (not recommended)
-
-**Recommendation:**
-If your organization has an enterprise IdP, we strongly recommend configuring SCIM integration. The initial setup effort is minimal compared to the ongoing benefits of automated provisioning.
-
-**More Information:**
-* [SCIM Overview](https://docs.snowflake.com/en/user-guide/scim)
-* [Supported Identity Providers](https://docs.snowflake.com/en/user-guide/scim#supported-identity-providers)
-**Options:**
-- Okta
-- Microsoft Entra ID (Azure ID)
-- Other SCIM 2.0 Compatible IdP
-- None - Manual User Management
-
-#### What name would you like to use for the SAML integration? (`saml_integration_name`: text)
-**What is this asking?**
-Provide a name for the SAML security integration that will be created in Snowflake.
-
-**Why does this matter?**
-The integration name is used to reference the SAML configuration and appears in the login URL for IdP-initiated SSO.
-
-**Format:**
-- Use uppercase letters and underscores
-- Include the IdP name for clarity
-- Examples: `OKTA_SSO`, `AZURE_AD_SAML`, `PING_SSO`
-
-**Recommendation:**
-Use a format like `<IDP>_SSO` or `<IDP>_SAML` where `<IDP>` is your Identity Provider name.
-
-**More Information:**
-* [CREATE SECURITY INTEGRATION (SAML2)](https://docs.snowflake.com/en/sql-reference/sql/create-security-integration-saml2)
-
 #### What authentication methods should be allowed for human users in this account? (`human_auth_methods`: multi-select)
 **What is this asking?**
 Choose how human users (interactive users) should authenticate to this account. The value from Platform Foundation is pre-populated—accept it for consistency or change it if this account has different requirements.
@@ -188,6 +101,24 @@ Accept the Platform Foundation value unless this account has specific requiremen
 - SAML or Password with MFA
 - Password with MFA Only
 
+#### What name would you like to use for the SAML integration? (`saml_integration_name`: text)
+**What is this asking?**
+Provide a name for the SAML security integration that will be created in Snowflake.
+
+**Why does this matter?**
+The integration name is used to reference the SAML configuration and appears in the login URL for IdP-initiated SSO.
+
+**Format:**
+- Use uppercase letters and underscores
+- Include the IdP name for clarity
+- Examples: `OKTA_SSO`, `AZURE_AD_SAML`, `PING_SSO`
+
+**Recommendation:**
+Use a format like `<IDP>_SSO` or `<IDP>_SAML` where `<IDP>` is your Identity Provider name.
+
+**More Information:**
+* [CREATE SECURITY INTEGRATION (SAML2)](https://docs.snowflake.com/en/sql-reference/sql/create-security-integration-saml2)
+
 #### What MFA method should be required for password authentication? (`mfa_method`: multi-select)
 **What is this asking?**
 Select the multi-factor authentication method(s) to require when users authenticate with passwords.
@@ -209,6 +140,75 @@ MFA significantly reduces the risk of account compromise from password theft.
 - TOTP (Authenticator Apps)
 - Passkey (FIDO2/WebAuthn)
 - Either TOTP or Passkey
+
+#### What authentication methods should be allowed for service accounts? (`service_auth_methods`: multi-select)
+**What is this asking?**
+Define how service accounts (automated processes, applications) should authenticate.
+
+**Why does this matter?**
+Service accounts should not use password authentication, which is less secure and harder to rotate.
+
+**Options explained:**
+- **OAuth Only**: Services must use OAuth tokens. Best for cloud applications with OAuth support.
+- **Key Pair Only**: Services must use RSA key pairs. Best for on-premise or custom applications.
+- **OAuth or Key Pair**: Either method allowed. Recommended for flexibility.
+- **OAuth, Key Pair, or PAT**: Adds Personal Access Tokens. PATs are easier to manage but less secure.
+
+**Recommendation:**
+**OAuth or Key Pair** provides security while accommodating different integration patterns.
+
+**More Information:**
+* [Key Pair Authentication](https://docs.snowflake.com/en/user-guide/key-pair-auth)
+* [OAuth](https://docs.snowflake.com/en/user-guide/oauth)
+**Options:**
+- OAuth Only
+- Key Pair Only
+- OAuth or Key Pair
+- OAuth, Key Pair, or PAT
+
+#### Should authentication policies be applied at the account level? (`apply_auth_policies_account_level`: multi-select)
+**What is this asking?**
+Decide whether to enforce the human user authentication policy for all users by default.
+
+**Why does this matter?**
+- **Yes**: All users must comply with the policy unless they have a specific override (like break-glass)
+- **No**: Policies only apply to users you explicitly assign them to
+
+**Recommendation:**
+- Start with **No** during initial rollout and testing
+- Move to **Yes** once you've validated policies work correctly
+- Ensure break-glass accounts have their own policy first
+
+**More Information:**
+* [Activating Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies#activating-an-authentication-policy)
+**Options:**
+- Yes - Apply default policy to all users
+- No - Apply only to specific users
+
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+**What is this asking?**
+Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
+
+**Why does this matter?**
+Different IdPs have different configuration steps and capabilities. Snowflake provides specific documentation for major IdPs like Okta and Azure AD, while other SCIM 2.0 compatible providers use a generic configuration.
+
+**Options explained:**
+- **Okta**: Enterprise IdP with native Snowflake SCIM integration
+- **Microsoft Entra ID (Azure AD)**: Microsoft's cloud identity service with gallery app for Snowflake
+- **Other SCIM 2.0 Compatible IdP**: Any IdP that supports SCIM 2.0 protocol
+- **None - Manual User Management**: Skip SCIM and manage users manually (not recommended)
+
+**Recommendation:**
+If your organization has an enterprise IdP, we strongly recommend configuring SCIM integration. The initial setup effort is minimal compared to the ongoing benefits of automated provisioning.
+
+**More Information:**
+* [SCIM Overview](https://docs.snowflake.com/en/user-guide/scim)
+* [Supported Identity Providers](https://docs.snowflake.com/en/user-guide/scim#supported-identity-providers)
+**Options:**
+- Okta
+- Microsoft Entra ID (Azure ID)
+- Other SCIM 2.0 Compatible IdP
+- None - Manual User Management
 
 #### Who should be set up as administrators? (`manual_admin_users`: object-list)
 **What is this asking?**

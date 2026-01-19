@@ -59,38 +59,33 @@ Resource monitors complement budgets: Budgets provide predictive alerts based on
 
 ### Configuration Questions
 
-#### How often should the resource monitor reset? (`account_resource_monitor_reset_frequency`: multi-select)
+#### What is the monthly credit limit for the resource monitor? (`account_resource_monitor_limit`: text)
 **What is this asking?**
-Choose when the credit counter resets to zero.
+Set the maximum number of credits the account can consume before the configured action (at 100%) is taken.
 
 **Why does this matter?**
-The reset frequency should align with your billing and budgeting cycles.
+This is your hard limit. The resource monitor will automatically set up tiered alerts:
+- At 75% of this limit: First notification
+- At 90% of this limit: Second notification
+- At 100% of this limit: Your selected action (Suspend/Notify)
+- At 110%: Same action as 100% (catches overruns)
 
-**Options explained:**
+**How to determine your limit:**
+- Align with or slightly exceed your monthly budget
+- Consider setting 10-20% higher than expected usage as a safety buffer
+- Account for all warehouses that will be created
 
-**Monthly (Recommended):**
-- Resets on the 1st of each month
-- Aligns with Snowflake billing cycles
+**Example:**
+If your monthly budget is 1,000 credits:
+- Set limit to 1,000 credits
+- First alert at 750 credits (75%)
+- Second alert at 900 credits (90%)
+- Action triggered at 1,000 credits (100%)
 
-**Weekly:**
-- Resets every Monday
-- For tighter weekly cost control
+**Relationship to Budgets:**
+If you set a budget of 1,000 credits with a 75% threshold, you'll receive budget forecasting alerts *before* the resource monitor's 75% actual usage alert—giving you even earlier warning.
 
-**Daily:**
-- Resets daily at midnight
-- For very tight cost control
-
-**Never:**
-- Manual reset only
-- For one-time credit allocations
-
-**Recommendation:**
-Use Monthly reset aligned with your billing cycle.
-**Options:**
-- Monthly
-- Weekly
-- Daily
-- Never (manual reset)
+**Warning:** When the limit is reached and suspension is configured, ALL warehouses will be affected.
 
 #### What action should be taken when the credit limit is reached? (`account_resource_monitor_action`: multi-select)
 **What is this asking?**
@@ -125,33 +120,38 @@ Use "Suspend After Current Queries" for production.
 - Suspend After Current Queries
 - Notify Only
 
-#### What is the monthly credit limit for the resource monitor? (`account_resource_monitor_limit`: text)
+#### How often should the resource monitor reset? (`account_resource_monitor_reset_frequency`: multi-select)
 **What is this asking?**
-Set the maximum number of credits the account can consume before the configured action (at 100%) is taken.
+Choose when the credit counter resets to zero.
 
 **Why does this matter?**
-This is your hard limit. The resource monitor will automatically set up tiered alerts:
-- At 75% of this limit: First notification
-- At 90% of this limit: Second notification
-- At 100% of this limit: Your selected action (Suspend/Notify)
-- At 110%: Same action as 100% (catches overruns)
+The reset frequency should align with your billing and budgeting cycles.
 
-**How to determine your limit:**
-- Align with or slightly exceed your monthly budget
-- Consider setting 10-20% higher than expected usage as a safety buffer
-- Account for all warehouses that will be created
+**Options explained:**
 
-**Example:**
-If your monthly budget is 1,000 credits:
-- Set limit to 1,000 credits
-- First alert at 750 credits (75%)
-- Second alert at 900 credits (90%)
-- Action triggered at 1,000 credits (100%)
+**Monthly (Recommended):**
+- Resets on the 1st of each month
+- Aligns with Snowflake billing cycles
 
-**Relationship to Budgets:**
-If you set a budget of 1,000 credits with a 75% threshold, you'll receive budget forecasting alerts *before* the resource monitor's 75% actual usage alert—giving you even earlier warning.
+**Weekly:**
+- Resets every Monday
+- For tighter weekly cost control
 
-**Warning:** When the limit is reached and suspension is configured, ALL warehouses will be affected.
+**Daily:**
+- Resets daily at midnight
+- For very tight cost control
+
+**Never:**
+- Manual reset only
+- For one-time credit allocations
+
+**Recommendation:**
+Use Monthly reset aligned with your billing cycle.
+**Options:**
+- Monthly
+- Weekly
+- Daily
+- Never (manual reset)
 
 #### Do you want to configure resource monitors? (`enable_resource_monitors`: multi-select)
 **What is this asking?**

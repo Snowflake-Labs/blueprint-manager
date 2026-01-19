@@ -122,29 +122,22 @@ Isolating data processing or querying into separate warehouses allows for optima
 
 ### Configuration Questions
 
-#### What are your domain abbreviations? (`domain_list`: list)
-**What is a Domain?**  
-A domain represents a logical grouping of business functions, data, or ownership. Domains define boundaries for governance, cost allocation, and data stewardship.  
-
-**How Domains Are Used:**  
-Depending on your account strategy, domains appear at either the account level or database level:  
-* Multi-Account (Domain-based): Each domain gets its own Snowflake account  
-* Single Account: Domains appear as prefixes in database/warehouse/role names  
-
-**Examples by Type:**  
-* **Business Units:** `fin` (Finance), `mkt` (Marketing), `ops` (Operations), `hr` (Human Resources)  
-* **Entities:** `retail`, `wholesale`, `mfg` (Manufacturing)  
-* **Departments:** `sales`, `sc` (Supply Chain), `custsvc` (Customer Service)  
-* **Technical Teams:** `data`, `plat` (Platform), `eng` (Engineering)  
-
-**Best Practices:**  
-* Use short abbreviations (3-8 characters) for readability  
-* Avoid underscores within domain names—use concatenated abbreviations  
-* Choose intuitive names that are self-descriptive to users  
-* Consider future growth—add domains you may need later  
-
-**More Information:**  
-* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  
+#### What do you want to name the platform database? (`platform_database_name`: text)
+**What is the Platform/Infrastructure Database?**  
+  The Infrastructure Database is a centralized "hub" database that houses platform-wide objects including tags, network rules, governance policies, and shared procedures. It is owned by the central platform team and shared across all accounts in multi-account deployments.  
+  **Recommended Naming Approach:**  
+  Use a name that clearly identifies this as a platform-owned, infrastructure-focused database. The format should be: \<domain\>\_\<dataproduct\>  
+  * **Domain:** Use plat (short for "platform") or your platform team's acronym (e.g., cdp, snow, data)  
+  * **Data Product:** Use infra or another term indicating infrastructure purpose  
+* **Example:** PLAT\_INFRA — clearly indicates Platform team ownership and Infrastructure purpose  
+  **Alternative Examples:**  
+  * CDP\_INFRA — Cloud Data Platform Infrastructure  
+  * SNOW\_ADMIN — Snowflake Administration  
+  * DATA\_PLATFORM — Data Platform database  
+* **Important:** Choose carefully\! This name will eventually be referenced by dozens to hundreds of objects, policies, and procedures. Changing it later can be complex and risky.  
+  **More Information:**  
+  * [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)  
+  * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)
 
 #### What do you want to name the governance schema? (`governance_name`: text)
 **What is the Governance Schema?**  
@@ -170,22 +163,55 @@ Depending on your account strategy, domains appear at either the account level o
   * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)  
   * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
 
-#### What do you want to name the platform database? (`platform_database_name`: text)
-**What is the Platform/Infrastructure Database?**  
-  The Infrastructure Database is a centralized "hub" database that houses platform-wide objects including tags, network rules, governance policies, and shared procedures. It is owned by the central platform team and shared across all accounts in multi-account deployments.  
-  **Recommended Naming Approach:**  
-  Use a name that clearly identifies this as a platform-owned, infrastructure-focused database. The format should be: \<domain\>\_\<dataproduct\>  
-  * **Domain:** Use plat (short for "platform") or your platform team's acronym (e.g., cdp, snow, data)  
-  * **Data Product:** Use infra or another term indicating infrastructure purpose  
-* **Example:** PLAT\_INFRA — clearly indicates Platform team ownership and Infrastructure purpose  
-  **Alternative Examples:**  
-  * CDP\_INFRA — Cloud Data Platform Infrastructure  
-  * SNOW\_ADMIN — Snowflake Administration  
-  * DATA\_PLATFORM — Data Platform database  
-* **Important:** Choose carefully\! This name will eventually be referenced by dozens to hundreds of objects, policies, and procedures. Changing it later can be complex and risky.  
-  **More Information:**  
-  * [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)  
-  * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)
+#### What are your domain abbreviations? (`domain_list`: list)
+**What is a Domain?**  
+A domain represents a logical grouping of business functions, data, or ownership. Domains define boundaries for governance, cost allocation, and data stewardship.  
+
+**How Domains Are Used:**  
+Depending on your account strategy, domains appear at either the account level or database level:  
+* Multi-Account (Domain-based): Each domain gets its own Snowflake account  
+* Single Account: Domains appear as prefixes in database/warehouse/role names  
+
+**Examples by Type:**  
+* **Business Units:** `fin` (Finance), `mkt` (Marketing), `ops` (Operations), `hr` (Human Resources)  
+* **Entities:** `retail`, `wholesale`, `mfg` (Manufacturing)  
+* **Departments:** `sales`, `sc` (Supply Chain), `custsvc` (Customer Service)  
+* **Technical Teams:** `data`, `plat` (Platform), `eng` (Engineering)  
+
+**Best Practices:**  
+* Use short abbreviations (3-8 characters) for readability  
+* Avoid underscores within domain names—use concatenated abbreviations  
+* Choose intuitive names that are self-descriptive to users  
+* Consider future growth—add domains you may need later  
+
+**More Information:**  
+* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  
+
+#### What abbreviations will you use for environments? (`environment_list`: list)
+**What is an Environment?**  
+An environment represents a stage in the Software Development Lifecycle (SDLC). Environments isolate data and applications based on their maturity and stability.  
+
+**How Environments Are Used:**  
+Depending on your account strategy, environments appear at either the account level or database level:  
+* Multi-Account (Environment-based): Each environment gets its own Snowflake account  
+* Single Account: Environments appear as suffixes in database/warehouse/role names  
+
+**Common Environment Abbreviations:**  
+* `dev` — Development: Where developers build and test code  
+* `test` or `qa` — Testing/QA: For quality assurance and integration testing  
+* `stg` or `stage` — Staging: Pre-production environment mirroring production  
+* `prod` — Production: Live environment serving end users  
+* `sbx` — Sandbox: Isolated environments for experimentation  
+* `uat` — User Acceptance Testing: For business user validation  
+* `dr` — Disaster Recovery: Failover environment for business continuity  
+
+**Best Practices:**  
+* Use short abbreviations (3-4 characters) for consistency  
+* Keep abbreviations intuitive and recognizable  
+* Include all environments you'll need—adding later requires renaming objects  
+
+**More Information:**  
+* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  
 
 #### What core component ordering will be used for account-level object names? (`object_component_order`: multi-select)
 **Why Order Matters:**  
@@ -252,29 +278,3 @@ Choose the account strategy that best fits your organization. Your choice determ
 - Multi-Account (Environment-based)
 - Multi-Account (Domain-based)
 - Multi-Account (Domain + Environment)
-
-#### What abbreviations will you use for environments? (`environment_list`: list)
-**What is an Environment?**  
-An environment represents a stage in the Software Development Lifecycle (SDLC). Environments isolate data and applications based on their maturity and stability.  
-
-**How Environments Are Used:**  
-Depending on your account strategy, environments appear at either the account level or database level:  
-* Multi-Account (Environment-based): Each environment gets its own Snowflake account  
-* Single Account: Environments appear as suffixes in database/warehouse/role names  
-
-**Common Environment Abbreviations:**  
-* `dev` — Development: Where developers build and test code  
-* `test` or `qa` — Testing/QA: For quality assurance and integration testing  
-* `stg` or `stage` — Staging: Pre-production environment mirroring production  
-* `prod` — Production: Live environment serving end users  
-* `sbx` — Sandbox: Isolated environments for experimentation  
-* `uat` — User Acceptance Testing: For business user validation  
-* `dr` — Disaster Recovery: Failover environment for business continuity  
-
-**Best Practices:**  
-* Use short abbreviations (3-4 characters) for consistency  
-* Keep abbreviations intuitive and recognizable  
-* Include all environments you'll need—adding later requires renaming objects  
-
-**More Information:**  
-* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  

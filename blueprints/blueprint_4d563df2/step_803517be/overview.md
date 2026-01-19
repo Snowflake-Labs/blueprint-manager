@@ -44,40 +44,6 @@ It is significantly easier to implement tags when you first set up your environm
 
 ### Configuration Questions
 
-#### Do you want to add additional cost allocation tags? (`enable_cost_tags`: multi-select)
-**What is this asking?** Decide whether you want to configure additional cost allocation tags beyond the core platform tags.  
-
-  **Why does this matter?** Additional cost tags enable more granular cost tracking and can integrate with your organization's accounting systems.  
-
-  **Tags you already have for platform management:**  
-  * domain \- Business unit or department  
-  * environment \- SDLC stage (dev, test, prod)  
-  * dataproduct \- Data product identifier  
-  * workload \- Workload type  
-  * zone \- Data zone  
-  * data\_classification \- Data sensitivity level  
-
-* **Additional tags below would be configured in next step:**  
-  * cost\_center \- Accounting cost center code  
-  * owner \- Team or individual responsible  
-  * project \- Specific project or initiative  
-  * application \- Application or system name  
-
-* **Options explained:**  
-  **Yes (Recommended):**  
-  * Proceed to the next step to create additional FinOps and cost allocation tags
-* **No:**  
-  * Use only the core platform tags (Domain, Environment, etc.) from previous steps for FinOps  
-  * Can add more tags later if needed  
-
-* **Recommendation:** Select Yes to proceed to the next step where you can add at least cost\_center and owner tags for better financial accountability.  
-
-**More Information:**  
-  * [Attributing Costs using Tags](https://docs.snowflake.com/en/user-guide/cost-attributing)
-**Options:**
-- Yes
-- No
-
 #### What do you want to name the platform database? (`platform_database_name`: text)
 **What is the Platform/Infrastructure Database?**  
   The Infrastructure Database is a centralized "hub" database that houses platform-wide objects including tags, network rules, governance policies, and shared procedures. It is owned by the central platform team and shared across all accounts in multi-account deployments.  
@@ -118,3 +84,37 @@ It is significantly easier to implement tags when you first set up your environm
   * [CREATE SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/create-schema)  
   * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)  
   * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
+
+#### Do you want to add additional cost allocation tags? (`enable_cost_tags`: multi-select)
+**What is this asking?** Decide whether you want to configure additional cost allocation tags beyond the core platform tags.  
+
+  **Why does this matter?** Additional cost tags enable more granular cost tracking and can integrate with your organization's accounting systems.  
+
+  **Tags you already have for platform management:**  
+  * domain \- Business unit or department  
+  * environment \- SDLC stage (dev, test, prod)  
+  * dataproduct \- Data product identifier  
+  * workload \- Workload type  
+  * zone \- Data zone  
+  * data\_classification \- Data sensitivity level  
+
+* **Additional tags below would be configured in next step:**  
+  * cost\_center \- Accounting cost center code  
+  * owner \- Team or individual responsible  
+  * project \- Specific project or initiative  
+  * application \- Application or system name  
+
+* **Options explained:**  
+  **Yes (Recommended):**  
+  * Proceed to the next step to create additional FinOps and cost allocation tags
+* **No:**  
+  * Use only the core platform tags (Domain, Environment, etc.) from previous steps for FinOps  
+  * Can add more tags later if needed  
+
+* **Recommendation:** Select Yes to proceed to the next step where you can add at least cost\_center and owner tags for better financial accountability.  
+
+**More Information:**  
+  * [Attributing Costs using Tags](https://docs.snowflake.com/en/user-guide/cost-attributing)
+**Options:**
+- Yes
+- No

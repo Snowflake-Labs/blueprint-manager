@@ -39,6 +39,35 @@ You'll create a local database that references the share. The name should indica
 
 ### Configuration Questions
 
+#### What name would you like to use for the infrastructure database share? (`infrastructure_share_name`: text)
+**What is this asking?** Choose a name for the SHARE object that will provide access to your infrastructure database.  
+
+  **Why does this matter?** This name will be visible to all accounts that consume the share. Choose something descriptive and aligned with your naming conventions.  
+  **Recommendations:**  
+  * Use lowercase with underscores  
+  * Include a clear identifier like infrastructure or governance  
+  * Keep it concise but descriptive  
+
+* **Examples:**  
+  * infrastructure\_share  
+  * governance\_share  
+  * platform\_share  
+
+* **Default recommendation:** infrastructure\_share
+
+#### What is your Snowflake organization name? (`snowflake_org_name`: text)
+Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
+  **How to find your organization name:**  
+  Look at your current Snowflake URL. The organization name is the portion before the dash:  
+  * https://\*\*ACME\*\*-prod.snowflakecomputing.com → Organization name is ACME  
+  * https://\*\*XY12345\*\*-prod.snowflakecomputing.com → Organization name is XY12345  
+* **Types of Organization Names:**  
+  * **Custom Name:** A human-readable name like ACME or INITECH that was requested from Snowflake. These provide better branding and more readable URLs.  
+  * **System-Generated:** An auto-assigned alphanumeric code like XY12345 or AB98765, created automatically during self-service sign up. Companies typically keep this name if transparency of your organization name in the URL is unnecessary or undesirable.   
+* **To request a custom name:** If you have a system-generated name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge) or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
+  **More Information:**  
+  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
+
 #### What do you want to name your organization account? (`org_account_name`: text)
 **Recommended Name:** ORG  
   Since there can be only one Organization Account per organization, the name should clearly indicate this special purpose. We recommend simply naming it ORG.  
@@ -56,6 +85,27 @@ You'll create a local database that references the share. The name should indica
 * **More Information:**  
   * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
   * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
+
+#### What name should be used for the shared infrastructure database in this account? (`shared_database_name`: text)
+**What is this asking?**
+Choose a name for the database that will be created from the infrastructure share. This is a local reference to the shared governance objects.
+
+**Why does this matter?**
+This database name will be used in SQL queries when referencing governance objects like tags and cost reporting views.
+
+**Recommendations:**
+- Use a name that indicates it's a shared resource
+- Keep it consistent across all accounts
+- Use lowercase with underscores
+
+**Examples:**
+- `infrastructure_shared`
+- `governance_shared`
+- `platform_shared`
+
+**Default recommendation:** `{{ platform_database_name | lower }}_shared`
+
+**Note:** This creates a read-only database. You cannot create objects in this database.
 
 #### What name should be used for this account? (`new_account_name`: text)
 **What is this asking?**
@@ -81,21 +131,6 @@ Based on your Platform Foundation settings, follow this pattern:
 **Best Practice:**
 Use the suggested name from the previous step unless you have a specific reason to customize it. Consistent naming makes governance and cost allocation easier.
 
-#### Which domain will this account represent? (`account_domain`: multi-select)
-**What is this asking?**
-Select the business domain this account will represent. This account will serve all environments (Dev, Test, Prod) for this domain.
-
-**Why does this matter?**
-- The domain becomes part of the account name
-- Cost allocation at the account level will be attributed to this domain
-- All resources in this account are associated with this domain
-
-**Note on Environments:**
-Since you're using a domain-based strategy, environments (Dev, Test, Prod) will be organized **within** this account at the database level. You'll configure environments when creating data products.
-
-**More Information:**
-* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
-
 #### What do you want to name the governance schema? (`governance_name`: text)
 **What is the Governance Schema?**  
   The Governance schema is created within the Infrastructure Database and contains objects related to security, compliance, and platform governance. This includes platform and FinOps tags, network rules, audit views, and administrative procedures.  
@@ -119,76 +154,6 @@ Since you're using a domain-based strategy, environments (Dev, Test, Prod) will 
   * [CREATE SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/create-schema)  
   * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)  
   * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
-
-#### What is your Snowflake organization name? (`snowflake_org_name`: text)
-Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
-  **How to find your organization name:**  
-  Look at your current Snowflake URL. The organization name is the portion before the dash:  
-  * https://\*\*ACME\*\*-prod.snowflakecomputing.com → Organization name is ACME  
-  * https://\*\*XY12345\*\*-prod.snowflakecomputing.com → Organization name is XY12345  
-* **Types of Organization Names:**  
-  * **Custom Name:** A human-readable name like ACME or INITECH that was requested from Snowflake. These provide better branding and more readable URLs.  
-  * **System-Generated:** An auto-assigned alphanumeric code like XY12345 or AB98765, created automatically during self-service sign up. Companies typically keep this name if transparency of your organization name in the URL is unnecessary or undesirable.   
-* **To request a custom name:** If you have a system-generated name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge) or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
-  **More Information:**  
-  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
-
-#### What name should be used for the shared infrastructure database in this account? (`shared_database_name`: text)
-**What is this asking?**
-Choose a name for the database that will be created from the infrastructure share. This is a local reference to the shared governance objects.
-
-**Why does this matter?**
-This database name will be used in SQL queries when referencing governance objects like tags and cost reporting views.
-
-**Recommendations:**
-- Use a name that indicates it's a shared resource
-- Keep it consistent across all accounts
-- Use lowercase with underscores
-
-**Examples:**
-- `infrastructure_shared`
-- `governance_shared`
-- `platform_shared`
-
-**Default recommendation:** `{{ platform_database_name | lower }}_shared`
-
-**Note:** This creates a read-only database. You cannot create objects in this database.
-
-#### Which environment will this account represent? (`account_environment`: multi-select)
-**What is this asking?**
-Select the SDLC environment this account will represent. This account will serve all domains (Sales, Finance, HR, etc.) for this environment.
-
-**Why does this matter?**
-- The environment becomes part of the account name
-- Cost allocation at the account level will be attributed to this environment
-- All resources in this account are associated with this environment
-
-**Environment Considerations:**
-- **DEV/DEVELOPMENT**: Lower security, experimentation allowed
-- **TEST/QA**: Moderate security, controlled changes
-- **PROD/PRODUCTION**: Highest security, strict change control
-
-**Note on Domains:**
-Since you're using an environment-based strategy, domains will be organized **within** this account at the database level. You'll configure domains when creating data products.
-
-**More Information:**
-* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
-
-#### What name would you like to use for the infrastructure database share? (`infrastructure_share_name`: text)
-**What is this asking?** Choose a name for the SHARE object that will provide access to your infrastructure database.  
-
-  **Why does this matter?** This name will be visible to all accounts that consume the share. Choose something descriptive and aligned with your naming conventions.  
-  **Recommendations:**  
-  * Use lowercase with underscores  
-  * Include a clear identifier like infrastructure or governance  
-  * Keep it concise but descriptive  
-
-* **Examples:**  
-  * infrastructure\_share  
-  * governance\_share  
-  * platform\_share  
-
-* **Default recommendation:** infrastructure\_share
 
 #### What account strategy do you wish to implement? (`account_strategy`: multi-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
@@ -224,3 +189,38 @@ Choose the account strategy that best fits your organization. Your choice determ
 - Multi-Account (Environment-based)
 - Multi-Account (Domain-based)
 - Multi-Account (Domain + Environment)
+
+#### Which domain will this account represent? (`account_domain`: multi-select)
+**What is this asking?**
+Select the business domain this account will represent. This account will serve all environments (Dev, Test, Prod) for this domain.
+
+**Why does this matter?**
+- The domain becomes part of the account name
+- Cost allocation at the account level will be attributed to this domain
+- All resources in this account are associated with this domain
+
+**Note on Environments:**
+Since you're using a domain-based strategy, environments (Dev, Test, Prod) will be organized **within** this account at the database level. You'll configure environments when creating data products.
+
+**More Information:**
+* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
+
+#### Which environment will this account represent? (`account_environment`: multi-select)
+**What is this asking?**
+Select the SDLC environment this account will represent. This account will serve all domains (Sales, Finance, HR, etc.) for this environment.
+
+**Why does this matter?**
+- The environment becomes part of the account name
+- Cost allocation at the account level will be attributed to this environment
+- All resources in this account are associated with this environment
+
+**Environment Considerations:**
+- **DEV/DEVELOPMENT**: Lower security, experimentation allowed
+- **TEST/QA**: Moderate security, controlled changes
+- **PROD/PRODUCTION**: Highest security, strict change control
+
+**Note on Domains:**
+Since you're using an environment-based strategy, domains will be organized **within** this account at the database level. You'll configure domains when creating data products.
+
+**More Information:**
+* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview

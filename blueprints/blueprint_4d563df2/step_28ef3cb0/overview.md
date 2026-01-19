@@ -63,72 +63,6 @@ If your organization has an enterprise IdP, we strongly recommend configuring SC
 - Other SCIM 2.0 Compatible IdP
 - None - Manual User Management
 
-#### Configure the break-glass emergency access account(s) (`breakglass_accounts`: object-list)
-**What is this asking?**
-Define one or more break-glass emergency access accounts. Each account can bypass SSO and authenticate with a password when your Identity Provider is unavailable.
-
-**How Many Accounts?**
-- **Minimum 1**: At least one break-glass account is required
-- **Recommended 2**: Two accounts provide redundancy if one is compromised
-- **Maximum 3**: More than 3 increases the attack surface
-
-**Username**
-- Use a descriptive name: `BREAKGLASS_ADMIN`, `EMERGENCY_ACCESS`, `SOS_ADMIN`
-- Avoid personal names since this is a shared emergency account
-- For multiple accounts, use suffixes: `BREAKGLASS_ADMIN_01`, `BREAKGLASS_ADMIN_02`
-
-**Email**
-- Use a team distribution list, not a personal email
-- Examples: `snowflake-security@company.com`, `platform-team@company.com`
-- Ensure the email is monitored 24/7 if you have critical workloads
-
-**Allowed IPs**
-- Enter comma-separated IP addresses or CIDR ranges
-- Example: `10.0.0.1, 192.168.1.0/24, 172.16.0.0/16`
-- Include VPN egress IPs, office IPs, and backup locations
-- Enter `NONE` to allow access from any IP (not recommended)
-
-**Example Entries:**
-
-| username | email | allowed_ips |
-|----------|-------|-------------|
-| `BREAKGLASS_ADMIN_01` | `platform-team@company.com` | `10.0.0.1, 192.168.1.0/24` |
-| `BREAKGLASS_ADMIN_02` | `security-team@company.com` | `10.0.0.2, 192.168.1.0/24` |
-
-**Security Notes:**
-- All accounts are created with `MUST_CHANGE_PASSWORD = TRUE`
-- Initial password must be changed on first login
-- Use one-time passwords (OTPs) stored in a secure vault
-- Restrict to Web UI only (no driver/CLI access)
-
-**More Information:**
-* [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)
-* [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies)
-
-#### When should MFA be enforced for administrative users? (`mfa_enforcement_timeline`: multi-select)
-**What is this asking?**
-Select when MFA should be required for users logging in with passwords.
-
-**Why does this matter?**
-Users need time to download authenticator apps and enroll in MFA. Too short a timeline may lock users out; too long reduces security.
-
-**Options explained:**
-- **Immediately**: Users must enroll in MFA on next login. Best for security but may cause access issues.
-- **7 Days**: One week grace period. Recommended for most organizations.
-- **14 Days**: Two weeks grace period. Good for distributed teams.
-- **30 Days**: One month grace period. Use only if you have complex user communication requirements.
-
-**Recommendation:**
-**7 Days** provides a good balance of security and user experience. Send communications to users immediately after running this step.
-
-**More Information:**
-* [MFA Enrollment](https://docs.snowflake.com/en/user-guide/security-mfa-enroll)
-**Options:**
-- Immediately - Require MFA now
-- 7 Days - Allow one week for enrollment
-- 14 Days - Allow two weeks for enrollment
-- 30 Days - Allow one month for enrollment
-
 #### Who should be set up as administrators? (`manual_admin_users`: object-list)
 **What is this asking?**
 Define the administrators who will manage your Snowflake account. For each administrator, provide their details and specify their administrative role.
@@ -214,3 +148,69 @@ Users must first be provisioned through SCIM before roles can be granted. Run th
 **More Information:**
 * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-accountadmin-role)
 * [System-Defined Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#system-defined-roles)
+
+#### Configure the break-glass emergency access account(s) (`breakglass_accounts`: object-list)
+**What is this asking?**
+Define one or more break-glass emergency access accounts. Each account can bypass SSO and authenticate with a password when your Identity Provider is unavailable.
+
+**How Many Accounts?**
+- **Minimum 1**: At least one break-glass account is required
+- **Recommended 2**: Two accounts provide redundancy if one is compromised
+- **Maximum 3**: More than 3 increases the attack surface
+
+**Username**
+- Use a descriptive name: `BREAKGLASS_ADMIN`, `EMERGENCY_ACCESS`, `SOS_ADMIN`
+- Avoid personal names since this is a shared emergency account
+- For multiple accounts, use suffixes: `BREAKGLASS_ADMIN_01`, `BREAKGLASS_ADMIN_02`
+
+**Email**
+- Use a team distribution list, not a personal email
+- Examples: `snowflake-security@company.com`, `platform-team@company.com`
+- Ensure the email is monitored 24/7 if you have critical workloads
+
+**Allowed IPs**
+- Enter comma-separated IP addresses or CIDR ranges
+- Example: `10.0.0.1, 192.168.1.0/24, 172.16.0.0/16`
+- Include VPN egress IPs, office IPs, and backup locations
+- Enter `NONE` to allow access from any IP (not recommended)
+
+**Example Entries:**
+
+| username | email | allowed_ips |
+|----------|-------|-------------|
+| `BREAKGLASS_ADMIN_01` | `platform-team@company.com` | `10.0.0.1, 192.168.1.0/24` |
+| `BREAKGLASS_ADMIN_02` | `security-team@company.com` | `10.0.0.2, 192.168.1.0/24` |
+
+**Security Notes:**
+- All accounts are created with `MUST_CHANGE_PASSWORD = TRUE`
+- Initial password must be changed on first login
+- Use one-time passwords (OTPs) stored in a secure vault
+- Restrict to Web UI only (no driver/CLI access)
+
+**More Information:**
+* [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)
+* [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies)
+
+#### When should MFA be enforced for administrative users? (`mfa_enforcement_timeline`: multi-select)
+**What is this asking?**
+Select when MFA should be required for users logging in with passwords.
+
+**Why does this matter?**
+Users need time to download authenticator apps and enroll in MFA. Too short a timeline may lock users out; too long reduces security.
+
+**Options explained:**
+- **Immediately**: Users must enroll in MFA on next login. Best for security but may cause access issues.
+- **7 Days**: One week grace period. Recommended for most organizations.
+- **14 Days**: Two weeks grace period. Good for distributed teams.
+- **30 Days**: One month grace period. Use only if you have complex user communication requirements.
+
+**Recommendation:**
+**7 Days** provides a good balance of security and user experience. Send communications to users immediately after running this step.
+
+**More Information:**
+* [MFA Enrollment](https://docs.snowflake.com/en/user-guide/security-mfa-enroll)
+**Options:**
+- Immediately - Require MFA now
+- 7 Days - Allow one week for enrollment
+- 14 Days - Allow two weeks for enrollment
+- 30 Days - Allow one month for enrollment

@@ -45,6 +45,39 @@ The Snowflake account where this data product's resources will be created. All d
 
 ### Configuration Questions
 
+#### Which account will this data product be deployed to? (`target_account_name`: text)
+
+**What is this asking?**
+Enter the name of the Snowflake account where this data product will be created.
+
+**Why does this matter?**
+This ensures all generated SQL is clearly documented with the target account, preventing deployment errors and providing clear audit trails.
+
+**How to find your account name:**
+- In Snowsight: Click your account name in the bottom-left corner
+- Run SQL: `SELECT CURRENT_ACCOUNT_NAME();`
+- From your URL: `https://<org>-<account>.snowflakecomputing.com`
+
+**Examples based on strategy:**
+
+**Domain-based strategy:**
+- `ACME_SALES` - Sales domain account
+- `ACME_FINANCE` - Finance domain account
+
+**Environment-based strategy:**
+- `ACME_DEV` - Development environment account
+- `ACME_PROD` - Production environment account
+
+**Domain + Environment strategy:**
+- `ACME_SALES_DEV` - Sales domain, Development environment
+- `ACME_FINANCE_PROD` - Finance domain, Production environment
+
+**Recommendation:**
+Copy the exact account name from your Snowflake session to avoid typos.
+
+**More Information:**
+* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) — Understanding account names
+
 #### What account strategy do you wish to implement? (`account_strategy`: multi-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  
@@ -79,36 +112,3 @@ Choose the account strategy that best fits your organization. Your choice determ
 - Multi-Account (Environment-based)
 - Multi-Account (Domain-based)
 - Multi-Account (Domain + Environment)
-
-#### Which account will this data product be deployed to? (`target_account_name`: text)
-
-**What is this asking?**
-Enter the name of the Snowflake account where this data product will be created.
-
-**Why does this matter?**
-This ensures all generated SQL is clearly documented with the target account, preventing deployment errors and providing clear audit trails.
-
-**How to find your account name:**
-- In Snowsight: Click your account name in the bottom-left corner
-- Run SQL: `SELECT CURRENT_ACCOUNT_NAME();`
-- From your URL: `https://<org>-<account>.snowflakecomputing.com`
-
-**Examples based on strategy:**
-
-**Domain-based strategy:**
-- `ACME_SALES` - Sales domain account
-- `ACME_FINANCE` - Finance domain account
-
-**Environment-based strategy:**
-- `ACME_DEV` - Development environment account
-- `ACME_PROD` - Production environment account
-
-**Domain + Environment strategy:**
-- `ACME_SALES_DEV` - Sales domain, Development environment
-- `ACME_FINANCE_PROD` - Finance domain, Production environment
-
-**Recommendation:**
-Copy the exact account name from your Snowflake session to avoid typos.
-
-**More Information:**
-* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) — Understanding account names

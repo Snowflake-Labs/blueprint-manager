@@ -31,6 +31,38 @@ In this strategy, domains (Sales, Finance, HR) are NOT at the account level. The
 
 ### Configuration Questions
 
+#### Which environment will this account represent? (`account_environment`: multi-select)
+**What is this asking?**
+Select the SDLC environment this account will represent. This account will serve all domains (Sales, Finance, HR, etc.) for this environment.
+
+**Why does this matter?**
+- The environment becomes part of the account name
+- Cost allocation at the account level will be attributed to this environment
+- All resources in this account are associated with this environment
+
+**Environment Considerations:**
+- **DEV/DEVELOPMENT**: Lower security, experimentation allowed
+- **TEST/QA**: Moderate security, controlled changes
+- **PROD/PRODUCTION**: Highest security, strict change control
+
+**Note on Domains:**
+Since you're using an environment-based strategy, domains will be organized **within** this account at the database level. You'll configure domains when creating data products.
+
+**More Information:**
+* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
+
+#### Provide a brief description of this account's purpose. (`account_description`: text)
+**What is this asking?**
+Write a short description that explains what this account is for.
+
+**Why does this matter?**
+A clear description helps team members understand the account's purpose at a glance. It appears in account listings and documentation, making governance and auditing easier.
+
+**Examples:**
+- "Sales domain account - contains all environments for Sales analytics"
+- "Finance domain account for financial reporting and analytics"
+- "HR domain account for people analytics and workforce planning"
+
 #### What account strategy do you wish to implement? (`account_strategy`: multi-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  
@@ -65,35 +97,3 @@ Choose the account strategy that best fits your organization. Your choice determ
 - Multi-Account (Environment-based)
 - Multi-Account (Domain-based)
 - Multi-Account (Domain + Environment)
-
-#### Provide a brief description of this account's purpose. (`account_description`: text)
-**What is this asking?**
-Write a short description that explains what this account is for.
-
-**Why does this matter?**
-A clear description helps team members understand the account's purpose at a glance. It appears in account listings and documentation, making governance and auditing easier.
-
-**Examples:**
-- "Sales domain account - contains all environments for Sales analytics"
-- "Finance domain account for financial reporting and analytics"
-- "HR domain account for people analytics and workforce planning"
-
-#### Which environment will this account represent? (`account_environment`: multi-select)
-**What is this asking?**
-Select the SDLC environment this account will represent. This account will serve all domains (Sales, Finance, HR, etc.) for this environment.
-
-**Why does this matter?**
-- The environment becomes part of the account name
-- Cost allocation at the account level will be attributed to this environment
-- All resources in this account are associated with this environment
-
-**Environment Considerations:**
-- **DEV/DEVELOPMENT**: Lower security, experimentation allowed
-- **TEST/QA**: Moderate security, controlled changes
-- **PROD/PRODUCTION**: Highest security, strict change control
-
-**Note on Domains:**
-Since you're using an environment-based strategy, domains will be organized **within** this account at the database level. You'll configure domains when creating data products.
-
-**More Information:**
-* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview

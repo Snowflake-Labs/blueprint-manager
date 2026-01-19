@@ -46,36 +46,21 @@ In a multi-account strategy, each account needs access to the governance framewo
 
 ### Configuration Questions
 
-#### What do you want to name your organization account? (`org_account_name`: text)
-**Recommended Name:** ORG  
-  Since there can be only one Organization Account per organization, the name should clearly indicate this special purpose. We recommend simply naming it ORG.  
-  
-  **Example URLs with Organization Account name ORG:**  
-  * With Custom Org Name: [https://ACME-ORG.snowflakecomputing.com](https://ACME-ORG.snowflakecomputing.com)  
-    * Org Name \= ACME  
-    * Org Account Name \= Org  
-  * System-generated Org Name: [https://XY12345-ORG.snowflakecomputing.com](https://XY12345-ORG.snowflakecomputing.com)  
-    * Org Name \= XY12345  
-    * Org Account Name \= Org  
-* **Requirements:**  
-  * Snowflake Enterprise Edition or higher  
-  * ORGADMIN role granted in the existing account  
-* **More Information:**  
-  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
-  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
+#### What name would you like to use for the infrastructure database share? (`infrastructure_share_name`: text)
+**What is this asking?** Choose a name for the SHARE object that will provide access to your infrastructure database.  
 
-#### What is your Snowflake organization name? (`snowflake_org_name`: text)
-Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
-  **How to find your organization name:**  
-  Look at your current Snowflake URL. The organization name is the portion before the dash:  
-  * https://\*\*ACME\*\*-prod.snowflakecomputing.com → Organization name is ACME  
-  * https://\*\*XY12345\*\*-prod.snowflakecomputing.com → Organization name is XY12345  
-* **Types of Organization Names:**  
-  * **Custom Name:** A human-readable name like ACME or INITECH that was requested from Snowflake. These provide better branding and more readable URLs.  
-  * **System-Generated:** An auto-assigned alphanumeric code like XY12345 or AB98765, created automatically during self-service sign up. Companies typically keep this name if transparency of your organization name in the URL is unnecessary or undesirable.   
-* **To request a custom name:** If you have a system-generated name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge) or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
-  **More Information:**  
-  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
+  **Why does this matter?** This name will be visible to all accounts that consume the share. Choose something descriptive and aligned with your naming conventions.  
+  **Recommendations:**  
+  * Use lowercase with underscores  
+  * Include a clear identifier like infrastructure or governance  
+  * Keep it concise but descriptive  
+
+* **Examples:**  
+  * infrastructure\_share  
+  * governance\_share  
+  * platform\_share  
+
+* **Default recommendation:** infrastructure\_share
 
 #### What do you want to name the platform database? (`platform_database_name`: text)
 **What is the Platform/Infrastructure Database?**  
@@ -93,22 +78,6 @@ Your Snowflake organization name is the first part of your account URL and conne
   **More Information:**  
   * [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)  
   * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)
-
-#### What name would you like to use for the infrastructure database share? (`infrastructure_share_name`: text)
-**What is this asking?** Choose a name for the SHARE object that will provide access to your infrastructure database.  
-
-  **Why does this matter?** This name will be visible to all accounts that consume the share. Choose something descriptive and aligned with your naming conventions.  
-  **Recommendations:**  
-  * Use lowercase with underscores  
-  * Include a clear identifier like infrastructure or governance  
-  * Keep it concise but descriptive  
-
-* **Examples:**  
-  * infrastructure\_share  
-  * governance\_share  
-  * platform\_share  
-
-* **Default recommendation:** infrastructure\_share
 
 #### What account strategy do you wish to implement? (`account_strategy`: multi-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
@@ -168,3 +137,34 @@ Choose the account strategy that best fits your organization. Your choice determ
   * [CREATE SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/create-schema)  
   * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)  
   * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
+
+#### What is your Snowflake organization name? (`snowflake_org_name`: text)
+Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
+  **How to find your organization name:**  
+  Look at your current Snowflake URL. The organization name is the portion before the dash:  
+  * https://\*\*ACME\*\*-prod.snowflakecomputing.com → Organization name is ACME  
+  * https://\*\*XY12345\*\*-prod.snowflakecomputing.com → Organization name is XY12345  
+* **Types of Organization Names:**  
+  * **Custom Name:** A human-readable name like ACME or INITECH that was requested from Snowflake. These provide better branding and more readable URLs.  
+  * **System-Generated:** An auto-assigned alphanumeric code like XY12345 or AB98765, created automatically during self-service sign up. Companies typically keep this name if transparency of your organization name in the URL is unnecessary or undesirable.   
+* **To request a custom name:** If you have a system-generated name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge) or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
+  **More Information:**  
+  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
+
+#### What do you want to name your organization account? (`org_account_name`: text)
+**Recommended Name:** ORG  
+  Since there can be only one Organization Account per organization, the name should clearly indicate this special purpose. We recommend simply naming it ORG.  
+  
+  **Example URLs with Organization Account name ORG:**  
+  * With Custom Org Name: [https://ACME-ORG.snowflakecomputing.com](https://ACME-ORG.snowflakecomputing.com)  
+    * Org Name \= ACME  
+    * Org Account Name \= Org  
+  * System-generated Org Name: [https://XY12345-ORG.snowflakecomputing.com](https://XY12345-ORG.snowflakecomputing.com)  
+    * Org Name \= XY12345  
+    * Org Account Name \= Org  
+* **Requirements:**  
+  * Snowflake Enterprise Edition or higher  
+  * ORGADMIN role granted in the existing account  
+* **More Information:**  
+  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
+  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)

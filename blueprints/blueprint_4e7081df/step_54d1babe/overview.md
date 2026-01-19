@@ -64,6 +64,33 @@ Based on your Platform Foundation settings, follow this pattern:
 **Best Practice:**
 Use the suggested name from the previous step unless you have a specific reason to customize it. Consistent naming makes governance and cost allocation easier.
 
+#### What is the monthly credit limit for this account? (`account_budget_limit`: text)
+**What is this asking?**
+Set the expected monthly credit consumption for this account.
+
+**Why does this matter?**
+A well-set budget provides meaningful alerts without being too restrictive. Setting it too low causes alert fatigue; too high means late warnings. This is your primary visibility into spending patterns for this account.
+
+**How to estimate:**
+- Consider the workloads planned for this account
+- Review historical usage from similar environments
+- Factor in development vs production usage patterns
+- Account for growth and seasonality
+
+**Examples by account type:**
+| Account Type | Typical Range |
+|--------------|---------------|
+| Development | 500 - 2,000 credits |
+| Test/QA | 1,000 - 5,000 credits |
+| Production | 5,000 - 50,000+ credits |
+
+**Format:** Enter a number (e.g., `5000` for 5,000 credits)
+
+**Note:** This is a monitoring threshold. You can adjust it as you learn actual consumption patterns.
+
+**More Information:**
+* [Budgets Overview](https://docs.snowflake.com/en/user-guide/budgets) — Credit monitoring and alerts
+
 #### At what percentage should budget alerts be sent? (`account_budget_threshold`: multi-select)
 **What is this asking?**
 Choose when to receive the first budget alert (as a percentage of the monthly limit).
@@ -91,33 +118,6 @@ With a 5,000 credit limit and 75% threshold:
 - 75
 - 90
 - 100
-
-#### What is the monthly credit limit for this account? (`account_budget_limit`: text)
-**What is this asking?**
-Set the expected monthly credit consumption for this account.
-
-**Why does this matter?**
-A well-set budget provides meaningful alerts without being too restrictive. Setting it too low causes alert fatigue; too high means late warnings. This is your primary visibility into spending patterns for this account.
-
-**How to estimate:**
-- Consider the workloads planned for this account
-- Review historical usage from similar environments
-- Factor in development vs production usage patterns
-- Account for growth and seasonality
-
-**Examples by account type:**
-| Account Type | Typical Range |
-|--------------|---------------|
-| Development | 500 - 2,000 credits |
-| Test/QA | 1,000 - 5,000 credits |
-| Production | 5,000 - 50,000+ credits |
-
-**Format:** Enter a number (e.g., `5000` for 5,000 credits)
-
-**Note:** This is a monitoring threshold. You can adjust it as you learn actual consumption patterns.
-
-**More Information:**
-* [Budgets Overview](https://docs.snowflake.com/en/user-guide/budgets) — Credit monitoring and alerts
 
 #### Who should receive budget alerts? (`account_budget_emails`: list)
 **What is this asking?**

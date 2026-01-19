@@ -49,6 +49,58 @@ Best practice is to configure multiple thresholds:
 
 ### Configuration Questions
 
+#### What name should be used for this account? (`new_account_name`: text)
+**What is this asking?**
+Confirm or customize the account name. Based on your Platform Foundation naming conventions, a suggested name was generated in the previous step.
+
+**Naming Requirements:**
+- Must be unique within your organization
+- Can contain letters, numbers, and underscores
+- Cannot start with a number
+- Maximum 255 characters
+- Will be converted to uppercase internally
+
+**Recommended Format:**
+Based on your Platform Foundation settings, follow this pattern:
+- If prefix is used: `{prefix}_{domain}_{environment}` or `{prefix}_{environment}_{domain}`
+- If no prefix: `{domain}_{environment}` or `{environment}_{domain}`
+
+**Examples:**
+- `ACME_SALES_PROD`
+- `ACME_DEV_FINANCE`
+- `ANALYTICS_TEST`
+
+**Best Practice:**
+Use the suggested name from the previous step unless you have a specific reason to customize it. Consistent naming makes governance and cost allocation easier.
+
+#### What is the monthly credit limit for the resource monitor? (`account_resource_monitor_limit`: text)
+**What is this asking?**
+Set the maximum number of credits the account can consume before the configured action (at 100%) is taken.
+
+**Why does this matter?**
+This is your hard limit. The resource monitor will automatically set up tiered alerts:
+- At 75% of this limit: First notification
+- At 90% of this limit: Second notification
+- At 100% of this limit: Your selected action (Suspend/Notify)
+- At 110%: Same action as 100% (catches overruns)
+
+**How to determine your limit:**
+- Align with or slightly exceed your monthly budget
+- Consider setting 10-20% higher than expected usage as a safety buffer
+- Account for all warehouses that will be created
+
+**Example:**
+If your monthly budget is 1,000 credits:
+- Set limit to 1,000 credits
+- First alert at 750 credits (75%)
+- Second alert at 900 credits (90%)
+- Action triggered at 1,000 credits (100%)
+
+**Relationship to Budgets:**
+If you set a budget of 1,000 credits with a 75% threshold, you'll receive budget forecasting alerts *before* the resource monitor's 75% actual usage alert—giving you even earlier warning.
+
+**Warning:** When the limit is reached and suspension is configured, ALL warehouses will be affected.
+
 #### How often should the resource monitor reset? (`account_resource_monitor_reset_frequency`: multi-select)
 **What is this asking?**
 Choose when the credit counter resets to zero.
@@ -114,55 +166,3 @@ Use "Suspend After Current Queries" for production.
 - Suspend Immediately
 - Suspend After Current Queries
 - Notify Only
-
-#### What name should be used for this account? (`new_account_name`: text)
-**What is this asking?**
-Confirm or customize the account name. Based on your Platform Foundation naming conventions, a suggested name was generated in the previous step.
-
-**Naming Requirements:**
-- Must be unique within your organization
-- Can contain letters, numbers, and underscores
-- Cannot start with a number
-- Maximum 255 characters
-- Will be converted to uppercase internally
-
-**Recommended Format:**
-Based on your Platform Foundation settings, follow this pattern:
-- If prefix is used: `{prefix}_{domain}_{environment}` or `{prefix}_{environment}_{domain}`
-- If no prefix: `{domain}_{environment}` or `{environment}_{domain}`
-
-**Examples:**
-- `ACME_SALES_PROD`
-- `ACME_DEV_FINANCE`
-- `ANALYTICS_TEST`
-
-**Best Practice:**
-Use the suggested name from the previous step unless you have a specific reason to customize it. Consistent naming makes governance and cost allocation easier.
-
-#### What is the monthly credit limit for the resource monitor? (`account_resource_monitor_limit`: text)
-**What is this asking?**
-Set the maximum number of credits the account can consume before the configured action (at 100%) is taken.
-
-**Why does this matter?**
-This is your hard limit. The resource monitor will automatically set up tiered alerts:
-- At 75% of this limit: First notification
-- At 90% of this limit: Second notification
-- At 100% of this limit: Your selected action (Suspend/Notify)
-- At 110%: Same action as 100% (catches overruns)
-
-**How to determine your limit:**
-- Align with or slightly exceed your monthly budget
-- Consider setting 10-20% higher than expected usage as a safety buffer
-- Account for all warehouses that will be created
-
-**Example:**
-If your monthly budget is 1,000 credits:
-- Set limit to 1,000 credits
-- First alert at 750 credits (75%)
-- Second alert at 900 credits (90%)
-- Action triggered at 1,000 credits (100%)
-
-**Relationship to Budgets:**
-If you set a budget of 1,000 credits with a 75% threshold, you'll receive budget forecasting alerts *before* the resource monitor's 75% actual usage alert—giving you even earlier warning.
-
-**Warning:** When the limit is reached and suspension is configured, ALL warehouses will be affected.

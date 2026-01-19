@@ -62,62 +62,6 @@ Based on your Platform Foundation settings, follow this pattern:
 **Best Practice:**
 Use the suggested name from the previous step unless you have a specific reason to customize it. Consistent naming makes governance and cost allocation easier.
 
-#### Which domain will this account represent? (`account_domain`: multi-select)
-**What is this asking?**
-Select the business domain this account will represent. This account will serve all environments (Dev, Test, Prod) for this domain.
-
-**Why does this matter?**
-- The domain becomes part of the account name
-- Cost allocation at the account level will be attributed to this domain
-- All resources in this account are associated with this domain
-
-**Note on Environments:**
-Since you're using a domain-based strategy, environments (Dev, Test, Prod) will be organized **within** this account at the database level. You'll configure environments when creating data products.
-
-**More Information:**
-* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
-
-#### What name should be used for the shared infrastructure database in this account? (`shared_database_name`: text)
-**What is this asking?**
-Choose a name for the database that will be created from the infrastructure share. This is a local reference to the shared governance objects.
-
-**Why does this matter?**
-This database name will be used in SQL queries when referencing governance objects like tags and cost reporting views.
-
-**Recommendations:**
-- Use a name that indicates it's a shared resource
-- Keep it consistent across all accounts
-- Use lowercase with underscores
-
-**Examples:**
-- `infrastructure_shared`
-- `governance_shared`
-- `platform_shared`
-
-**Default recommendation:** `{{ platform_database_name | lower }}_shared`
-
-**Note:** This creates a read-only database. You cannot create objects in this database.
-
-#### Which environment will this account represent? (`account_environment`: multi-select)
-**What is this asking?**
-Select the SDLC environment this account will represent. This account will serve all domains (Sales, Finance, HR, etc.) for this environment.
-
-**Why does this matter?**
-- The environment becomes part of the account name
-- Cost allocation at the account level will be attributed to this environment
-- All resources in this account are associated with this environment
-
-**Environment Considerations:**
-- **DEV/DEVELOPMENT**: Lower security, experimentation allowed
-- **TEST/QA**: Moderate security, controlled changes
-- **PROD/PRODUCTION**: Highest security, strict change control
-
-**Note on Domains:**
-Since you're using an environment-based strategy, domains will be organized **within** this account at the database level. You'll configure domains when creating data products.
-
-**More Information:**
-* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
-
 #### What account strategy do you wish to implement? (`account_strategy`: multi-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  
@@ -152,6 +96,62 @@ Choose the account strategy that best fits your organization. Your choice determ
 - Multi-Account (Environment-based)
 - Multi-Account (Domain-based)
 - Multi-Account (Domain + Environment)
+
+#### Which domain will this account represent? (`account_domain`: multi-select)
+**What is this asking?**
+Select the business domain this account will represent. This account will serve all environments (Dev, Test, Prod) for this domain.
+
+**Why does this matter?**
+- The domain becomes part of the account name
+- Cost allocation at the account level will be attributed to this domain
+- All resources in this account are associated with this domain
+
+**Note on Environments:**
+Since you're using a domain-based strategy, environments (Dev, Test, Prod) will be organized **within** this account at the database level. You'll configure environments when creating data products.
+
+**More Information:**
+* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
+
+#### Which environment will this account represent? (`account_environment`: multi-select)
+**What is this asking?**
+Select the SDLC environment this account will represent. This account will serve all domains (Sales, Finance, HR, etc.) for this environment.
+
+**Why does this matter?**
+- The environment becomes part of the account name
+- Cost allocation at the account level will be attributed to this environment
+- All resources in this account are associated with this environment
+
+**Environment Considerations:**
+- **DEV/DEVELOPMENT**: Lower security, experimentation allowed
+- **TEST/QA**: Moderate security, controlled changes
+- **PROD/PRODUCTION**: Highest security, strict change control
+
+**Note on Domains:**
+Since you're using an environment-based strategy, domains will be organized **within** this account at the database level. You'll configure domains when creating data products.
+
+**More Information:**
+* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
+
+#### What name should be used for the shared infrastructure database in this account? (`shared_database_name`: text)
+**What is this asking?**
+Choose a name for the database that will be created from the infrastructure share. This is a local reference to the shared governance objects.
+
+**Why does this matter?**
+This database name will be used in SQL queries when referencing governance objects like tags and cost reporting views.
+
+**Recommendations:**
+- Use a name that indicates it's a shared resource
+- Keep it consistent across all accounts
+- Use lowercase with underscores
+
+**Examples:**
+- `infrastructure_shared`
+- `governance_shared`
+- `platform_shared`
+
+**Default recommendation:** `{{ platform_database_name | lower }}_shared`
+
+**Note:** This creates a read-only database. You cannot create objects in this database.
 
 #### What do you want to name the governance schema? (`governance_name`: text)
 **What is the Governance Schema?**  

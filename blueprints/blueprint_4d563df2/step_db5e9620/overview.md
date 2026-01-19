@@ -58,6 +58,70 @@ The Organization Account will be created with a single initial [ACCOUNTADMIN](ht
   * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
   * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
 
+#### What username should be used for the initial administrator? (`org_admin_name`: text)
+The initial administrator is the first user created in the Organization Account with ACCOUNTADMIN privileges. This is the **username** (login name), not the person's full name.  
+ 
+  **Recommendations:**  
+  * Use a standard username format (e.g., jsmith, john.smith, or email address)  
+  * Choose a trusted member of your platform or security team  
+  * Use lowercase for consistency  
+  * Avoid special characters other than ., \_, or \-  
+* **Examples:**  
+  * platform\_admin  
+  * john.smith  
+  * jsmith@company.com  
+* **Security Notes:**  
+  * Password will be set to require change on first login (MUST\_CHANGE\_PASSWORD \= TRUE)  
+  * [MFA](https://docs.snowflake.com/en/user-guide/security-mfa) will be required
+  * RSA public key authentication can be configured after account creation  
+  * Additional ACCOUNTADMIN users should be added for redundancy  
+* **More Information:**  
+  * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)  
+  * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
+  * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#accountadmin-role) 
+  * [MFA](https://docs.snowflake.com/en/user-guide/security-mfa)
+
+#### What email address should be used for the Organization Account administrator? (`org_admin_email`: text)
+* **Guidance:**  
+  This email address will be associated with the initial ACCOUNTADMIN user and used for:  
+  * Account activation and password reset notifications  
+  * Critical security alerts and notifications  
+  * Snowflake support communications  
+* **Best Practices:**  
+  * Use a monitored email address (not a personal email that may become inactive)  
+  * Consider using a shared mailbox or distribution list for continuity (e.g., snowflake-admin@yourcompany.com)  
+  * Ensure the email belongs to or is accessible by the named administrator  
+* **Note:** This can be changed after account creation, but it's important to set correctly from the start.  
+  **More Information:**  
+  * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)
+  * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
+  * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#accountadmin-role) 
+
+#### What Snowflake edition will you use for the Organization Account? (`org_account_edition`: multi-select)
+The Organization Account requires **Enterprise Edition or higher**. Standard Edition does not support Organization Account functionality.  
+
+**Enterprise Edition** (Recommended):  
+* Full organization management capabilities  
+* Multi-cluster warehouses for concurrency scaling  
+* Column-level security and up to 90-day Time Travel  
+* Failover/Failback for business continuity  
+* Best for: Most organizations  
+
+**Business Critical Edition:**  
+* Everything in Enterprise, plus:  
+* HIPAA and PCI DSS compliance support  
+* Customer-managed encryption keys (Tri-Secret Secure)  
+* Private connectivity (AWS PrivateLink, Azure Private Link, GCP Private Service Connect)  
+* Best for: Highly regulated industries or when the Organization Account needs to meet strict compliance requirements  
+
+**Recommendation:** Enterprise Edition is typically sufficient for the Organization Account since it primarily serves administrative purposes rather than hosting sensitive business data.  
+
+**More Information:**  
+* [Snowflake Editions](https://docs.snowflake.com/en/user-guide/intro-editions)  
+**Options:**
+- ENTERPRISE
+- BUSINESS_CRITICAL
+
 #### What cloud region should host the Organization Account? (`org_account_region`: text)
   Select the Snowflake Region ID where your Organization Account will be created.  
   
@@ -98,45 +162,6 @@ Your Snowflake organization name is the first part of your account URL and conne
   **More Information:**  
   * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
 
-#### What email address should be used for the Organization Account administrator? (`org_admin_email`: text)
-* **Guidance:**  
-  This email address will be associated with the initial ACCOUNTADMIN user and used for:  
-  * Account activation and password reset notifications  
-  * Critical security alerts and notifications  
-  * Snowflake support communications  
-* **Best Practices:**  
-  * Use a monitored email address (not a personal email that may become inactive)  
-  * Consider using a shared mailbox or distribution list for continuity (e.g., snowflake-admin@yourcompany.com)  
-  * Ensure the email belongs to or is accessible by the named administrator  
-* **Note:** This can be changed after account creation, but it's important to set correctly from the start.  
-  **More Information:**  
-  * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)
-  * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
-  * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#accountadmin-role) 
-
-#### What username should be used for the initial administrator? (`org_admin_name`: text)
-The initial administrator is the first user created in the Organization Account with ACCOUNTADMIN privileges. This is the **username** (login name), not the person's full name.  
- 
-  **Recommendations:**  
-  * Use a standard username format (e.g., jsmith, john.smith, or email address)  
-  * Choose a trusted member of your platform or security team  
-  * Use lowercase for consistency  
-  * Avoid special characters other than ., \_, or \-  
-* **Examples:**  
-  * platform\_admin  
-  * john.smith  
-  * jsmith@company.com  
-* **Security Notes:**  
-  * Password will be set to require change on first login (MUST\_CHANGE\_PASSWORD \= TRUE)  
-  * [MFA](https://docs.snowflake.com/en/user-guide/security-mfa) will be required
-  * RSA public key authentication can be configured after account creation  
-  * Additional ACCOUNTADMIN users should be added for redundancy  
-* **More Information:**  
-  * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)  
-  * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
-  * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#accountadmin-role) 
-  * [MFA](https://docs.snowflake.com/en/user-guide/security-mfa)
-
 #### Do you want to create an Organization Account? (`enable_org_account`: multi-select)
 The Organization Account is a special account that provides centralized management capabilities for your Snowflake environment.  
   
@@ -159,28 +184,3 @@ The Organization Account is a special account that provides centralized manageme
 **Options:**
 - Yes
 - No
-
-#### What Snowflake edition will you use for the Organization Account? (`org_account_edition`: multi-select)
-The Organization Account requires **Enterprise Edition or higher**. Standard Edition does not support Organization Account functionality.  
-
-**Enterprise Edition** (Recommended):  
-* Full organization management capabilities  
-* Multi-cluster warehouses for concurrency scaling  
-* Column-level security and up to 90-day Time Travel  
-* Failover/Failback for business continuity  
-* Best for: Most organizations  
-
-**Business Critical Edition:**  
-* Everything in Enterprise, plus:  
-* HIPAA and PCI DSS compliance support  
-* Customer-managed encryption keys (Tri-Secret Secure)  
-* Private connectivity (AWS PrivateLink, Azure Private Link, GCP Private Service Connect)  
-* Best for: Highly regulated industries or when the Organization Account needs to meet strict compliance requirements  
-
-**Recommendation:** Enterprise Edition is typically sufficient for the Organization Account since it primarily serves administrative purposes rather than hosting sensitive business data.  
-
-**More Information:**  
-* [Snowflake Editions](https://docs.snowflake.com/en/user-guide/intro-editions)  
-**Options:**
-- ENTERPRISE
-- BUSINESS_CRITICAL

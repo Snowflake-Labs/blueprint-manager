@@ -42,51 +42,6 @@ The certificate used to verify SAML assertions from the IdP. This is how Snowfla
 
 ### Configuration Questions
 
-#### What do you want to name your organization account? (`org_account_name`: text)
-**Recommended Name:** ORG  
-  Since there can be only one Organization Account per organization, the name should clearly indicate this special purpose. We recommend simply naming it ORG.  
-  
-  **Example URLs with Organization Account name ORG:**  
-  * With Custom Org Name: [https://ACME-ORG.snowflakecomputing.com](https://ACME-ORG.snowflakecomputing.com)  
-    * Org Name \= ACME  
-    * Org Account Name \= Org  
-  * System-generated Org Name: [https://XY12345-ORG.snowflakecomputing.com](https://XY12345-ORG.snowflakecomputing.com)  
-    * Org Name \= XY12345  
-    * Org Account Name \= Org  
-* **Requirements:**  
-  * Snowflake Enterprise Edition or higher  
-  * ORGADMIN role granted in the existing account  
-* **More Information:**  
-  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
-  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
-
-#### What prefix (if any) should be added to all account names? (`account_name_prefix`: text)
-An account name prefix is an optional string added to the beginning of every account name for consistency and organization identification.  
-
-**When to use a prefix:**  
-* If your organization name is system-generated (e.g., `XY12345`) and you want your company name visible in account names  
-* If you want to enforce consistent naming across all accounts  
-* If you have multiple organizations or business units sharing Snowflake and need differentiation  
-
-**Example with prefix:**  
-* Prefix: `acme`  
-* Account names become: `acme_prod`, `acme_dev`, `acme_finance`  
-* URL: `https://XY12345-acme_prod.snowflakecomputing.com`  
-
-**Example without prefix:**  
-* Account names: `prod`, `dev`, `finance`  
-* URL: `https://ACME-prod.snowflakecomputing.com`  
-
-**Recommendations:**  
-* If you have a **custom organization name** (like `ACME`), a prefix is typically unnecessary since your identity is already in the URL  
-* If you have a **system-generated name**, consider using an abbreviated company name as a prefix  
-* Keep prefixes short (3-8 characters) with no underscores  
-
-**Enter `NONE` if you do not want to use an account name prefix.**  
-
-**More Information:**  
-* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
-
 #### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
@@ -112,37 +67,6 @@ If your organization has an enterprise IdP, we strongly recommend configuring SC
 - Other SCIM 2.0 Compatible IdP
 - None - Manual User Management
 
-#### What is your Identity Provider's Issuer/Entity ID? (`saml_issuer`: text)
-**What is this asking?**
-Provide the Issuer (also called Entity ID) from your Identity Provider. This uniquely identifies your IdP.
-
-**Why does this matter?**
-The Issuer is used to verify that SAML assertions are coming from the expected Identity Provider.
-
-**How to find this:**
-- **Okta**: Found in the SAML application settings under "Identity Provider Issuer"
-- **Azure AD**: Found as "Azure AD Identifier" in the SAML configuration
-- **Ping**: Found in the application connection settings as "Entity ID"
-
-**Format:**
-Typically a URL like: `http://www.okta.com/exk1234567890` or a URN.
-
-**More Information:**
-* [SAML Configuration](https://docs.snowflake.com/en/user-guide/admin-security-fed-auth-configure-snowflake)
-
-#### What is your Snowflake organization name? (`snowflake_org_name`: text)
-Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
-  **How to find your organization name:**  
-  Look at your current Snowflake URL. The organization name is the portion before the dash:  
-  * https://\*\*ACME\*\*-prod.snowflakecomputing.com → Organization name is ACME  
-  * https://\*\*XY12345\*\*-prod.snowflakecomputing.com → Organization name is XY12345  
-* **Types of Organization Names:**  
-  * **Custom Name:** A human-readable name like ACME or INITECH that was requested from Snowflake. These provide better branding and more readable URLs.  
-  * **System-Generated:** An auto-assigned alphanumeric code like XY12345 or AB98765, created automatically during self-service sign up. Companies typically keep this name if transparency of your organization name in the URL is unnecessary or undesirable.   
-* **To request a custom name:** If you have a system-generated name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge) or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
-  **More Information:**  
-  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
-
 #### What name would you like to use for the SAML integration? (`saml_integration_name`: text)
 **What is this asking?**
 Provide a name for the SAML security integration that will be created in Snowflake.
@@ -161,40 +85,23 @@ Use a format like `<IDP>_SSO` or `<IDP>_SAML` where `<IDP>` is your Identity Pro
 **More Information:**
 * [CREATE SECURITY INTEGRATION (SAML2)](https://docs.snowflake.com/en/sql-reference/sql/create-security-integration-saml2)
 
-#### Will you configure SAML/SSO for single sign-on? (`configure_saml`: multi-select)
+#### What is your Identity Provider's Issuer/Entity ID? (`saml_issuer`: text)
 **What is this asking?**
-Decide whether to configure SAML-based Single Sign-On (SSO) as part of this setup, or defer it for later.
+Provide the Issuer (also called Entity ID) from your Identity Provider. This uniquely identifies your IdP.
 
 **Why does this matter?**
-SAML/SSO allows users to authenticate to Snowflake using your Identity Provider, providing a seamless login experience and centralized authentication control.
+The Issuer is used to verify that SAML assertions are coming from the expected Identity Provider.
 
-**Options explained:**
+**How to find this:**
+- **Okta**: Found in the SAML application settings under "Identity Provider Issuer"
+- **Azure AD**: Found as "Azure AD Identifier" in the SAML configuration
+- **Ping**: Found in the application connection settings as "Entity ID"
 
-**Yes - Configure SAML now:**
-- A dedicated step will guide you through SAML configuration
-- Recommended if your IdP is ready and you want SSO from day one
-
-**No - Configure later:**
-- Skip SAML configuration for now
-- Users will authenticate with username/password + MFA
-- You can configure SAML later without rebuilding
-
-**When to choose "Configure later":**
-- Your IdP isn't fully set up yet
-- You want to get the basics working first
-- You need to coordinate with your identity team
-- You're doing a proof-of-concept
-
-**Note:** Even without SAML, password + MFA provides strong authentication. SAML adds convenience and centralized control, not necessarily more security.
-
-**Recommendation:**
-If you selected a SCIM provider and your IdP is ready, configure SAML now for a complete SSO experience. Otherwise, defer and configure later.
+**Format:**
+Typically a URL like: `http://www.okta.com/exk1234567890` or a URN.
 
 **More Information:**
-* [SAML/SSO Configuration](https://docs.snowflake.com/en/user-guide/admin-security-fed-auth) — Federated authentication setup
-**Options:**
-- Yes - Configure SAML now
-- No - Configure later or use password authentication
+* [SAML Configuration](https://docs.snowflake.com/en/user-guide/admin-security-fed-auth-configure-snowflake)
 
 #### What is your Identity Provider's SSO URL? (`saml_sso_url`: text)
 **What is this asking?**
@@ -235,6 +142,64 @@ The certificate is a public key and is safe to include in configuration. Do not 
 **More Information:**
 * [SAML Certificate Requirements](https://docs.snowflake.com/en/user-guide/admin-security-fed-auth-configure-snowflake#label-fed-auth-configure-cert)
 
+#### What is your Snowflake organization name? (`snowflake_org_name`: text)
+Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
+  **How to find your organization name:**  
+  Look at your current Snowflake URL. The organization name is the portion before the dash:  
+  * https://\*\*ACME\*\*-prod.snowflakecomputing.com → Organization name is ACME  
+  * https://\*\*XY12345\*\*-prod.snowflakecomputing.com → Organization name is XY12345  
+* **Types of Organization Names:**  
+  * **Custom Name:** A human-readable name like ACME or INITECH that was requested from Snowflake. These provide better branding and more readable URLs.  
+  * **System-Generated:** An auto-assigned alphanumeric code like XY12345 or AB98765, created automatically during self-service sign up. Companies typically keep this name if transparency of your organization name in the URL is unnecessary or undesirable.   
+* **To request a custom name:** If you have a system-generated name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge) or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
+  **More Information:**  
+  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
+
+#### What prefix (if any) should be added to all account names? (`account_name_prefix`: text)
+An account name prefix is an optional string added to the beginning of every account name for consistency and organization identification.  
+
+**When to use a prefix:**  
+* If your organization name is system-generated (e.g., `XY12345`) and you want your company name visible in account names  
+* If you want to enforce consistent naming across all accounts  
+* If you have multiple organizations or business units sharing Snowflake and need differentiation  
+
+**Example with prefix:**  
+* Prefix: `acme`  
+* Account names become: `acme_prod`, `acme_dev`, `acme_finance`  
+* URL: `https://XY12345-acme_prod.snowflakecomputing.com`  
+
+**Example without prefix:**  
+* Account names: `prod`, `dev`, `finance`  
+* URL: `https://ACME-prod.snowflakecomputing.com`  
+
+**Recommendations:**  
+* If you have a **custom organization name** (like `ACME`), a prefix is typically unnecessary since your identity is already in the URL  
+* If you have a **system-generated name**, consider using an abbreviated company name as a prefix  
+* Keep prefixes short (3-8 characters) with no underscores  
+
+**Enter `NONE` if you do not want to use an account name prefix.**  
+
+**More Information:**  
+* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
+
+#### What do you want to name your organization account? (`org_account_name`: text)
+**Recommended Name:** ORG  
+  Since there can be only one Organization Account per organization, the name should clearly indicate this special purpose. We recommend simply naming it ORG.  
+  
+  **Example URLs with Organization Account name ORG:**  
+  * With Custom Org Name: [https://ACME-ORG.snowflakecomputing.com](https://ACME-ORG.snowflakecomputing.com)  
+    * Org Name \= ACME  
+    * Org Account Name \= Org  
+  * System-generated Org Name: [https://XY12345-ORG.snowflakecomputing.com](https://XY12345-ORG.snowflakecomputing.com)  
+    * Org Name \= XY12345  
+    * Org Account Name \= Org  
+* **Requirements:**  
+  * Snowflake Enterprise Edition or higher  
+  * ORGADMIN role granted in the existing account  
+* **More Information:**  
+  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
+  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
+
 #### Should the Snowflake login page show a button to log in with SSO? (`saml_sso_login_page`: multi-select)
 **What is this asking?**
 Decide whether to add a "Log in using SSO" button to the Snowflake login page.
@@ -251,3 +216,38 @@ Select **Yes** to provide users with an easy SSO option on the login page.
 **Options:**
 - Yes
 - No
+
+#### Will you configure SAML/SSO for single sign-on? (`configure_saml`: multi-select)
+**What is this asking?**
+Decide whether to configure SAML-based Single Sign-On (SSO) as part of this setup, or defer it for later.
+
+**Why does this matter?**
+SAML/SSO allows users to authenticate to Snowflake using your Identity Provider, providing a seamless login experience and centralized authentication control.
+
+**Options explained:**
+
+**Yes - Configure SAML now:**
+- A dedicated step will guide you through SAML configuration
+- Recommended if your IdP is ready and you want SSO from day one
+
+**No - Configure later:**
+- Skip SAML configuration for now
+- Users will authenticate with username/password + MFA
+- You can configure SAML later without rebuilding
+
+**When to choose "Configure later":**
+- Your IdP isn't fully set up yet
+- You want to get the basics working first
+- You need to coordinate with your identity team
+- You're doing a proof-of-concept
+
+**Note:** Even without SAML, password + MFA provides strong authentication. SAML adds convenience and centralized control, not necessarily more security.
+
+**Recommendation:**
+If you selected a SCIM provider and your IdP is ready, configure SAML now for a complete SSO experience. Otherwise, defer and configure later.
+
+**More Information:**
+* [SAML/SSO Configuration](https://docs.snowflake.com/en/user-guide/admin-security-fed-auth) — Federated authentication setup
+**Options:**
+- Yes - Configure SAML now
+- No - Configure later or use password authentication

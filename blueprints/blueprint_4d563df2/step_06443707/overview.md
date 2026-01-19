@@ -43,30 +43,46 @@ Network policies are your first line of defense—even if credentials are stolen
 
 ### Configuration Questions
 
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
-**What is this asking?**
-Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
+#### What do you want to name the platform database? (`platform_database_name`: text)
+**What is the Platform/Infrastructure Database?**  
+  The Infrastructure Database is a centralized "hub" database that houses platform-wide objects including tags, network rules, governance policies, and shared procedures. It is owned by the central platform team and shared across all accounts in multi-account deployments.  
+  **Recommended Naming Approach:**  
+  Use a name that clearly identifies this as a platform-owned, infrastructure-focused database. The format should be: \<domain\>\_\<dataproduct\>  
+  * **Domain:** Use plat (short for "platform") or your platform team's acronym (e.g., cdp, snow, data)  
+  * **Data Product:** Use infra or another term indicating infrastructure purpose  
+* **Example:** PLAT\_INFRA — clearly indicates Platform team ownership and Infrastructure purpose  
+  **Alternative Examples:**  
+  * CDP\_INFRA — Cloud Data Platform Infrastructure  
+  * SNOW\_ADMIN — Snowflake Administration  
+  * DATA\_PLATFORM — Data Platform database  
+* **Important:** Choose carefully\! This name will eventually be referenced by dozens to hundreds of objects, policies, and procedures. Changing it later can be complex and risky.  
+  **More Information:**  
+  * [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)  
+  * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)
 
-**Why does this matter?**
-Different IdPs have different configuration steps and capabilities. Snowflake provides specific documentation for major IdPs like Okta and Azure AD, while other SCIM 2.0 compatible providers use a generic configuration.
+#### What do you want to name the governance schema? (`governance_name`: text)
+**What is the Governance Schema?**  
+  The Governance schema is created within the Infrastructure Database and contains objects related to security, compliance, and platform governance. This includes platform and FinOps tags, network rules, audit views, and administrative procedures.  
 
-**Options explained:**
-- **Okta**: Enterprise IdP with native Snowflake SCIM integration
-- **Microsoft Entra ID (Azure AD)**: Microsoft's cloud identity service with gallery app for Snowflake
-- **Other SCIM 2.0 Compatible IdP**: Any IdP that supports SCIM 2.0 protocol
-- **None - Manual User Management**: Skip SCIM and manage users manually (not recommended)
+  **Recommended Name:** GOVERNANCE  
 
-**Recommendation:**
-If your organization has an enterprise IdP, we strongly recommend configuring SCIM integration. The initial setup effort is minimal compared to the ongoing benefits of automated provisioning.
+  This is a straightforward, self-descriptive name that clearly communicates the schema's purpose. Alternative options include:  
+  * ADMIN — Administration  
+  * SECURITY — Security-focused objects  
+  * PLATFORM — Platform-level objects  
 
-**More Information:**
-* [SCIM Overview](https://docs.snowflake.com/en/user-guide/scim)
-* [Supported Identity Providers](https://docs.snowflake.com/en/user-guide/scim#supported-identity-providers)
-**Options:**
-- Okta
-- Microsoft Entra ID (Azure ID)
-- Other SCIM 2.0 Compatible IdP
-- None - Manual User Management
+**Schema Configuration:**  
+  This schema will be created with **Managed Access** enabled, which means:  
+  * Only the schema owner (typically [SYSADMIN](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system) - aka System Administrator) can grant privileges on objects  
+  * Prevents "shadow" security configurations where object creators grant their own access  
+  * Provides centralized control over who can access governance objects  
+
+**Best Practice:** Use a simple, single-word name that represents the functional purpose.  
+  
+**More Information:**  
+  * [CREATE SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/create-schema)  
+  * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)  
+  * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
 
 #### Define the network rules for allowed IP addresses (`allowed_network_rules`: object-list)
 **What is this asking?**
@@ -101,46 +117,35 @@ Network rules define which IP addresses can access your Snowflake account. Group
 * [Network Rules](https://docs.snowflake.com/en/user-guide/network-rules)
 * [CREATE NETWORK RULE](https://docs.snowflake.com/en/sql-reference/sql/create-network-rule)
 
-#### What do you want to name the governance schema? (`governance_name`: text)
-**What is the Governance Schema?**  
-  The Governance schema is created within the Infrastructure Database and contains objects related to security, compliance, and platform governance. This includes platform and FinOps tags, network rules, audit views, and administrative procedures.  
+#### Define any network rules for blocked IP addresses (`blocked_network_rules`: object-list)
+**What is this asking?**
+Optionally create network rules for IP addresses that should be explicitly blocked from accessing Snowflake.
 
-  **Recommended Name:** GOVERNANCE  
+**Why does this matter?**
+Block rules take precedence over allow rules. This is useful for blocking specific IPs within an otherwise allowed range.
 
-  This is a straightforward, self-descriptive name that clearly communicates the schema's purpose. Alternative options include:  
-  * ADMIN — Administration  
-  * SECURITY — Security-focused objects  
-  * PLATFORM — Platform-level objects  
+**Fields:**
+- **rule_name**: A descriptive name for the block rule (e.g., `blocked_regions`, `former_vendor`)
+- **cidr_blocks**: Comma-separated list of IP addresses or CIDR ranges to block
 
-**Schema Configuration:**  
-  This schema will be created with **Managed Access** enabled, which means:  
-  * Only the schema owner (typically [SYSADMIN](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system) - aka System Administrator) can grant privileges on objects  
-  * Prevents "shadow" security configurations where object creators grant their own access  
-  * Provides centralized control over who can access governance objects  
+**Example block rules:**
+| Rule Name | CIDR Blocks | Purpose |
+|-----------|-------------|---------|
+| `blocked_countries` | `185.0.0.0/8, 91.0.0.0/8` | Block traffic from specific regions |
+| `former_vendor` | `203.0.113.100, 203.0.113.101` | Block former vendor's static IPs |
+| `known_malicious` | `192.0.2.0/24` | Known malicious IP range |
+| `excluded_subnet` | `10.0.5.0/24` | Exclude specific subnet from broader allow |
 
-**Best Practice:** Use a simple, single-word name that represents the functional purpose.  
-  
-**More Information:**  
-  * [CREATE SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/create-schema)  
-  * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)  
-  * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
+**Use cases:**
+- Blocking known malicious IP ranges
+- Blocking specific hosts within an allowed CIDR range
+- Blocking IPs from former vendors or partners
+- Geographic restrictions (blocking entire country IP ranges)
 
-#### What do you want to name the platform database? (`platform_database_name`: text)
-**What is the Platform/Infrastructure Database?**  
-  The Infrastructure Database is a centralized "hub" database that houses platform-wide objects including tags, network rules, governance policies, and shared procedures. It is owned by the central platform team and shared across all accounts in multi-account deployments.  
-  **Recommended Naming Approach:**  
-  Use a name that clearly identifies this as a platform-owned, infrastructure-focused database. The format should be: \<domain\>\_\<dataproduct\>  
-  * **Domain:** Use plat (short for "platform") or your platform team's acronym (e.g., cdp, snow, data)  
-  * **Data Product:** Use infra or another term indicating infrastructure purpose  
-* **Example:** PLAT\_INFRA — clearly indicates Platform team ownership and Infrastructure purpose  
-  **Alternative Examples:**  
-  * CDP\_INFRA — Cloud Data Platform Infrastructure  
-  * SNOW\_ADMIN — Snowflake Administration  
-  * DATA\_PLATFORM — Data Platform database  
-* **Important:** Choose carefully\! This name will eventually be referenced by dozens to hundreds of objects, policies, and procedures. Changing it later can be complex and risky.  
-  **More Information:**  
-  * [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)  
-  * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)
+**Leave empty** if you don't need to explicitly block any IPs. Most organizations only use allow rules.
+
+**More Information:**
+* [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies)
 
 #### Should the network policy be applied at the account level? (`enable_account_network_policy`: multi-select)
 **What is this asking?**
@@ -163,6 +168,31 @@ If you enable account-level policy without including all necessary IPs, you coul
 **Options:**
 - Yes - Apply to all users by default
 - No - Apply only to specific users
+
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+**What is this asking?**
+Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
+
+**Why does this matter?**
+Different IdPs have different configuration steps and capabilities. Snowflake provides specific documentation for major IdPs like Okta and Azure AD, while other SCIM 2.0 compatible providers use a generic configuration.
+
+**Options explained:**
+- **Okta**: Enterprise IdP with native Snowflake SCIM integration
+- **Microsoft Entra ID (Azure AD)**: Microsoft's cloud identity service with gallery app for Snowflake
+- **Other SCIM 2.0 Compatible IdP**: Any IdP that supports SCIM 2.0 protocol
+- **None - Manual User Management**: Skip SCIM and manage users manually (not recommended)
+
+**Recommendation:**
+If your organization has an enterprise IdP, we strongly recommend configuring SCIM integration. The initial setup effort is minimal compared to the ongoing benefits of automated provisioning.
+
+**More Information:**
+* [SCIM Overview](https://docs.snowflake.com/en/user-guide/scim)
+* [Supported Identity Providers](https://docs.snowflake.com/en/user-guide/scim#supported-identity-providers)
+**Options:**
+- Okta
+- Microsoft Entra ID (Azure ID)
+- Other SCIM 2.0 Compatible IdP
+- None - Manual User Management
 
 #### Who should be set up as administrators? (`manual_admin_users`: object-list)
 **What is this asking?**
@@ -203,36 +233,6 @@ Enter ONE of the following values exactly as shown:
 **More Information:**
 * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)
 * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-accountadmin-role)
-
-#### Define any network rules for blocked IP addresses (`blocked_network_rules`: object-list)
-**What is this asking?**
-Optionally create network rules for IP addresses that should be explicitly blocked from accessing Snowflake.
-
-**Why does this matter?**
-Block rules take precedence over allow rules. This is useful for blocking specific IPs within an otherwise allowed range.
-
-**Fields:**
-- **rule_name**: A descriptive name for the block rule (e.g., `blocked_regions`, `former_vendor`)
-- **cidr_blocks**: Comma-separated list of IP addresses or CIDR ranges to block
-
-**Example block rules:**
-| Rule Name | CIDR Blocks | Purpose |
-|-----------|-------------|---------|
-| `blocked_countries` | `185.0.0.0/8, 91.0.0.0/8` | Block traffic from specific regions |
-| `former_vendor` | `203.0.113.100, 203.0.113.101` | Block former vendor's static IPs |
-| `known_malicious` | `192.0.2.0/24` | Known malicious IP range |
-| `excluded_subnet` | `10.0.5.0/24` | Exclude specific subnet from broader allow |
-
-**Use cases:**
-- Blocking known malicious IP ranges
-- Blocking specific hosts within an allowed CIDR range
-- Blocking IPs from former vendors or partners
-- Geographic restrictions (blocking entire country IP ranges)
-
-**Leave empty** if you don't need to explicitly block any IPs. Most organizations only use allow rules.
-
-**More Information:**
-* [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies)
 
 #### Who should be granted administrative roles? (`scim_admin_users`: object-list)
 **What is this asking?**

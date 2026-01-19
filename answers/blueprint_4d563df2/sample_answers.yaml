@@ -1,60 +1,60 @@
-org_account_name: Sample org account name
-budget_notification_threshold: '50'
-account_resource_monitor_limit: Sample account resource monitor limit
-org_admin_email: Sample org admin email
-enable_resource_monitors: 'Yes'
-allowed_network_rules: null
-governance_name: Sample governance name
+account_strategy: Single Account
 snowflake_org_name: Sample snowflake org name
-object_component_order: <domain>_<env>_<dataproduct>
-account_resource_monitor_reset_frequency: Monthly
-saml_sso_login_page: 'Yes'
-blocked_network_rules: null
-enable_cost_tags: 'Yes'
-enable_budgets: 'Yes'
+account_name_prefix: Sample account name prefix
+enable_org_account: 'Yes'
+org_account_name: Sample org account name
+org_admin_name: Sample org admin name
+org_admin_email: Sample org admin email
+org_account_edition: ENTERPRISE
+org_account_region: Sample org account region
+platform_database_name: Sample platform database name
+governance_name: Sample governance name
 domain_list:
 - domain_list_Item 1
 - domain_list_Item 2
 - domain_list_Item 3
-identity_provider: Okta
-saml_issuer: Sample saml issuer
-breakglass_accounts: null
-human_auth_methods: SAML Only (SSO required)
-additional_tag_dimensions: All (Cost Center, Owner, Project, Application)
-enable_account_network_policy: Yes - Apply to all users by default
-scim_integration_name: Sample scim integration name
-saml_sso_url: Sample saml sso url
-org_account_edition: ENTERPRISE
-require_cost_tags: Yes (all resources)
-scim_admin_users: null
-apply_auth_policies_account_level: Yes - Apply default policy to all users
-budget_refresh_interval: 6.5 hours (default)
-scim_allowed_ips:
-- scim_allowed_ips_Item 1
-- scim_allowed_ips_Item 2
-- scim_allowed_ips_Item 3
-saml_integration_name: Sample saml integration name
-mfa_enforcement_timeline: Immediately - Require MFA now
-scim_provisioner_role: OKTA_PROVISIONER
-infrastructure_share_name: Sample infrastructure share name
-account_strategy: Single Account
-org_admin_name: Sample org admin name
-saml_certificate: Sample saml certificate
-mfa_method: TOTP (Authenticator Apps)
-account_resource_monitor_action: Suspend Immediately
 environment_list:
 - environment_list_Item 1
 - environment_list_Item 2
 - environment_list_Item 3
+object_component_order: <domain>_<env>_<dataproduct>
+infrastructure_share_name: Sample infrastructure share name
+identity_provider: Okta
+configure_saml: Yes - Configure SAML now
+scim_integration_name: Sample scim integration name
+scim_provisioner_role: OKTA_PROVISIONER
+scim_allowed_ips:
+- scim_allowed_ips_Item 1
+- scim_allowed_ips_Item 2
+- scim_allowed_ips_Item 3
+scim_admin_users: null
+manual_admin_users: null
+saml_integration_name: Sample saml integration name
+saml_issuer: Sample saml issuer
+saml_sso_url: Sample saml sso url
+saml_certificate: Sample saml certificate
+saml_sso_login_page: 'Yes'
+breakglass_accounts: null
+allowed_network_rules: null
+blocked_network_rules: null
+enable_account_network_policy: Yes - Apply to all users by default
+human_auth_methods: SAML Only (SSO required)
+mfa_method: TOTP (Authenticator Apps)
+service_auth_methods: OAuth Only
+apply_auth_policies_account_level: Yes - Apply default policy to all users
+mfa_enforcement_timeline: Immediately - Require MFA now
+enable_budgets: 'Yes'
+account_monthly_budget: Sample account monthly budget
+budget_notification_threshold: '50'
+budget_refresh_interval: 6.5 hours (default)
 budget_alert_emails:
 - budget_alert_emails_Item 1
 - budget_alert_emails_Item 2
 - budget_alert_emails_Item 3
-account_name_prefix: Sample account name prefix
-service_auth_methods: OAuth Only
-account_monthly_budget: Sample account monthly budget
-org_account_region: Sample org account region
-platform_database_name: Sample platform database name
-configure_saml: Yes - Configure SAML now
-enable_org_account: 'Yes'
-manual_admin_users: null
+enable_resource_monitors: 'Yes'
+account_resource_monitor_limit: Sample account resource monitor limit
+account_resource_monitor_action: Suspend Immediately
+account_resource_monitor_reset_frequency: Monthly
+enable_cost_tags: 'Yes'
+additional_tag_dimensions: All (Cost Center, Owner, Project, Application)
+require_cost_tags: Yes (all resources)

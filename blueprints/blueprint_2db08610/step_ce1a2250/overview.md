@@ -55,57 +55,6 @@ For Slack, Teams, or custom integrations:
 
 ### Configuration Questions
 
-#### Who should receive resource monitor alerts? (`resource_monitor_emails`: list)
-Enter the email addresses of people who should be notified when thresholds are triggered.
-
-**Recommended recipients:**
-- Data product owner
-- FinOps or cloud cost team
-- Engineering lead
-
-**Why does this matter?**
-The right notifications ensure:
-- Timely response to cost alerts
-- Accountability for spending
-- No surprise bills
-
-**Example:**
-```
-data.team@company.com
-finance@company.com
-john.smith@company.com
-```
-
-**Note:** Account administrators receive all notifications by default, regardless of this setting.
-
-#### Which environment is this data product being deployed to? (`data_product_environment`: multi-select)
-**What is this asking?**
-Select the SDLC environment for this data product deployment.
-
-**Auto-Detection for Multi-Account Strategies:**
-- **Environment-based accounts**: Your environment is determined by your target account. Select the matching value.
-- **Domain + Environment accounts**: Your environment is derived from the second part of your account name. Select the matching value.
-- **Domain-based accounts**: Environment is not determined by your account. Select from the available options.
-- **Single Account**: Environment is not determined by your account. Select from the available options.
-
-**Why does this matter?**
-Environment assignment determines:
-- **Isolation**: Resources are created in the appropriate context
-- **Access Controls**: Production typically has stricter access
-- **Resource Sizing**: Dev environments may use smaller warehouses
-- **Data Sensitivity**: Production may have real data vs. synthetic in dev
-
-**Common Environments:**
-| Abbreviation | Full Name | Purpose |
-|--------------|-----------|---------|
-| `dev` | Development | Building and testing code |
-| `test` | Testing/QA | Quality assurance |
-| `stg` | Staging | Pre-production validation |
-| `prod` | Production | Live environment |
-
-**Recommendation:**
-For environment-based and domain+environment strategies, select the environment that matches your target account name.
-
 #### What is the name of this data product? (`data_product_name`: text)
 **What is this asking?**
 Provide a descriptive name for your data product. This name will be used in database names, role names, and resource tags.
@@ -143,87 +92,6 @@ Choose a name that business users would recognize. Ask: "If someone searched for
 **More Information:**
 * [Identifier Requirements](https://docs.snowflake.com/en/sql-reference/identifiers-syntax) — Valid characters and length limits
 
-#### What core component ordering will be used for account-level object names? (`object_component_order`: multi-select)
-**Why Order Matters:**  
-Snowflake displays objects alphabetically. The component order determines how objects cluster together in Snowsight, BI tools, and queries.  
-
-**Option 1: `<domain>_<env>_<dataproduct>`**  
-* Objects cluster by **domain first**, then by environment  
-* All Finance objects together, all Marketing objects together  
-* Example: `FIN_PROD_ANALYTICS`, `FIN_DEV_ANALYTICS`, `MKT_PROD_CAMPAIGNS`  
-* Best for: Organizations where domain ownership is primary  
-
-**Option 2: `<domain>_<dataproduct>_<env>`**  
-* Objects cluster by **domain first**, then by data product  
-* All Finance Analytics together across environments  
-* Example: `FIN_ANALYTICS_PROD`, `FIN_ANALYTICS_DEV`, `MKT_CAMPAIGNS_PROD`  
-* Best for: Data product-centric organizations  
-
-**Option 3: `<env>_<domain>_<dataproduct>`**  
-* Objects cluster by **environment first**  
-* All Production objects together, all Development objects together  
-* Example: `PROD_FIN_ANALYTICS`, `PROD_MKT_CAMPAIGNS`, `DEV_FIN_ANALYTICS`  
-* Best for: Operations teams focused on environment-based management  
-
-**Recommendation:** Most organizations prefer `<domain>_<env>_<dataproduct>` or `<domain>_<dataproduct>_<env>` for domain-centric clustering.  
-
-**More Information:**  
-* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  
-**Options:**
-- <domain>_<env>_<dataproduct>
-- <domain>_<dataproduct>_<env>
-- <env>_<domain>_<dataproduct>
-
-#### Which account will this data product be deployed to? (`target_account_name`: text)
-
-**What is this asking?**
-Enter the name of the Snowflake account where this data product will be created.
-
-**Why does this matter?**
-This ensures all generated SQL is clearly documented with the target account, preventing deployment errors and providing clear audit trails.
-
-**How to find your account name:**
-- In Snowsight: Click your account name in the bottom-left corner
-- Run SQL: `SELECT CURRENT_ACCOUNT_NAME();`
-- From your URL: `https://<org>-<account>.snowflakecomputing.com`
-
-**Examples based on strategy:**
-
-**Domain-based strategy:**
-- `ACME_SALES` - Sales domain account
-- `ACME_FINANCE` - Finance domain account
-
-**Environment-based strategy:**
-- `ACME_DEV` - Development environment account
-- `ACME_PROD` - Production environment account
-
-**Domain + Environment strategy:**
-- `ACME_SALES_DEV` - Sales domain, Development environment
-- `ACME_FINANCE_PROD` - Finance domain, Production environment
-
-**Recommendation:**
-Copy the exact account name from your Snowflake session to avoid typos.
-
-**More Information:**
-* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) — Understanding account names
-
-#### What should happen when the credit limit is reached? (`resource_monitor_action`: multi-select)
-Choose the action when 100% of credits are consumed:
-
-- **Notify Only**: Warehouses continue running. Use for non-critical data products or when you'll manually intervene.
-- **Suspend**: Warehouses stop after current queries complete. Recommended for most data products.
-- **Suspend Immediately**: Kills in-flight queries and stops warehouses. Use for strict budget enforcement.
-
-**Why does this matter?**
-- Too aggressive → Queries fail unexpectedly
-- Too permissive → Costs exceed budget
-
-**Recommendation:** Start with "Suspend" for production, "Notify Only" for development.
-**Options:**
-- Notify Only (continue running)
-- Suspend (stop warehouse gracefully)
-- Suspend Immediately (kill queries and stop)
-
 #### What account strategy do you wish to implement? (`account_strategy`: multi-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  
@@ -259,6 +127,70 @@ Choose the account strategy that best fits your organization. Your choice determ
 - Multi-Account (Domain-based)
 - Multi-Account (Domain + Environment)
 
+#### Which account will this data product be deployed to? (`target_account_name`: text)
+
+**What is this asking?**
+Enter the name of the Snowflake account where this data product will be created.
+
+**Why does this matter?**
+This ensures all generated SQL is clearly documented with the target account, preventing deployment errors and providing clear audit trails.
+
+**How to find your account name:**
+- In Snowsight: Click your account name in the bottom-left corner
+- Run SQL: `SELECT CURRENT_ACCOUNT_NAME();`
+- From your URL: `https://<org>-<account>.snowflakecomputing.com`
+
+**Examples based on strategy:**
+
+**Domain-based strategy:**
+- `ACME_SALES` - Sales domain account
+- `ACME_FINANCE` - Finance domain account
+
+**Environment-based strategy:**
+- `ACME_DEV` - Development environment account
+- `ACME_PROD` - Production environment account
+
+**Domain + Environment strategy:**
+- `ACME_SALES_DEV` - Sales domain, Development environment
+- `ACME_FINANCE_PROD` - Finance domain, Production environment
+
+**Recommendation:**
+Copy the exact account name from your Snowflake session to avoid typos.
+
+**More Information:**
+* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) — Understanding account names
+
+#### What core component ordering will be used for account-level object names? (`object_component_order`: multi-select)
+**Why Order Matters:**  
+Snowflake displays objects alphabetically. The component order determines how objects cluster together in Snowsight, BI tools, and queries.  
+
+**Option 1: `<domain>_<env>_<dataproduct>`**  
+* Objects cluster by **domain first**, then by environment  
+* All Finance objects together, all Marketing objects together  
+* Example: `FIN_PROD_ANALYTICS`, `FIN_DEV_ANALYTICS`, `MKT_PROD_CAMPAIGNS`  
+* Best for: Organizations where domain ownership is primary  
+
+**Option 2: `<domain>_<dataproduct>_<env>`**  
+* Objects cluster by **domain first**, then by data product  
+* All Finance Analytics together across environments  
+* Example: `FIN_ANALYTICS_PROD`, `FIN_ANALYTICS_DEV`, `MKT_CAMPAIGNS_PROD`  
+* Best for: Data product-centric organizations  
+
+**Option 3: `<env>_<domain>_<dataproduct>`**  
+* Objects cluster by **environment first**  
+* All Production objects together, all Development objects together  
+* Example: `PROD_FIN_ANALYTICS`, `PROD_MKT_CAMPAIGNS`, `DEV_FIN_ANALYTICS`  
+* Best for: Operations teams focused on environment-based management  
+
+**Recommendation:** Most organizations prefer `<domain>_<env>_<dataproduct>` or `<domain>_<dataproduct>_<env>` for domain-centric clustering.  
+
+**More Information:**  
+* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  
+**Options:**
+- <domain>_<env>_<dataproduct>
+- <domain>_<dataproduct>_<env>
+- <env>_<domain>_<dataproduct>
+
 #### Which domain does this data product belong to? (`data_product_domain`: multi-select)
 **What is this asking?**
 Select the business domain (team, department, or organizational unit) that owns this data product.
@@ -289,3 +221,71 @@ Work with your platform team to add the domain to Platform Foundation, then retu
 
 **Recommendation:**
 For domain-based and domain+environment strategies, select the domain that matches your target account name.
+
+#### Which environment is this data product being deployed to? (`data_product_environment`: multi-select)
+**What is this asking?**
+Select the SDLC environment for this data product deployment.
+
+**Auto-Detection for Multi-Account Strategies:**
+- **Environment-based accounts**: Your environment is determined by your target account. Select the matching value.
+- **Domain + Environment accounts**: Your environment is derived from the second part of your account name. Select the matching value.
+- **Domain-based accounts**: Environment is not determined by your account. Select from the available options.
+- **Single Account**: Environment is not determined by your account. Select from the available options.
+
+**Why does this matter?**
+Environment assignment determines:
+- **Isolation**: Resources are created in the appropriate context
+- **Access Controls**: Production typically has stricter access
+- **Resource Sizing**: Dev environments may use smaller warehouses
+- **Data Sensitivity**: Production may have real data vs. synthetic in dev
+
+**Common Environments:**
+| Abbreviation | Full Name | Purpose |
+|--------------|-----------|---------|
+| `dev` | Development | Building and testing code |
+| `test` | Testing/QA | Quality assurance |
+| `stg` | Staging | Pre-production validation |
+| `prod` | Production | Live environment |
+
+**Recommendation:**
+For environment-based and domain+environment strategies, select the environment that matches your target account name.
+
+#### Who should receive resource monitor alerts? (`resource_monitor_emails`: list)
+Enter the email addresses of people who should be notified when thresholds are triggered.
+
+**Recommended recipients:**
+- Data product owner
+- FinOps or cloud cost team
+- Engineering lead
+
+**Why does this matter?**
+The right notifications ensure:
+- Timely response to cost alerts
+- Accountability for spending
+- No surprise bills
+
+**Example:**
+```
+data.team@company.com
+finance@company.com
+john.smith@company.com
+```
+
+**Note:** Account administrators receive all notifications by default, regardless of this setting.
+
+#### What should happen when the credit limit is reached? (`resource_monitor_action`: multi-select)
+Choose the action when 100% of credits are consumed:
+
+- **Notify Only**: Warehouses continue running. Use for non-critical data products or when you'll manually intervene.
+- **Suspend**: Warehouses stop after current queries complete. Recommended for most data products.
+- **Suspend Immediately**: Kills in-flight queries and stops warehouses. Use for strict budget enforcement.
+
+**Why does this matter?**
+- Too aggressive → Queries fail unexpectedly
+- Too permissive → Costs exceed budget
+
+**Recommendation:** Start with "Suspend" for production, "Notify Only" for development.
+**Options:**
+- Notify Only (continue running)
+- Suspend (stop warehouse gracefully)
+- Suspend Immediately (kill queries and stop)

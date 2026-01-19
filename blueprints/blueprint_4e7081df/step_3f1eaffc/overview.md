@@ -63,94 +63,6 @@ Based on your Platform Foundation settings, follow this pattern:
 **Best Practice:**
 Use the suggested name from the previous step unless you have a specific reason to customize it. Consistent naming makes governance and cost allocation easier.
 
-#### Which domain will this account represent? (`account_domain`: multi-select)
-**What is this asking?**
-Select the business domain this account will represent. This account will serve all environments (Dev, Test, Prod) for this domain.
-
-**Why does this matter?**
-- The domain becomes part of the account name
-- Cost allocation at the account level will be attributed to this domain
-- All resources in this account are associated with this domain
-
-**Note on Environments:**
-Since you're using a domain-based strategy, environments (Dev, Test, Prod) will be organized **within** this account at the database level. You'll configure environments when creating data products.
-
-**More Information:**
-* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
-
-#### What email address should be used for the initial administrator? (`new_account_admin_email`: text)
-**What is this asking?**
-Provide the email address for the initial ACCOUNTADMIN user.
-
-**Why does this matter?**
-This email will receive:
-- Account activation notifications
-- Password reset links
-- Critical security alerts
-
-If the email is unmonitored or inaccessible, you may lose access to password recovery and important security notifications.
-
-**Best Practices:**
-- Use a monitored email address
-- Consider a shared mailbox for continuity (e.g., `snowflake-admin@company.com`)
-- Ensure the named administrator has access to this email
-
-**More Information:**
-* [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user) — User creation reference
-
-#### What username should be used for the initial administrator? (`new_account_admin_name`: text)
-**What is this asking?**
-Specify the username (login name) for the first ACCOUNTADMIN user in this account.
-
-**Why does this matter?**
-This is the bootstrap user who will configure the account after creation. Choosing the right person and a proper username format ensures smooth handoff and follows your organization's identity standards.
-
-**This is NOT a display name** — it's the login identifier the administrator will use to access Snowflake.
-
-**Recommendations:**
-- Use a standard username format (e.g., `jsmith`, `john.smith`, or email address)
-- Choose a trusted member of your platform or security team
-- Use lowercase for consistency
-- Avoid special characters other than `.`, `_`, or `-`
-
-**Examples:**
-- `platform_admin`
-- `john.smith`
-- `jsmith@company.com`
-
-**Security Notes:**
-- Password will be set to require change on first login
-- Additional ACCOUNTADMIN users should be added for redundancy
-- This user should enable MFA after first login
-
-**More Information:**
-* [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user) — User creation reference
-
-#### Provide a brief description of this account's purpose. (`account_description`: text)
-**What is this asking?**
-Write a short description that explains what this account is for.
-
-**Why does this matter?**
-A clear description helps team members understand the account's purpose at a glance. It appears in account listings and documentation, making governance and auditing easier.
-
-**Examples:**
-- "Sales domain account - contains all environments for Sales analytics"
-- "Finance domain account for financial reporting and analytics"
-- "HR domain account for people analytics and workforce planning"
-
-#### What is your Snowflake organization name? (`snowflake_org_name`: text)
-Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
-  **How to find your organization name:**  
-  Look at your current Snowflake URL. The organization name is the portion before the dash:  
-  * https://\*\*ACME\*\*-prod.snowflakecomputing.com → Organization name is ACME  
-  * https://\*\*XY12345\*\*-prod.snowflakecomputing.com → Organization name is XY12345  
-* **Types of Organization Names:**  
-  * **Custom Name:** A human-readable name like ACME or INITECH that was requested from Snowflake. These provide better branding and more readable URLs.  
-  * **System-Generated:** An auto-assigned alphanumeric code like XY12345 or AB98765, created automatically during self-service sign up. Companies typically keep this name if transparency of your organization name in the URL is unnecessary or undesirable.   
-* **To request a custom name:** If you have a system-generated name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge) or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
-  **More Information:**  
-  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
-
 #### What Snowflake edition will this account use? (`new_account_edition`: multi-select)
 **What is this asking?**
 Select the Snowflake edition for this account.
@@ -196,61 +108,6 @@ The edition determines:
 - Enterprise
 - Business Critical
 
-#### Which environment will this account represent? (`account_environment`: multi-select)
-**What is this asking?**
-Select the SDLC environment this account will represent. This account will serve all domains (Sales, Finance, HR, etc.) for this environment.
-
-**Why does this matter?**
-- The environment becomes part of the account name
-- Cost allocation at the account level will be attributed to this environment
-- All resources in this account are associated with this environment
-
-**Environment Considerations:**
-- **DEV/DEVELOPMENT**: Lower security, experimentation allowed
-- **TEST/QA**: Moderate security, controlled changes
-- **PROD/PRODUCTION**: Highest security, strict change control
-
-**Note on Domains:**
-Since you're using an environment-based strategy, domains will be organized **within** this account at the database level. You'll configure domains when creating data products.
-
-**More Information:**
-* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
-
-#### What account strategy do you wish to implement? (`account_strategy`: multi-select)
-Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
-  **Single Account:**  
-  * Best for: Small to medium organizations, centralized teams, simpler governance  
-  * Naming: Domain \+ Environment \+ Data Product at database level  
-  * Pros: Lower operational overhead, easier cross-database queries, centralized management  
-  * Cons: Less isolation, shared resource limits, single security boundary  
-  * Recommendation: Consider setting up an organization account even for single-account deployments to enable future growth  
-* **Multi-Account (Environment-based):**  
-  * Best for: Organizations requiring strong environment isolation (dev/test/prod)  
-  * Naming: Environment at account level, Domain \+ Data Product at database level  
-  * Pros: Complete environment isolation, independent security controls, separate billing  
-  * Cons: More complex data sharing, higher operational overhead  
-  * Requirement: Organization account required  
-* **Multi-Account (Domain-based):**  
-  * Best for: Large enterprises with autonomous business units/domains  
-  * Naming: Domain at account level, Environment \+ Data Product at database level  
-  * Pros: Clear cost allocation per domain, independent governance, domain autonomy  
-  * Cons: Higher complexity, requires data sharing for cross-domain analytics  
-  * Requirement: Organization account required  
-* **Multi-Account (Domain \+ Environment):**  
-  * Best for: Large organizations needing both domain and environment isolation  
-  * Naming: Domain \+ Environment at account level, Data Product at database level  
-  * Pros: Maximum isolation, clear ownership and environment separation  
-  * Cons: Highest complexity and operational overhead, most accounts to manage  
-  * Requirement: Organization account required  
-* **More Information:**  
-  * [Organizations](https://docs.snowflake.com/en/user-guide/organizations)  
-  * [Managing Multiple Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts)  
-**Options:**
-- Single Account
-- Multi-Account (Environment-based)
-- Multi-Account (Domain-based)
-- Multi-Account (Domain + Environment)
-
 #### What cloud region should host this account? (`new_account_region`: text)
 **What is this asking?**
 Specify the Snowflake Region ID where this account will be created.
@@ -289,3 +146,146 @@ If left blank, the account is created in the same region as the Organization Acc
 
 **More Information:**
 * [Supported Cloud Regions](https://docs.snowflake.com/en/user-guide/intro-regions) — Full region list
+
+#### What username should be used for the initial administrator? (`new_account_admin_name`: text)
+**What is this asking?**
+Specify the username (login name) for the first ACCOUNTADMIN user in this account.
+
+**Why does this matter?**
+This is the bootstrap user who will configure the account after creation. Choosing the right person and a proper username format ensures smooth handoff and follows your organization's identity standards.
+
+**This is NOT a display name** — it's the login identifier the administrator will use to access Snowflake.
+
+**Recommendations:**
+- Use a standard username format (e.g., `jsmith`, `john.smith`, or email address)
+- Choose a trusted member of your platform or security team
+- Use lowercase for consistency
+- Avoid special characters other than `.`, `_`, or `-`
+
+**Examples:**
+- `platform_admin`
+- `john.smith`
+- `jsmith@company.com`
+
+**Security Notes:**
+- Password will be set to require change on first login
+- Additional ACCOUNTADMIN users should be added for redundancy
+- This user should enable MFA after first login
+
+**More Information:**
+* [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user) — User creation reference
+
+#### What account strategy do you wish to implement? (`account_strategy`: multi-select)
+Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
+  **Single Account:**  
+  * Best for: Small to medium organizations, centralized teams, simpler governance  
+  * Naming: Domain \+ Environment \+ Data Product at database level  
+  * Pros: Lower operational overhead, easier cross-database queries, centralized management  
+  * Cons: Less isolation, shared resource limits, single security boundary  
+  * Recommendation: Consider setting up an organization account even for single-account deployments to enable future growth  
+* **Multi-Account (Environment-based):**  
+  * Best for: Organizations requiring strong environment isolation (dev/test/prod)  
+  * Naming: Environment at account level, Domain \+ Data Product at database level  
+  * Pros: Complete environment isolation, independent security controls, separate billing  
+  * Cons: More complex data sharing, higher operational overhead  
+  * Requirement: Organization account required  
+* **Multi-Account (Domain-based):**  
+  * Best for: Large enterprises with autonomous business units/domains  
+  * Naming: Domain at account level, Environment \+ Data Product at database level  
+  * Pros: Clear cost allocation per domain, independent governance, domain autonomy  
+  * Cons: Higher complexity, requires data sharing for cross-domain analytics  
+  * Requirement: Organization account required  
+* **Multi-Account (Domain \+ Environment):**  
+  * Best for: Large organizations needing both domain and environment isolation  
+  * Naming: Domain \+ Environment at account level, Data Product at database level  
+  * Pros: Maximum isolation, clear ownership and environment separation  
+  * Cons: Highest complexity and operational overhead, most accounts to manage  
+  * Requirement: Organization account required  
+* **More Information:**  
+  * [Organizations](https://docs.snowflake.com/en/user-guide/organizations)  
+  * [Managing Multiple Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts)  
+**Options:**
+- Single Account
+- Multi-Account (Environment-based)
+- Multi-Account (Domain-based)
+- Multi-Account (Domain + Environment)
+
+#### Which domain will this account represent? (`account_domain`: multi-select)
+**What is this asking?**
+Select the business domain this account will represent. This account will serve all environments (Dev, Test, Prod) for this domain.
+
+**Why does this matter?**
+- The domain becomes part of the account name
+- Cost allocation at the account level will be attributed to this domain
+- All resources in this account are associated with this domain
+
+**Note on Environments:**
+Since you're using a domain-based strategy, environments (Dev, Test, Prod) will be organized **within** this account at the database level. You'll configure environments when creating data products.
+
+**More Information:**
+* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
+
+#### Which environment will this account represent? (`account_environment`: multi-select)
+**What is this asking?**
+Select the SDLC environment this account will represent. This account will serve all domains (Sales, Finance, HR, etc.) for this environment.
+
+**Why does this matter?**
+- The environment becomes part of the account name
+- Cost allocation at the account level will be attributed to this environment
+- All resources in this account are associated with this environment
+
+**Environment Considerations:**
+- **DEV/DEVELOPMENT**: Lower security, experimentation allowed
+- **TEST/QA**: Moderate security, controlled changes
+- **PROD/PRODUCTION**: Highest security, strict change control
+
+**Note on Domains:**
+Since you're using an environment-based strategy, domains will be organized **within** this account at the database level. You'll configure domains when creating data products.
+
+**More Information:**
+* [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
+
+#### Provide a brief description of this account's purpose. (`account_description`: text)
+**What is this asking?**
+Write a short description that explains what this account is for.
+
+**Why does this matter?**
+A clear description helps team members understand the account's purpose at a glance. It appears in account listings and documentation, making governance and auditing easier.
+
+**Examples:**
+- "Sales domain account - contains all environments for Sales analytics"
+- "Finance domain account for financial reporting and analytics"
+- "HR domain account for people analytics and workforce planning"
+
+#### What email address should be used for the initial administrator? (`new_account_admin_email`: text)
+**What is this asking?**
+Provide the email address for the initial ACCOUNTADMIN user.
+
+**Why does this matter?**
+This email will receive:
+- Account activation notifications
+- Password reset links
+- Critical security alerts
+
+If the email is unmonitored or inaccessible, you may lose access to password recovery and important security notifications.
+
+**Best Practices:**
+- Use a monitored email address
+- Consider a shared mailbox for continuity (e.g., `snowflake-admin@company.com`)
+- Ensure the named administrator has access to this email
+
+**More Information:**
+* [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user) — User creation reference
+
+#### What is your Snowflake organization name? (`snowflake_org_name`: text)
+Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
+  **How to find your organization name:**  
+  Look at your current Snowflake URL. The organization name is the portion before the dash:  
+  * https://\*\*ACME\*\*-prod.snowflakecomputing.com → Organization name is ACME  
+  * https://\*\*XY12345\*\*-prod.snowflakecomputing.com → Organization name is XY12345  
+* **Types of Organization Names:**  
+  * **Custom Name:** A human-readable name like ACME or INITECH that was requested from Snowflake. These provide better branding and more readable URLs.  
+  * **System-Generated:** An auto-assigned alphanumeric code like XY12345 or AB98765, created automatically during self-service sign up. Companies typically keep this name if transparency of your organization name in the URL is unnecessary or undesirable.   
+* **To request a custom name:** If you have a system-generated name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge) or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
+  **More Information:**  
+  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
