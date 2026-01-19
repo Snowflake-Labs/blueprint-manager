@@ -1,3 +1,138 @@
+- answer_title: local_policies_schema
+  question_text: What schema name should be used for security policies?
+  answer_type: text
+  is_org_scope: false
+  guidance: '**What is the Policies Schema?**
+
+    The Policies Schema is created within the Local Infrastructure Database and contains
+    account-specific security objects including authentication policies, network policies,
+    and other configurations that cannot be replicated.
+
+
+    **Recommended Name:** `POLICIES`
+
+
+    This is a straightforward, self-descriptive name that clearly communicates the
+    schema''s purpose. Alternative options include:
+
+    - `SECURITY` — Security-focused objects
+
+    - `AUTH` — Authentication and authorization objects
+
+    - `GOVERNANCE` — General governance objects
+
+
+    **Schema Configuration:**
+
+    This schema will be created with **Managed Access** enabled, which means:
+
+    - Only the schema owner (typically SECURITYADMIN or ACCOUNTADMIN) can grant privileges
+    on objects
+
+    - Prevents "shadow" security configurations where object creators grant their
+    own access
+
+    - Provides centralized control over who can access security policy objects
+
+
+    **Best Practice:** Use a simple, single-word name that represents the functional
+    purpose.
+
+
+    **More Information:**
+
+    * [CREATE SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/create-schema)
+
+    * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)
+
+    * [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies)'
+- answer_title: local_infra_database
+  question_text: What name should be used for the local infrastructure database?
+  answer_type: text
+  is_org_scope: false
+  guidance: '**What is the Local Infrastructure Database?**
+
+    The Local Infrastructure Database is a writable database within this account that
+    stores account-specific administrative and governance objects. This is separate
+    from the replicated infrastructure database which is read-only.
+
+
+    **Why is this needed?**
+
+    The infrastructure database replicated from the Organization Account is **read-only**.
+    Account-specific objects like authentication policies, local procedures, and account-level
+    configurations must be created in a local, writable database.
+
+
+    **Recommended Naming Approach:**
+
+    Use a name that clearly identifies this as a local, account-specific infrastructure
+    database. Follow the same naming pattern as your platform infrastructure database.
+    Consider formats like:
+
+    - `<domain>_LOCAL` — e.g., `PLAT_LOCAL`, `CDP_LOCAL`
+
+    - `<domain>_<account>` — e.g., `PLAT_SALES`, `PLAT_DEV`
+
+    - `LOCAL_<purpose>` — e.g., `LOCAL_INFRA`, `LOCAL_ADMIN`
+
+
+    **Example:** `PLAT_LOCAL` — clearly indicates Platform team ownership and local
+    (non-replicated) scope
+
+
+    **Alternative Examples:**
+
+    - `CDP_LOCAL` — Cloud Data Platform local objects
+
+    - `<ACCOUNT>_INFRA` — Account-specific infrastructure (e.g., `SALES_INFRA`)
+
+    - `LOCAL_ADMIN` — Local administration database
+
+
+    **Important:** This name should be distinct from the replicated infrastructure
+    database to avoid confusion.
+
+
+    **More Information:**
+
+    * [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)
+
+    * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)'
+- answer_title: replication_schedule
+  question_text: How frequently should the infrastructure database be replicated to
+    target accounts?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+  - text: Every 10 minutes
+  - text: Every 30 minutes
+  - text: Every hour
+  - text: Manual only
+  guidance: "**What is this asking?** Choose how often Snowflake should automatically\
+    \ synchronize the infrastructure database to all target accounts.  \n**Why does\
+    \ this matter?** More frequent replication means changes (new tags, updated views)\
+    \ are available sooner in target accounts, but may have minor cost implications.\
+    \  \n**Recommendations:**  \n* **Every 10 minutes** — Best for active development,\
+    \ changes propagate quickly\n* **Every 30 minutes** — Good balance for most organizations\n\
+    * **Every hour** — Suitable for stable environments with infrequent changes\n\
+    * **Manual only** — For environments where you want explicit control over when\
+    \ changes propagate\n\n**Note:** Infrastructure database changes (new tags, views)\
+    \ are typically infrequent, so even hourly refresh is usually sufficient."
+- answer_title: infrastructure_replication_group
+  question_text: 'What name would you like to use for the infrastructure database
+    replication group?  '
+  answer_type: text
+  is_org_scope: true
+  guidance: "**What is this asking?** Choose a name for the REPLICATION GROUP object\
+    \ that will synchronize your infrastructure database to other accounts.  \n**Why\
+    \ does this matter?** This name will be used when creating secondary replication\
+    \ groups in target accounts. Choose something descriptive and aligned with your\
+    \ naming conventions.  \n**Recommendations:**  \n* Use lowercase with underscores\
+    \  \n* Include a clear identifier like infrastructure or governance  \n* Keep\
+    \ it concise but descriptive  \n* **Examples:**  \n* infrastructure_replication_group\
+    \  \n* governance_replication_group  \n* platform_replication_group  \n* **Default\
+    \ recommendation:** infrastructure_replication_group"
 - answer_title: grant_account_access_roles
   question_text: Should the data product roles receive account-level access roles?
   answer_type: multi-select
@@ -952,6 +1087,105 @@
 
     * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
     — Understanding account names'
+- answer_title: account_blocked_network_rules
+  question_text: Define any blocked network rules for this account.
+  answer_type: object-list
+  is_org_scope: false
+  object_name: Blocked Network Rule
+  keys:
+  - rule_name
+  - ip_addresses
+  guidance: '**What is this asking?**
+
+    Define IP addresses that should be explicitly blocked, even if they fall within
+    an allowed range.
+
+
+    **Why does this matter?**
+
+    Block rules provide fine-grained control when you have broad allow rules. For
+    example, you might allow your entire corporate network but need to block a guest
+    WiFi subnet.
+
+
+    **When to use blocked rules:**
+
+    - Block specific IPs within a larger allowed range
+
+    - Explicitly deny known malicious sources
+
+    - Carve out exceptions from broad allow rules
+
+
+    **Example:**
+
+    If you allow `10.0.0.0/8` but want to block a specific subnet:
+
+    | Rule Name | IP Addresses |
+
+    |-----------|--------------|
+
+    | `blocked_guest_network` | `10.50.0.0/16` |
+
+
+    **Note:** If you don''t need any blocked rules, you can leave this empty.'
+- answer_title: account_allowed_network_rules
+  question_text: Define the allowed network rules for this account.
+  answer_type: object-list
+  is_org_scope: false
+  object_name: Network Rule
+  keys:
+  - rule_name
+  - ip_addresses
+  guidance: '**What is this asking?**
+
+    Define the IP addresses that should be allowed to access this Snowflake account.
+
+
+    **Why does this matter?**
+
+    Network rules are your first line of defense, blocking access attempts from unauthorized
+    locations before authentication even begins. Overly permissive rules increase
+    attack surface; overly restrictive rules lock out legitimate users.
+
+
+    **For Consistency with Organization Account:**
+
+    To maintain consistent network policies across accounts, review your Organization
+    Account''s network rules (`SHOW NETWORK RULES IN ACCOUNT`) and enter the same
+    values here.
+
+
+    **Format for each rule:**
+
+    - **rule_name**: Descriptive name (e.g., `corporate_network`, `vpn_endpoints`,
+    `etl_servers`)
+
+    - **ip_addresses**: Comma-separated list of IPs or CIDR blocks
+
+
+    **Examples:**
+
+    | Rule Name | IP Addresses |
+
+    |-----------|--------------|
+
+    | `corporate_network` | `10.0.0.0/8, 192.168.0.0/16` |
+
+    | `vpn_endpoints` | `203.0.113.1, 203.0.113.2` |
+
+    | `cloud_services` | `52.0.0.0/8, 34.0.0.0/8` |
+
+
+    **Best Practices:**
+
+    - Start restrictive and add IPs as needed
+
+    - Document what each rule covers
+
+    - Use descriptive names for easy identification
+
+    - Include all necessary IPs before applying the policy'
 - answer_title: account_budget_emails
   question_text: Who should receive budget alerts?
   answer_type: list
@@ -1090,6 +1324,442 @@
 
     * [Budgets Overview](https://docs.snowflake.com/en/user-guide/budgets) — Credit
     monitoring and alerts'
+- answer_title: account_mfa_support_contact
+  question_text: Who should users contact for MFA assistance?
+  answer_type: text
+  is_org_scope: false
+  guidance: '**What is this asking?**
+
+    Provide a contact (email, Slack channel, or help desk) where users can get help
+    with MFA issues.
+
+
+    **Why does this matter?**
+
+    MFA issues (lost device, locked out, enrollment problems) need quick resolution.
+    Having a clear support path prevents users from being stuck.
+
+
+    **Examples:**
+
+    - `it-helpdesk@company.com`
+
+    - `#snowflake-support` (Slack)
+
+    - `https://helpdesk.company.com/snowflake`
+
+
+    **Recommendation:**
+
+    Use your organization''s standard IT support channel. If you have a dedicated
+    Snowflake support team, use their contact.'
+- answer_title: account_breakglass_accounts
+  question_text: Configure break-glass emergency access account(s) for this Snowflake
+    account.
+  answer_type: object-list
+  is_org_scope: false
+  object_name: Break-glass User
+  keys:
+  - username
+  - email
+  - allowed_ips
+  guidance: '**What is this asking?**
+
+    Define one or more break-glass emergency access accounts for this Snowflake account.
+
+
+    **Why does this matter?**
+
+    Break-glass accounts are your last resort when:
+
+    - SSO/IdP is down and normal login is impossible
+
+    - All regular administrators are locked out
+
+    - Emergency security response requires immediate access
+
+    - Critical business operations cannot wait for normal access restoration
+
+
+    Without break-glass access, an IdP outage or misconfiguration could leave you
+    locked out of the account entirely.
+
+
+    **Recommendations:**
+
+    - Create at least one break-glass account
+
+    - Use a clearly identifiable name (e.g., `breakglass_admin`, `emergency_admin`)
+
+    - Restrict to known, trusted IP addresses
+
+
+    **Username recommendations:**
+
+    - `breakglass_admin`
+
+    - `emergency_access`
+
+    - `{{ new_account_name | lower }}_breakglass`
+
+
+    **Email considerations:**
+
+    - Use a monitored shared mailbox
+
+    - Avoid personal emails that may become inactive
+
+    - Example: `snowflake-emergency@yourcompany.com`
+
+
+    **Allowed IPs:**
+
+    - Enter IP addresses that should be able to use this break-glass account
+
+    - These should be trusted locations (e.g., secure admin workstations, VPN endpoints)
+
+    - Use CIDR notation for ranges: `10.0.0.0/8` or single IPs: `203.0.113.1`
+
+
+    **Example entry:**
+
+    - Username: `breakglass_admin`
+
+    - Email: `snowflake-emergency@company.com`
+
+    - Allowed IPs: `10.0.0.0/8, 192.168.1.0/24`
+
+
+    **More Information:**
+
+    * [MFA Best Practices](https://docs.snowflake.com/en/user-guide/security-mfa)
+    — Emergency access recommendations
+
+    * [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies)
+    — Exempting users from policies'
+- answer_title: account_saml_issuer
+  question_text: What is your Identity Provider's Issuer (Entity ID)?
+  answer_type: text
+  is_org_scope: false
+  guidance: '**What is this asking?**
+
+    The unique identifier for your Identity Provider in SAML assertions.
+
+
+    **Why does this matter?**
+
+    The issuer must exactly match what your IdP sends in SAML assertions. A mismatch
+    causes authentication failures.
+
+
+    **How to find this:**
+
+    - **Okta**: Application > Sign On tab > Identity Provider Issuer
+
+    - **Azure AD**: Enterprise App > Single sign-on > Azure AD Identifier
+
+    - **Other IdPs**: Look for "Issuer", "Entity ID", or "IdP Identifier"
+
+
+    **Example formats:**
+
+    - Okta: `http://www.okta.com/abcdefghijklmnop`
+
+    - Azure: `https://sts.windows.net/tenant-id/`'
+- answer_title: account_saml_certificate
+  question_text: What is your Identity Provider's X.509 certificate?
+  answer_type: text
+  is_org_scope: false
+  guidance: '**What is this asking?**
+
+    The public certificate used to verify SAML assertions from your IdP.
+
+
+    **Why does this matter?**
+
+    Snowflake uses this certificate to verify that SAML assertions genuinely come
+    from your IdP. Without a valid certificate, SSO authentication will fail with
+    signature validation errors.
+
+
+    **How to find this:**
+
+    - **Okta**: Application > Sign On tab > Download certificate
+
+    - **Azure AD**: Enterprise App > SAML Signing Certificate > Download (Base64)
+
+    - **Other IdPs**: Look for "Download Certificate" or "X.509 Certificate"
+
+
+    **Format:**
+
+    Paste the entire certificate including the BEGIN and END lines:
+
+    ```
+
+    -----BEGIN CERTIFICATE-----
+
+    MIIC8DCCAdigAwIBAgIQH...
+
+    -----END CERTIFICATE-----
+
+    ```
+
+
+    **Tip:** If the certificate is downloaded as a file, open it in a text editor
+    and copy the contents.'
+- answer_title: account_saml_sso_url
+  question_text: What is your Identity Provider's SSO URL?
+  answer_type: text
+  is_org_scope: false
+  guidance: '**What is this asking?**
+
+    The URL where Snowflake redirects users for SAML authentication.
+
+
+    **Why does this matter?**
+
+    This URL is where users are sent to log in. An incorrect URL will break SSO completely,
+    preventing users from authenticating via your IdP.
+
+
+    **How to find this:**
+
+    - **Okta**: Application > Sign On tab > Identity Provider Single Sign-On URL
+
+    - **Azure AD**: Enterprise App > Single sign-on > Login URL
+
+    - **Other IdPs**: Look for "SSO URL", "Login URL", or "SAML Endpoint"
+
+
+    **Example format:**
+
+    - Okta: `https://yourcompany.okta.com/app/snowflake/abcd1234/sso/saml`
+
+    - Azure: `https://login.microsoftonline.com/tenant-id/saml2`'
+- answer_title: account_saml_integration_name
+  question_text: What name should be used for the SAML integration in this account?
+  answer_type: text
+  is_org_scope: false
+  guidance: '**What is this asking?**
+
+    Provide a name for the SAML security integration object.
+
+
+    **Why does this matter?**
+
+    The integration name identifies the SAML connection in Snowflake. A descriptive
+    name helps with troubleshooting SSO issues and managing multiple integrations
+    if needed.
+
+
+    **Recommendations:**
+
+    - Use a descriptive name that identifies the IdP
+
+    - Use uppercase with underscores
+
+    - Keep consistent with your organization''s naming
+
+
+    **Examples:**
+
+    - `OKTA_SAML_INTEGRATION`
+
+    - `AAD_SAML_INTEGRATION`
+
+    - `CORPORATE_SSO`
+
+
+    **More Information:**
+
+    * [SAML Security Integration](https://docs.snowflake.com/en/sql-reference/sql/create-security-integration-saml2)
+    — CREATE SECURITY INTEGRATION reference'
+- answer_title: account_admin_users
+  question_text: Who should have administrator access to this account?
+  answer_type: object-list
+  is_org_scope: false
+  object_name: Admin User
+  keys:
+  - login_name
+  - admin_role
+  - email
+  - first_name
+  - last_name
+  guidance: '**What is this asking?**
+
+    Define the users who need administrator privileges in this account.
+
+
+    **Why does this matter?**
+
+    Administrator access is critical for account governance. Having the right people
+    with the right level of access ensures:
+
+    - Proper security oversight
+
+    - Continuity if someone is unavailable
+
+    - Principle of least privilege is maintained
+
+    - Clear accountability for administrative actions
+
+
+    **If using SCIM (automated provisioning):**
+
+    Users are created automatically from your IdP. You only need to specify:
+
+    - **login_name**: The username as it appears in Snowflake (check `SHOW USERS;`
+    after SCIM sync)
+
+    - **admin_role**: The administrative role to assign
+
+
+    Leave `email`, `first_name`, and `last_name` blank for SCIM users—these are managed
+    by your IdP.
+
+
+    **If using Manual User Management:**
+
+    Users will be created directly in Snowflake. Provide:
+
+    - **login_name**: The username for Snowflake login
+
+    - **admin_role**: The administrative role to assign
+
+    - **email**: Email address for notifications
+
+    - **first_name**: User''s first name
+
+    - **last_name**: User''s last name
+
+
+    **Admin Role Options:**
+
+    | Role | Responsibility | Recommended For |
+
+    |------|---------------|-----------------|
+
+    | `ACCOUNTADMIN` | Full account control | 2-3 senior platform/security leads |
+
+    | `SECURITYADMIN` | User and role management | Security team members |
+
+    | `SYSADMIN` | Resource management | Platform engineers, DBAs |
+
+    | `USERADMIN` | User creation/modification | HR integrations (if not using SCIM)
+    |
+
+
+    **⚠️ Important:** Enter role names exactly as shown (uppercase).
+
+
+    **Best Practices:**
+
+    - Limit ACCOUNTADMIN to 2-3 trusted individuals
+
+    - Each person should use their own account (no shared accounts)
+
+    - Ensure at least 2 people have ACCOUNTADMIN for redundancy
+
+
+    **More Information:**
+
+    * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#system-defined-roles)
+    — Built-in role descriptions
+
+    * [Access Control Overview](https://docs.snowflake.com/en/user-guide/security-access-control-overview)
+    — Role hierarchy and privileges'
+- answer_title: account_scim_allowed_ips
+  question_text: What IP addresses should be allowed for SCIM provisioning?
+  answer_type: list
+  is_org_scope: false
+  guidance: '**What is this asking?**
+
+    Enter the IP addresses from which your Identity Provider will make SCIM API calls
+    to Snowflake. This creates a network policy that restricts SCIM access.
+
+
+    **If using Organization Configuration:**
+
+    Use the same IdP IP addresses as your Organization Account for consistency.
+
+
+    **Why does this matter?**
+
+    Restricting SCIM access to known IdP IPs prevents unauthorized provisioning attempts.
+
+
+    **How to find your IdP''s IP ranges:**
+
+    - **Okta**: [Okta IP Addresses](https://help.okta.com/en-us/Content/Topics/Security/IP-Ranges.htm)
+
+    - **Azure AD**: [Azure AD IP Ranges](https://docs.microsoft.com/en-us/azure/active-directory/enterprise-users/directory-service-limits-restrictions)
+
+
+    **Format:**
+
+    Enter each IP address or CIDR block on a separate line:
+
+    ```
+
+    203.0.113.0/24
+
+    198.51.100.1
+
+    ```
+
+
+    **Important:** If you don''t know your IdP''s IP ranges, you can skip the network
+    policy and add it later. However, this is a security best practice.
+
+
+    **More Information:**
+
+    * [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies)
+    — IP-based access control'
+- answer_title: account_scim_integration_name
+  question_text: What name should be used for the SCIM integration in this account?
+  answer_type: text
+  is_org_scope: false
+  guidance: '**What is this asking?**
+
+    Provide a name for the SCIM security integration object in this account.
+
+
+    **Why does this matter?**
+
+    The integration name identifies the SCIM connection in Snowflake. A consistent
+    naming convention makes it easier to manage integrations across multiple accounts
+    and troubleshoot provisioning issues.
+
+
+    **If using Organization Configuration:**
+
+    Consider using the same integration name as your Organization Account for consistency.
+
+
+    **Recommendations:**
+
+    - Use a descriptive name that identifies the IdP
+
+    - Use uppercase with underscores
+
+    - Include the account identifier if you want unique names per account
+
+
+    **Examples:**
+
+    - `OKTA_SCIM_INTEGRATION`
+
+    - `AAD_SCIM_INTEGRATION`
+
+    - `<ACCOUNT_NAME>_SCIM` (e.g., `SALES_PROD_SCIM`)
+
+
+    **More Information:**
+
+    * [SCIM Integration](https://docs.snowflake.com/en/user-guide/scim) — SCIM provisioning
+    overview'
 - answer_title: account_configure_saml
   question_text: Will you configure SAML/SSO for this account?
   answer_type: multi-select
@@ -1905,18 +2575,6 @@
 
     **Recommendation:** Select `75` for balanced early warning that gives you time
     to take action.'
-- answer_title: infrastructure_share_name
-  question_text: What name would you like to use for the infrastructure database share?
-  answer_type: text
-  is_org_scope: true
-  guidance: "**What is this asking?** Choose a name for the SHARE object that will\
-    \ provide access to your infrastructure database.  \n\n  **Why does this matter?**\
-    \ This name will be visible to all accounts that consume the share. Choose something\
-    \ descriptive and aligned with your naming conventions.  \n  **Recommendations:**\
-    \  \n  * Use lowercase with underscores  \n  * Include a clear identifier like\
-    \ infrastructure or governance  \n  * Keep it concise but descriptive  \n\n* **Examples:**\
-    \  \n  * infrastructure\\_share  \n  * governance\\_share  \n  * platform\\_share\
-    \  \n\n* **Default recommendation:** infrastructure\\_share"
 - answer_title: mfa_support_contact
   question_text: Who should users contact for MFA enrollment help?
   answer_type: text

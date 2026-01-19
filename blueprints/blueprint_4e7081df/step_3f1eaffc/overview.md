@@ -1,4 +1,4 @@
-In this step, you'll configure the technical parameters for the new account, including the Snowflake edition, cloud region, and initial administrator credentials.
+In this step, you'll configure the technical parameters for the new account, including the Snowflake edition, cloud region, initial administrator credentials, and local infrastructure settings.
 
 **Account Context:** This step should be executed from your Organization Account.
 
@@ -8,6 +8,7 @@ These parameters define the capabilities, location, and initial access for the n
 - **Edition** determines available features and compliance certifications
 - **Region** affects data residency, latency, and disaster recovery options
 - **Initial administrator** is the first user who can access and configure the account
+- **Local infrastructure** provides a writable database for account-specific objects (the replicated infrastructure database is read-only)
 
 ## **Prerequisites**
 
@@ -276,6 +277,56 @@ If the email is unmonitored or inaccessible, you may lose access to password rec
 
 **More Information:**
 * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user) — User creation reference
+
+#### What name should be used for the local infrastructure database? (`local_infra_database`: text)
+**What is the Local Infrastructure Database?**
+The Local Infrastructure Database is a writable database within this account that stores account-specific administrative and governance objects. This is separate from the replicated infrastructure database which is read-only.
+
+**Why is this needed?**
+The infrastructure database replicated from the Organization Account is **read-only**. Account-specific objects like authentication policies, local procedures, and account-level configurations must be created in a local, writable database.
+
+**Recommended Naming Approach:**
+Use a name that clearly identifies this as a local, account-specific infrastructure database. Follow the same naming pattern as your platform infrastructure database. Consider formats like:
+- `<domain>_LOCAL` — e.g., `PLAT_LOCAL`, `CDP_LOCAL`
+- `<domain>_<account>` — e.g., `PLAT_SALES`, `PLAT_DEV`
+- `LOCAL_<purpose>` — e.g., `LOCAL_INFRA`, `LOCAL_ADMIN`
+
+**Example:** `PLAT_LOCAL` — clearly indicates Platform team ownership and local (non-replicated) scope
+
+**Alternative Examples:**
+- `CDP_LOCAL` — Cloud Data Platform local objects
+- `<ACCOUNT>_INFRA` — Account-specific infrastructure (e.g., `SALES_INFRA`)
+- `LOCAL_ADMIN` — Local administration database
+
+**Important:** This name should be distinct from the replicated infrastructure database to avoid confusion.
+
+**More Information:**
+* [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)
+* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)
+
+#### What schema name should be used for security policies? (`local_policies_schema`: text)
+**What is the Policies Schema?**
+The Policies Schema is created within the Local Infrastructure Database and contains account-specific security objects including authentication policies, network policies, and other configurations that cannot be replicated.
+
+**Recommended Name:** `POLICIES`
+
+This is a straightforward, self-descriptive name that clearly communicates the schema's purpose. Alternative options include:
+- `SECURITY` — Security-focused objects
+- `AUTH` — Authentication and authorization objects
+- `GOVERNANCE` — General governance objects
+
+**Schema Configuration:**
+This schema will be created with **Managed Access** enabled, which means:
+- Only the schema owner (typically SECURITYADMIN or ACCOUNTADMIN) can grant privileges on objects
+- Prevents "shadow" security configurations where object creators grant their own access
+- Provides centralized control over who can access security policy objects
+
+**Best Practice:** Use a simple, single-word name that represents the functional purpose.
+
+**More Information:**
+* [CREATE SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/create-schema)
+* [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)
+* [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies)
 
 #### What is your Snowflake organization name? (`snowflake_org_name`: text)
 Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  

@@ -33,5 +33,10 @@ Region:          {{ new_account_region }}
 Initial Admin:   {{ new_account_admin_name }}
 Admin Email:     {{ new_account_admin_email }}
 
+Local Infrastructure
+--------------------
+Local Database:  {{ local_infra_database | upper }}
+Policies Schema: {{ local_policies_schema | upper }}
+
 Account URL:     https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com
 */

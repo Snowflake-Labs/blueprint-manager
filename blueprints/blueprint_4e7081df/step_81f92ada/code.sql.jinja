@@ -2,7 +2,7 @@
 -- APPLY ORGANIZATION NETWORK CONFIGURATION
 -- ============================================================================
 -- Account: {{ new_account_name | upper }}
--- Using shared network rules from: {{ shared_database_name | upper }}.{{ governance_name | upper }}
+-- Using replicated network rules from: {{ platform_database_name | upper }}.{{ governance_name | upper }}
 -- ============================================================================
 -- EXECUTE FROM: New Account ({{ new_account_name | upper }})
 -- REQUIRED ROLE: ACCOUNTADMIN
@@ -11,27 +11,27 @@
 USE ROLE ACCOUNTADMIN;
 
 -- ============================================================================
--- STEP 1: VERIFY ACCESS TO SHARED NETWORK RULES
+-- STEP 1: VERIFY ACCESS TO REPLICATED NETWORK RULES
 -- ============================================================================
 
--- List network rules available from the shared database
-SHOW NETWORK RULES IN SCHEMA {{ shared_database_name | upper }}.{{ governance_name | upper }};
+-- List network rules available from the replicated database
+SHOW NETWORK RULES IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
 
 -- ============================================================================
--- STEP 2: CREATE NETWORK POLICY REFERENCING SHARED RULES
+-- STEP 2: CREATE NETWORK POLICY REFERENCING REPLICATED RULES
 -- ============================================================================
 
 CREATE OR REPLACE NETWORK POLICY {{ new_account_name | upper }}_NETWORK_POLICY
   ALLOWED_NETWORK_RULE_LIST = (
 {%- for rule in allowed_network_rules %}
-    {{ shared_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name | upper }}{% if not loop.last %},{% endif %}
+    {{ platform_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name | upper }}{% if not loop.last %},{% endif %}
 
 {%- endfor %}
   )
 {%- if blocked_network_rules | length > 0 %}
   BLOCKED_NETWORK_RULE_LIST = (
 {%- for rule in blocked_network_rules %}
-    {{ shared_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name | upper }}{% if not loop.last %},{% endif %}
+    {{ platform_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name | upper }}{% if not loop.last %},{% endif %}
 
 {%- endfor %}
   )
@@ -81,11 +81,11 @@ Network Configuration Applied!
 ==============================
 
 Policy Name: {{ new_account_name | upper }}_NETWORK_POLICY
-Configuration: Using organization-standard network rules
+Configuration: Using organization-standard network rules (replicated)
 
-Shared Rules Referenced:
+Replicated Rules Referenced:
 {%- for rule in allowed_network_rules %}
-- {{ shared_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name | upper }}
+- {{ platform_database_name | upper }}.{{ governance_name | upper }}.{{ rule.rule_name | upper }}
 {%- endfor %}
 
 The network policy is now enforcing organization-standard network access

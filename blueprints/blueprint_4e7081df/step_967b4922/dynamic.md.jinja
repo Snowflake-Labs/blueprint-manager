@@ -1,0 +1,73 @@
+## Authentication Policies Configuration
+
+### Inherited Values
+
+These values are inherited from Platform Foundation. Any changes apply only to this account.
+
+| Setting | Value | Source |
+|---------|-------|--------|
+| **Human Authentication** | {{ human_auth_methods }} | Platform Foundation (editable) |
+| **MFA Method** | {{ mfa_method }} | Platform Foundation (editable) |
+| **Service Authentication** | {{ service_auth_methods }} | Platform Foundation (editable) |
+| **Account-Level Enforcement** | {{ apply_auth_policies_account_level }} | Platform Foundation (editable) |
+
+### Policy Summary
+
+| User Type | Policy Name | Authentication Methods |
+|-----------|-------------|------------------------|
+| **Human Users** | `human_user_auth_policy` | {{ human_auth_methods }} |
+| **Service Accounts** | `service_account_auth_policy` | {{ service_auth_methods }} |
+| **Break-Glass** | `breakglass_auth_policy` | Password Only |
+
+### Human User Authentication Policy
+
+{%- if human_auth_methods == "SAML Only (SSO required)" %}
+- Authentication: SAML only
+- Users must use SSO via {{ identity_provider }}
+- MFA handled by Identity Provider
+{%- elif human_auth_methods == "SAML or Password with MFA" %}
+- Authentication: SAML or Password
+- MFA: {{ mfa_method }} (for password logins)
+- Users can choose SSO or password + MFA
+{%- else %}
+- Authentication: Password only
+- MFA: {{ mfa_method }} (required)
+- Users authenticate directly with Snowflake
+{%- endif %}
+
+### Service Account Authentication Policy
+
+{%- if service_auth_methods == "OAuth Only" %}
+- Authentication: OAuth only
+- Requires OAuth integration
+{%- elif service_auth_methods == "Key Pair Only" %}
+- Authentication: Key-pair only
+- No passwords to manage
+- Most secure for automated access
+{%- elif service_auth_methods == "OAuth or Key Pair" %}
+- Authentication: OAuth or key-pair
+- Flexibility for different integration types
+{%- else %}
+- Authentication: OAuth, key-pair, or PAT
+- Maximum flexibility including personal access tokens
+{%- endif %}
+
+### Policy Application
+
+{%- if apply_auth_policies_account_level == "Yes - Apply default policy to all users" %}
+**Account-Level Enforcement: Enabled**
+- The human user authentication policy applies to all users by default
+- Break-glass accounts must have their own policy explicitly assigned
+- Service accounts should have the service policy explicitly assigned
+{%- else %}
+**Account-Level Enforcement: Disabled**
+- Policies are created but not applied at account level
+- Assign policies to users as needed
+- Consider phased rollout starting with admin users
+{%- endif %}
+
+### Important Notes
+
+- Break-glass accounts have their own policy allowing password-only access
+- Admin users should use the human authentication policy
+- Apply service policy only to designated service accounts

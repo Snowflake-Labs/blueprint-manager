@@ -1,0 +1,27 @@
+## Network Rules and Policies Configuration
+
+### Allowed Network Rules
+
+| Rule Name | IP Addresses |
+|-----------|--------------|
+{%- for rule in account_allowed_network_rules %}
+| `{{ rule.rule_name | upper }}` | {{ rule.ip_addresses }} |
+{%- endfor %}
+
+{%- if account_blocked_network_rules | length > 0 %}
+
+### Blocked Network Rules
+
+| Rule Name | IP Addresses |
+|-----------|--------------|
+{%- for rule in account_blocked_network_rules %}
+| `{{ rule.rule_name | upper }}` | {{ rule.ip_addresses }} |
+{%- endfor %}
+
+{%- endif %}
+
+### Resulting Policy
+
+A network policy named `{{ new_account_name | upper }}_NETWORK_POLICY` will be created and applied to this account.
+
+**Important:** After applying the account-level network policy, ensure you can still access Snowflake from your current IP. If you're locked out, you'll need to use break-glass access to fix the policy.

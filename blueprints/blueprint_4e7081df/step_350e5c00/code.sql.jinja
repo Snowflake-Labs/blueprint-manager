@@ -1,0 +1,63 @@
+-- ============================================================================
+-- CONFIGURE SAML/SSO
+-- ============================================================================
+-- Integration Name: {{ account_saml_integration_name | upper }}
+-- Identity Provider: {{ identity_provider }}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE SAML SECURITY INTEGRATION
+-- ============================================================================
+
+CREATE OR REPLACE SECURITY INTEGRATION {{ account_saml_integration_name | upper }}
+  TYPE = SAML2
+  ENABLED = TRUE
+  SAML2_ISSUER = '{{ account_saml_issuer }}'
+  SAML2_SSO_URL = '{{ account_saml_sso_url }}'
+  SAML2_PROVIDER = 'CUSTOM'
+  SAML2_X509_CERT = '{{ account_saml_certificate }}'
+  SAML2_SP_INITIATED_LOGIN_PAGE_LABEL = 'Corporate SSO'
+  SAML2_ENABLE_SP_INITIATED = TRUE
+  SAML2_SNOWFLAKE_ACS_URL = 'https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com/fed/login'
+  SAML2_SNOWFLAKE_ISSUER_URL = 'https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com'
+  COMMENT = 'SAML SSO integration for {{ identity_provider }}';
+
+-- ============================================================================
+-- STEP 2: VERIFICATION
+-- ============================================================================
+
+-- Verify the integration was created
+SHOW SECURITY INTEGRATIONS LIKE '{{ account_saml_integration_name | upper }}';
+
+-- Describe the integration for detailed settings
+DESCRIBE SECURITY INTEGRATION {{ account_saml_integration_name | upper }};
+
+-- ============================================================================
+-- SAML CONFIGURATION COMPLETE
+-- ============================================================================
+
+/*
+SAML/SSO Integration Created!
+=============================
+
+Integration Name: {{ account_saml_integration_name | upper }}
+
+Users can now authenticate via SSO. They'll see "Corporate SSO" 
+as a login option on the Snowflake login page.
+
+Snowflake Login URL: https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com
+
+IdP Configuration Required:
+---------------------------
+Ensure your IdP is configured with:
+- ACS URL: https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com/fed/login
+- Entity ID: https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com
+- NameID Format: emailAddress
+
+Test SSO by logging out and using the SSO option on the login page.
+*/

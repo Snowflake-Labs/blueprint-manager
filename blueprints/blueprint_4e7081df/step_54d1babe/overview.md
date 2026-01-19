@@ -2,7 +2,7 @@ In this step, you'll configure an account-level budget to monitor credit consump
 
 **Account Context:** This step should be executed from the newly created account.
 
-## Why is this important?
+## **Why is this important?**
 
 Budgets provide visibility and early warning for cost management:
 - **Predictable spending**: Set expected monthly credit consumption
@@ -10,13 +10,14 @@ Budgets provide visibility and early warning for cost management:
 - **Stakeholder awareness**: Keep finance and management informed
 - **No surprise bills**: Avoid unexpected charges at month end
 
-## External Prerequisites
+## **Prerequisites**
 
 - Account created and accessible
+- **Wait 5-10 minutes** after account creation before running this step (the Snowflake system database needs time to bootstrap)
 - Knowledge of expected monthly credit consumption for this account
 - Email addresses of stakeholders to receive alerts
 
-## Key Concepts
+## **Key Concepts**
 
 **Account Budget**
 A native Snowflake feature that tracks credit consumption against a defined limit. Budgets use time-series forecasting to predict end-of-month spend and alert proactively.
@@ -33,6 +34,9 @@ Budget alerts are sent to specified email addresses. Use distribution lists to e
 **Budgets vs Resource Monitors**
 - **Budgets**: Alert only, use forecasting, good for visibility
 - **Resource Monitors**: Can take action (suspend), based on actual usage
+
+**Bootstrap Timing**
+Budget creation requires the Snowflake system database to be fully initialized. In newly created accounts, this may take 5-10 minutes. If you receive a "Snowflake Database is still bootstrapping" error, wait a few minutes and retry.
 
 **More Information:**
 * [Budgets Overview](https://docs.snowflake.com/en/user-guide/budgets) — Credit monitoring and alerts

@@ -1,0 +1,127 @@
+-- ============================================================================
+-- CONFIGURE NETWORK RULES AND POLICIES
+-- ============================================================================
+-- Account: {{ new_account_name | upper }}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE ALLOWED NETWORK RULES
+-- ============================================================================
+
+{%- for rule in account_allowed_network_rules %}
+
+CREATE OR REPLACE NETWORK RULE {{ rule.rule_name | upper }}
+  MODE = INGRESS
+  TYPE = IPV4
+  VALUE_LIST = (
+{%- for ip in rule.ip_addresses.split(',') %}
+    '{{ ip | trim }}'{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+  COMMENT = 'Allowed network rule: {{ rule.rule_name }}';
+
+{%- endfor %}
+
+{%- if account_blocked_network_rules | length > 0 %}
+
+-- ============================================================================
+-- STEP 2: CREATE BLOCKED NETWORK RULES
+-- ============================================================================
+
+{%- for rule in account_blocked_network_rules %}
+
+CREATE OR REPLACE NETWORK RULE {{ rule.rule_name | upper }}
+  MODE = INGRESS
+  TYPE = IPV4
+  VALUE_LIST = (
+{%- for ip in rule.ip_addresses.split(',') %}
+    '{{ ip | trim }}'{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+  COMMENT = 'Blocked network rule: {{ rule.rule_name }}';
+
+{%- endfor %}
+
+{%- endif %}
+
+-- ============================================================================
+-- STEP 3: CREATE NETWORK POLICY
+-- ============================================================================
+
+CREATE OR REPLACE NETWORK POLICY {{ new_account_name | upper }}_NETWORK_POLICY
+  ALLOWED_NETWORK_RULE_LIST = (
+{%- for rule in account_allowed_network_rules %}
+    {{ rule.rule_name | upper }}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+{%- if account_blocked_network_rules | length > 0 %}
+  BLOCKED_NETWORK_RULE_LIST = (
+{%- for rule in account_blocked_network_rules %}
+    {{ rule.rule_name | upper }}{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+{%- endif %}
+  COMMENT = 'Account-level network policy for {{ new_account_name }}';
+
+-- ============================================================================
+-- STEP 4: APPLY NETWORK POLICY TO ACCOUNT
+-- ============================================================================
+
+-- ⚠️  WARNING: Ensure your current IP is in the allowed list before running this!
+-- If you're locked out, use break-glass access to fix the policy.
+
+ALTER ACCOUNT SET NETWORK_POLICY = {{ new_account_name | upper }}_NETWORK_POLICY;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify network rules
+SHOW NETWORK RULES;
+
+-- Verify network policy
+SHOW NETWORK POLICIES;
+
+-- Show account-level policy
+SHOW PARAMETERS LIKE 'NETWORK_POLICY' IN ACCOUNT;
+
+-- ============================================================================
+-- NETWORK POLICY APPLIED
+-- ============================================================================
+
+/*
+Network Policy Configuration Complete!
+======================================
+
+Policy Name: {{ new_account_name | upper }}_NETWORK_POLICY
+
+Allowed Rules:
+{%- for rule in account_allowed_network_rules %}
+- {{ rule.rule_name | upper }}: {{ rule.ip_addresses }}
+{%- endfor %}
+
+{%- if account_blocked_network_rules | length > 0 %}
+
+Blocked Rules:
+{%- for rule in account_blocked_network_rules %}
+- {{ rule.rule_name | upper }}: {{ rule.ip_addresses }}
+{%- endfor %}
+{%- endif %}
+
+The network policy has been applied at the account level.
+Only the specified IP addresses can now access this account.
+
+⚠️  If you experience access issues:
+1. Use break-glass access to log in
+2. Modify the network policy to add your IP
+3. Consider adding the IP to an allowed rule before re-applying
+*/

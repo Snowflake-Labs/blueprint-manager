@@ -53,7 +53,6 @@ When the credit limit is reached, **alerts will be sent** but warehouses will co
 | {{ (account_resource_monitor_limit | int * 0.75) | round | int }} credits | 75% | Notify | Early warning |
 | {{ (account_resource_monitor_limit | int * 0.90) | round | int }} credits | 90% | Notify | Final warning |
 | {{ account_resource_monitor_limit }} credits | 100% | {{ account_resource_monitor_action }} | Limit enforcement |
-| {{ (account_resource_monitor_limit | int * 1.10) | round | int }} credits | 110% | {{ account_resource_monitor_action }} | Post-limit enforcement |
 
 ### How Budgets + Resource Monitors Work Together
 

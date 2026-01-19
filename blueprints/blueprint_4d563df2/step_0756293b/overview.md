@@ -2,44 +2,40 @@ In this step, you'll create break-glass emergency access account(s) that can byp
 
 **Account Context:** Break-glass account(s) are being created in your Organization Account (if created) or your primary account.
 
-## Why is this important?
+## **Why is this important?**
 
 When you rely on SAML/SSO for authentication, you create a dependency on your Identity Provider. If your IdP experiences an outage, misconfiguration, or certificate expiration, you could be locked out of Snowflake entirely.
 
 Break-glass accounts provide:
-- **Emergency Access**: Bypass SSO when the IdP is down
-- **Recovery Capability**: Fix SSO misconfigurations
-- **Business Continuity**: Maintain operations during identity outages
-- **Compliance**: Meet regulatory requirements for emergency access procedures
 
-## External Prerequisites
+* **Emergency Access**: Bypass SSO when the IdP is down  
+* **Recovery Capability**: Fix SSO misconfigurations  
+* **Business Continuity**: Maintain operations during identity outages  
+* **Compliance**: Meet regulatory requirements for emergency access procedures
 
-- A secure location to store emergency credentials (password vault, physical safe)
-- A process for generating and rotating one-time passwords (OTPs)
-- Documentation of break-glass procedures
+## **External Prerequisites**
 
-## Key Concepts
+* A secure location to store emergency credentials (password vault, physical safe)  
+* A process for generating and rotating one-time passwords (OTPs)  
+* Documentation of break-glass procedures
 
-**Break-Glass Account**
-A special-purpose account that bypasses normal authentication. Think of this as the "emergency key behind glass"—you break the glass only when the normal door won't open (IdP outage).
+## **Key Concepts**
 
-**One-Time Password (OTP)**
-A password that is used once and then changed. This is like a "single-use emergency key"—even if someone sees you use it, they can't reuse it.
+**Break-Glass Account** A special-purpose account that bypasses normal authentication. Think of this as the "emergency key behind glass"—you break the glass only when the normal door won't open (IdP outage).
 
-**Authentication Policy**
-A Snowflake object that defines how users must authenticate. Break-glass accounts use a separate policy that allows password-only authentication—a different "entrance" with different rules.
+**One-Time Password (OTP)** A password that is used once and then changed. This is like a "single-use emergency key"—even if someone sees you use it, they can't reuse it.
 
-**Client Types**
-Snowflake can restrict which clients (UI, drivers, etc.) can use certain authentication methods. Break-glass accounts should be limited to the web UI to reduce attack surface.
+**Authentication Policy** A Snowflake object that defines how users must authenticate. Break-glass accounts use a separate policy that allows password-only authentication—a different "entrance" with different rules.
 
-**Best Practice: Store Securely, Use Rarely**
-Break-glass credentials should be stored in a secure vault (physical or digital) and used only during genuine emergencies. Regular use defeats their purpose.
+**Client Types** Snowflake can restrict which clients (UI, drivers, etc.) can use certain authentication methods. Break-glass accounts should be limited to the web UI to reduce attack surface.
 
-## More Information
+**Best Practice: Store Securely, Use Rarely** Break-glass credentials should be stored in a secure vault (physical or digital) and used only during genuine emergencies. Regular use defeats their purpose.
 
-* [MFA and Break-Glass Access](https://docs.snowflake.com/en/user-guide/security-mfa) — Setting up break-glass accounts and one-time passcodes
-* [MFA Migration Best Practices](https://docs.snowflake.com/en/user-guide/security-mfa-migration-best-practices) — Break-glass procedures during MFA/SSO rollout
-* [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies) — Defining authentication methods per user
+## **More Information**
+
+* [MFA and Break-Glass Access](https://docs.snowflake.com/en/user-guide/security-mfa) — Setting up break-glass accounts and one-time passcodes  
+* [MFA Migration Best Practices](https://docs.snowflake.com/en/user-guide/security-mfa-migration-best-practices) — Break-glass procedures during MFA/SSO rollout  
+* [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies) — Defining authentication methods per user  
 * [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies) — Restricting access by IP address
 
 ### Configuration Questions

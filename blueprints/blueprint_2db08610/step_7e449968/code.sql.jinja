@@ -18,12 +18,9 @@ USE ROLE SYSADMIN;
 -- ============================================================================
 -- TAG DATABASE REFERENCE
 -- ============================================================================
--- Tags are stored in the Infrastructure Database (or shared copy for multi-account)
-{%- if account_strategy == 'Single Account' %}
+-- Tags are stored in the Infrastructure Database (replicated for multi-account)
+-- Replicated databases maintain the same name as the source
 {%- set tag_db = platform_database_name | upper %}
-{%- else %}
-{%- set tag_db = platform_database_name | upper ~ '_SHARED' %}
-{%- endif %}
 
 {#- Extract numeric value from data retention selection -#}
 {%- set retention_days = data_retention_days | regex_replace('[^0-9].*', '') | int %}

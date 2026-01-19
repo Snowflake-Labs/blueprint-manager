@@ -1,0 +1,85 @@
+-- ============================================================================
+-- CREATE/CONFIGURE ACCOUNT ADMINISTRATORS
+-- ============================================================================
+-- Account: {{ new_account_name | upper }}
+-- Identity Provider: {{ identity_provider }}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN (or SECURITYADMIN for role grants)
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+{%- if identity_provider == "None - Manual User Management" %}
+
+-- ============================================================================
+-- CREATE ADMINISTRATOR USERS (Manual Mode)
+-- ============================================================================
+-- Creating local users since SCIM is not configured
+
+{%- for user in account_admin_users %}
+
+-- Create user: {{ user.login_name }}
+CREATE USER IF NOT EXISTS {{ user.login_name | upper }}
+  LOGIN_NAME = '{{ user.login_name }}'
+  EMAIL = '{{ user.email }}'
+  FIRST_NAME = '{{ user.first_name }}'
+  LAST_NAME = '{{ user.last_name }}'
+  PASSWORD = 'ChangeMe123!'
+  MUST_CHANGE_PASSWORD = TRUE
+  COMMENT = 'Administrator user - {{ user.admin_role | upper }}';
+
+{%- endfor %}
+
+{%- endif %}
+
+-- ============================================================================
+-- ASSIGN ADMIN ROLES
+-- ============================================================================
+
+{%- for user in account_admin_users %}
+
+-- Grant {{ user.admin_role | upper }} to {{ user.login_name }}
+GRANT ROLE {{ user.admin_role | upper }} TO USER {{ user.login_name | upper }};
+
+{%- endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- List all users
+SHOW USERS;
+
+-- Verify role grants
+{%- for user in account_admin_users %}
+SHOW GRANTS TO USER {{ user.login_name | upper }};
+{%- endfor %}
+
+-- ============================================================================
+-- ADMINISTRATOR SETUP COMPLETE
+-- ============================================================================
+
+/*
+Account Administrators Configured!
+==================================
+
+The following administrator roles have been assigned:
+
+{%- for user in account_admin_users %}
+- {{ user.login_name }}: {{ user.admin_role | upper }}
+{%- endfor %}
+
+{%- if identity_provider == "None - Manual User Management" %}
+
+⚠️  Users have been created with temporary passwords.
+   Each user must log in and change their password.
+   Recommend enabling MFA after first login.
+
+{%- else %}
+
+Users were provisioned via SCIM from {{ identity_provider }}.
+Admin roles have been assigned to their existing accounts.
+
+{%- endif %}
+*/

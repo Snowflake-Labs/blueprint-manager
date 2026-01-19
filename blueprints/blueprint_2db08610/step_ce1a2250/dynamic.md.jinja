@@ -21,4 +21,3 @@ Notifications will be sent when these thresholds are crossed:
 | 75% | {{ (resource_monitor_limit | int * 0.75) | int }} | Notify |
 | 90% | {{ (resource_monitor_limit | int * 0.90) | int }} | Notify |
 | 100% | {{ resource_monitor_limit }} | {{ resource_monitor_action }} |
-| 110% | {{ (resource_monitor_limit | int * 1.10) | int }} | {{ resource_monitor_action }} |

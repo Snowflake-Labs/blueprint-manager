@@ -12,6 +12,20 @@
 USE ROLE ACCOUNTADMIN;
 
 -- ============================================================================
+-- IMPORTANT: BOOTSTRAP TIMING
+-- ============================================================================
+-- Budget creation requires the Snowflake system database to be fully
+-- initialized. In newly created accounts, this may take 5-10 minutes.
+--
+-- If you receive "Snowflake Database is still bootstrapping" error:
+--   1. Wait 5-10 minutes
+--   2. Re-run this section
+--
+-- Alternatively, configure the budget manually in Snowsight:
+--   Admin > Cost Management > Budgets
+-- ============================================================================
+
+-- ============================================================================
 -- STEP 1: CREATE ACCOUNT BUDGET
 -- ============================================================================
 

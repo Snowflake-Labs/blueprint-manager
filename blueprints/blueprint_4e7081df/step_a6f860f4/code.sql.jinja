@@ -1,0 +1,92 @@
+-- ============================================================================
+-- ENABLE MULTI-FACTOR AUTHENTICATION
+-- ============================================================================
+-- Account: {{ new_account_name | upper }}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: VERIFY MFA CONFIGURATION IN AUTH POLICY
+-- ============================================================================
+
+-- Check the human authentication policy
+DESCRIBE AUTHENTICATION POLICY HUMAN_AUTH_POLICY;
+
+-- Review the policy settings to ensure MFA will be required for password logins
+
+-- ============================================================================
+-- STEP 2: CHECK USER MFA STATUS
+-- ============================================================================
+
+-- List all users and their MFA status
+SELECT 
+  NAME,
+  LOGIN_NAME,
+  EMAIL,
+  EXT_AUTHN_DUO,
+  HAS_MFA,
+  DISABLED,
+  LAST_SUCCESS_LOGIN
+FROM SNOWFLAKE.ACCOUNT_USAGE.USERS
+WHERE DELETED_ON IS NULL
+ORDER BY NAME;
+
+-- For a quick check of current users:
+SHOW USERS;
+
+-- ============================================================================
+-- STEP 3: VERIFY ADMIN USER MFA STATUS
+-- ============================================================================
+
+{%- for user in account_admin_users %}
+
+-- Check MFA status for {{ user.login_name }}
+SELECT 
+  NAME, 
+  HAS_MFA, 
+  EXT_AUTHN_DUO
+FROM SNOWFLAKE.ACCOUNT_USAGE.USERS 
+WHERE LOGIN_NAME = '{{ user.login_name }}';
+
+{%- endfor %}
+
+-- ============================================================================
+-- MFA VERIFICATION COMPLETE
+-- ============================================================================
+
+/*
+MFA Configuration Summary
+=========================
+
+Account: {{ new_account_name | upper }}
+Auth Policy: {{ human_auth_methods }}
+MFA Method: {{ mfa_method }}
+{%- if "MFA" in human_auth_methods or "Password with MFA" in human_auth_methods %}
+MFA Required: Yes (for password logins)
+{%- elif human_auth_methods == "SAML Only (SSO required)" %}
+MFA Required: Via IdP ({{ identity_provider }})
+{%- else %}
+MFA Required: No
+{%- endif %}
+
+MFA Support Contact: {{ account_mfa_support_contact }}
+
+Administrator Users to Verify:
+{%- for user in account_admin_users %}
+- {{ user.login_name }} ({{ user.admin_role | upper }})
+{%- endfor %}
+
+Verification:
+1. Run the user MFA status queries above
+2. Verify all admin users show HAS_MFA = TRUE (if using password auth)
+3. Contact users who haven't enrolled and guide them through setup
+4. Document MFA enrollment completion
+
+Security & Identity Configuration Complete!
+===========================================
+Security and identity configuration complete.
+*/

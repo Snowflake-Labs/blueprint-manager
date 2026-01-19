@@ -20,14 +20,11 @@ CREATE OR REPLACE RESOURCE MONITOR account_resource_monitor
     ON 75 PERCENT DO NOTIFY
     ON 90 PERCENT DO NOTIFY
 {%- if account_resource_monitor_action == "Suspend Immediately" %}
-    ON 100 PERCENT DO SUSPEND_IMMEDIATE
-    ON 110 PERCENT DO SUSPEND_IMMEDIATE;
+    ON 100 PERCENT DO SUSPEND_IMMEDIATE;
 {%- elif account_resource_monitor_action == "Suspend After Current Queries" %}
-    ON 100 PERCENT DO SUSPEND
-    ON 110 PERCENT DO SUSPEND;
+    ON 100 PERCENT DO SUSPEND;
 {%- else %}
-    ON 100 PERCENT DO NOTIFY
-    ON 110 PERCENT DO NOTIFY;
+    ON 100 PERCENT DO NOTIFY;
 {%- endif %}
 
 -- ============================================================================

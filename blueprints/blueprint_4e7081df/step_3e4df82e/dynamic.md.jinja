@@ -1,0 +1,75 @@
+## SCIM Integration Configuration
+
+### Integration Settings
+
+| Setting | Value |
+|---------|-------|
+| **Identity Provider** | {{ identity_provider }} |
+| **Integration Name** | `{{ account_scim_integration_name | upper }}` |
+| **Provisioner Role** | `{{ account_scim_integration_name | upper }}_ROLE` |
+
+### SCIM Network Policy
+
+{%- if account_scim_allowed_ips | length > 0 %}
+
+A network policy will be created to restrict SCIM access to these IP addresses:
+
+| Allowed IPs |
+|-------------|
+{%- for ip in account_scim_allowed_ips %}
+| {{ ip }} |
+{%- endfor %}
+
+{%- else %}
+
+No SCIM network policy will be created. Consider adding one for improved security.
+
+{%- endif %}
+
+### SCIM Endpoint
+
+After configuration, your IdP will connect to:
+
+`https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com/scim/v2/`
+
+### IdP Configuration Steps
+
+After running the SQL in this step, you'll need to configure your IdP:
+
+{%- if identity_provider == "Okta" %}
+
+**Okta Configuration:**
+1. In Okta Admin Console, go to Applications > Browse App Catalog
+2. Search for "Snowflake" and add the application
+3. Configure with:
+   - **SCIM Base URL**: `https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com/scim/v2/`
+   - **API Token**: (Retrieved from SQL output below)
+4. Enable provisioning features as needed
+
+{%- elif identity_provider == "Microsoft Entra ID (Azure AD)" %}
+
+**Azure AD Configuration:**
+1. In Azure Portal, go to Enterprise Applications
+2. Add the Snowflake application from the gallery
+3. Go to Provisioning and set mode to "Automatic"
+4. Configure with:
+   - **Tenant URL**: `https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com/scim/v2/`
+   - **Secret Token**: (Retrieved from SQL output below)
+5. Test the connection and start provisioning
+
+{%- else %}
+
+**Generic SCIM 2.0 Configuration:**
+1. In your IdP, create a new SCIM application/integration
+2. Configure with:
+   - **SCIM Base URL**: `https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com/scim/v2/`
+   - **Bearer Token**: (Retrieved from SQL output below)
+3. Map user attributes according to SCIM 2.0 standard
+
+{%- endif %}
+
+### Important Notes
+
+- **SCIM Token**: The token displayed after running the SQL is shown only once. Copy and store it securely.
+- **Provisioning Delay**: It may take a few minutes for users to sync after enabling provisioning in your IdP.
+- **Existing Users**: SCIM will not automatically link to manually created users with the same email.

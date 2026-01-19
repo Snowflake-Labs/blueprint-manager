@@ -40,7 +40,7 @@ The following additional tag will be applied:
 You can skip this step or add a cost center later by running:
 ```sql
 ALTER WAREHOUSE <warehouse_name> SET TAG
-  {{ platform_database_name | upper }}{% if account_strategy != 'Single Account' %}_SHARED{% endif %}.{{ governance_name | upper }}.COST_CENTER = '<your_code>';
+  {{ platform_database_name | upper }}.{{ governance_name | upper }}.COST_CENTER = '<your_code>';
 ```
 
 {%- endif %}

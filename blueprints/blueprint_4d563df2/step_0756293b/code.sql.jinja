@@ -10,15 +10,17 @@ USE ROLE ACCOUNTADMIN;
 -- ============================================================================
 -- STEP 1: CREATE AUTHENTICATION POLICY FOR BREAK-GLASS
 -- ============================================================================
--- This policy allows password-only authentication, no MFA
+-- This policy requires MFA but only allows OTP (one-time passcodes)
+-- OTPs can be pre-generated and stored securely for emergency use
 -- Restricted to web UI only for security
 
 CREATE OR REPLACE AUTHENTICATION POLICY breakglass_auth_policy
   AUTHENTICATION_METHODS = (PASSWORD)
-  MFA_AUTHENTICATION_METHODS = ()
+  MFA_ENROLLMENT = 'REQUIRED'
+  MFA_POLICY = (ALLOWED_METHODS = ('OTP'))
   CLIENT_TYPES = (SNOWFLAKE_UI)
   SECURITY_INTEGRATIONS = ()
-  COMMENT = 'Authentication policy for break-glass emergency access - password only, UI only';
+  COMMENT = 'Authentication policy for break-glass emergency access - password + OTP, UI only';
 
 -- ============================================================================
 -- STEP 2: CREATE BREAK-GLASS ACCOUNTS
@@ -67,6 +69,19 @@ ALTER USER {{ account.username | upper }}
 {%- endfor %}
 
 -- ============================================================================
+-- STEP 3: GENERATE ONE-TIME PASSCODES (OTPs) FOR BREAK-GLASS ACCESS
+-- ============================================================================
+-- ⚠️  IMPORTANT: The output of these commands contains the OTPs!
+--    Capture and store them securely - they cannot be retrieved later.
+--    See the "Capturing OTPs" section above for details.
+-- ============================================================================
+
+{%- for account in breakglass_accounts %}
+-- Generate 10 OTPs for {{ account.username | upper }}
+--ALTER USER {{ account.username | upper }} ADD MFA METHOD OTP COUNT = 10;
+{%- endfor %}
+
+-- ============================================================================
 -- VERIFICATION
 -- ============================================================================
 
@@ -80,24 +95,3 @@ SHOW AUTHENTICATION POLICIES LIKE 'breakglass_auth_policy';
 
 -- Verify network policies
 SHOW NETWORK POLICIES;
-
--- ============================================================================
--- POST-SETUP: CHANGE PASSWORDS AND STORE OTPs
--- ============================================================================
--- IMPORTANT: After running this script:
--- 
--- For each break-glass account:
--- 1. Log in and change the initial password
--- 2. Generate a set of one-time passwords (OTPs)
--- 3. Store the OTPs securely (password vault or physical safe)
--- 4. Document the break-glass procedure for your team
--- 5. Test the procedure to ensure it works
---
--- Break-glass accounts created:
-{%- for account in breakglass_accounts %}
--- - {{ account.username | upper }} ({{ account.email }})
-{%- endfor %}
---
--- To change the password later (as ACCOUNTADMIN):
--- ALTER USER <username> SET PASSWORD = '<new_otp>';
--- ============================================================================

@@ -18,7 +18,8 @@ environment_list:
 - environment_list_Item 2
 - environment_list_Item 3
 object_component_order: <domain>_<env>_<dataproduct>
-infrastructure_share_name: Sample infrastructure share name
+infrastructure_replication_group: Sample infrastructure replication group
+replication_schedule: Every 10 minutes
 identity_provider: Okta
 configure_saml: Yes - Configure SAML now
 scim_integration_name: Sample scim integration name

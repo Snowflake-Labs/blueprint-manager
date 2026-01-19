@@ -1,0 +1,76 @@
+## Infrastructure Database Replication Configuration
+
+### Replication Group Configuration
+
+| Setting | Value |
+|---------|-------|
+| Replication Group Name | `{{ infrastructure_replication_group | upper }}` |
+| Source Database | `{{ platform_database_name | upper }}` |
+| Source Account | `{{ snowflake_org_name | upper }}.{{ org_account_name | upper }}` |
+{%- if replication_schedule == 'Manual only' %}
+| Refresh Schedule | Manual (on-demand) |
+{%- else %}
+| Refresh Schedule | {{ replication_schedule }} |
+{%- endif %}
+
+### What's Being Replicated
+
+The following objects from `{{ platform_database_name | upper }}.{{ governance_name | upper }}` will be replicated to all target accounts:
+
+**Tags:**
+- `DOMAIN` - Business unit identifier
+- `ENVIRONMENT` - SDLC stage (dev, test, prod)
+- `DATAPRODUCT` - Data product identifier
+- `WORKLOAD` - Workload type
+- `ZONE` - Data zone
+- `DATA_CLASSIFICATION` - Data sensitivity level
+
+**Network Rules (if created in Security & Identity task):**
+- Allowed network rules (e.g., `corporate_vpn`, `cloud_services`)
+- Blocked network rules (if configured)
+
+**Views (if created in Cost Management task):**
+- `cost_by_domain` - Credit usage by domain
+- `cost_by_environment` - Credit usage by environment
+- `untagged_warehouses` - Resources missing required tags
+
+### Key Difference from Sharing
+
+Unlike shared databases (which are read-only), replicated databases create **local copies** of all objects. This means:
+
+| Capability | Shared Database | Replicated Database |
+|------------|-----------------|---------------------|
+| View tags | ✅ Yes | ✅ Yes |
+| Apply tags to local objects | ❌ No | ✅ Yes |
+| Reference network rules | ❌ No | ✅ Yes |
+| Query views | ✅ Yes | ✅ Yes |
+| Modify objects | ❌ No | ❌ No (read-only replica) |
+
+### Creating Secondary Replication Groups
+
+When you create additional accounts in your organization, you'll need to create a secondary replication group:
+
+```sql
+-- Run in the target account (as ACCOUNTADMIN)
+CREATE REPLICATION GROUP {{ infrastructure_replication_group | upper }}
+  AS REPLICA OF {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}.{{ infrastructure_replication_group | upper }};
+```
+
+Then refresh to create the replica database:
+
+```sql
+-- Initial refresh to pull the database
+ALTER REPLICATION GROUP {{ infrastructure_replication_group | upper }} REFRESH;
+```
+
+This creates a local copy of the infrastructure database that automatically stays in sync.
+
+### Adding New Accounts
+
+When new accounts are created, grant them access to the replication group:
+
+```sql
+-- Run in the Organization Account
+ALTER REPLICATION GROUP {{ infrastructure_replication_group | upper }} 
+  SET ALLOWED_ACCOUNTS = {{ snowflake_org_name | upper }}.<new_account_name>;
+```

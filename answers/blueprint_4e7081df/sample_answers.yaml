@@ -7,39 +7,40 @@ new_account_edition: Standard
 new_account_region: Sample new account region
 new_account_admin_name: Sample new account admin name
 new_account_admin_email: Sample new account admin email
+local_infra_database: Sample local infra database
+local_policies_schema: Sample local policies schema
 snowflake_org_name: Sample snowflake org name
-infrastructure_share_name: Sample infrastructure share name
+infrastructure_replication_group: Sample infrastructure replication group
 org_account_name: Sample org account name
-shared_database_name: Sample shared database name
+platform_database_name: Sample platform database name
 governance_name: Sample governance name
 security_config_approach: Use Organization Configuration
 account_configure_saml: Yes - Configure SAML for this account
 identity_provider: Okta
 configure_saml: Yes - Configure SAML now
-scim_integration_name: Sample scim integration name
-scim_provisioner_role: OKTA_PROVISIONER
-scim_allowed_ips:
-- scim_allowed_ips_Item 1
-- scim_allowed_ips_Item 2
-- scim_allowed_ips_Item 3
-account_name_prefix: Sample account name prefix
-manual_admin_users: null
-saml_integration_name: Sample saml integration name
-saml_issuer: Sample saml issuer
-saml_sso_url: Sample saml sso url
-saml_certificate: Sample saml certificate
-saml_sso_login_page: 'Yes'
-breakglass_accounts: null
-platform_database_name: Sample platform database name
+account_scim_integration_name: Sample account scim integration name
+account_scim_allowed_ips:
+- account_scim_allowed_ips_Item 1
+- account_scim_allowed_ips_Item 2
+- account_scim_allowed_ips_Item 3
+account_admin_users: null
+account_saml_integration_name: Sample account saml integration name
+account_saml_issuer: Sample account saml issuer
+account_saml_sso_url: Sample account saml sso url
+account_saml_certificate: Sample account saml certificate
+account_breakglass_accounts: null
+account_allowed_network_rules: null
+account_blocked_network_rules: null
 allowed_network_rules: null
 blocked_network_rules: null
 enable_account_network_policy: Yes - Apply to all users by default
+manual_admin_users: null
 scim_admin_users: null
 human_auth_methods: SAML Only (SSO required)
 mfa_method: TOTP (Authenticator Apps)
 service_auth_methods: OAuth Only
 apply_auth_policies_account_level: Yes - Apply default policy to all users
-mfa_enforcement_timeline: Immediately - Require MFA now
+account_mfa_support_contact: Sample account mfa support contact
 account_budget_limit: Sample account budget limit
 account_budget_threshold: '50'
 account_budget_emails:
@@ -49,3 +50,4 @@ account_budget_emails:
 account_resource_monitor_limit: Sample account resource monitor limit
 account_resource_monitor_reset_frequency: Monthly
 account_resource_monitor_action: Suspend Immediately
+shared_database_name: Sample shared database name

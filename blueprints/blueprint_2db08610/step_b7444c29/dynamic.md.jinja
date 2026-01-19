@@ -1,0 +1,51 @@
+## Resource Monitor Configuration
+
+### Monitor Settings
+
+| Setting | Value |
+|---------|-------|
+| **Monthly Credit Limit** | {{ resource_monitor_limit }} credits |
+| **100% Action** | {{ resource_monitor_action }} |
+| **Reset Frequency** | Monthly |
+
+### Threshold Schedule
+
+| Threshold | Action |
+|-----------|--------|
+| 75% ({{ (resource_monitor_limit | int * 0.75) | int }} credits) | Notify |
+| 90% ({{ (resource_monitor_limit | int * 0.90) | int }} credits) | Notify |
+| 100% ({{ resource_monitor_limit }} credits) | {{ resource_monitor_action }} |
+
+### Monitor Name
+
+{%- if object_component_order == '<domain>_<env>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+`{{ data_product_domain | upper }}_{{ data_product_environment | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+`{{ data_product_domain | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+`{{ data_product_environment | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+`{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- endif %}
+{%- elif object_component_order == '<domain>_<dataproduct>_<env>' %}
+{%- if account_strategy == 'Single Account' %}
+`{{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ data_product_environment | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+`{{ data_product_domain | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+`{{ data_product_name | upper }}_{{ data_product_environment | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+`{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- endif %}
+{%- elif object_component_order == '<env>_<domain>_<dataproduct>' %}
+{%- if account_strategy == 'Single Account' %}
+`{{ data_product_environment | upper }}_{{ data_product_domain | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+`{{ data_product_domain | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+`{{ data_product_environment | upper }}_{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+`{{ data_product_name | upper }}_RESOURCE_MONITOR`
+{%- endif %}
+{%- endif %}

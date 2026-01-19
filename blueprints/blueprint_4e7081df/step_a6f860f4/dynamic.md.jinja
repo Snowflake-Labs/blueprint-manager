@@ -1,0 +1,71 @@
+## Multi-Factor Authentication Configuration
+
+### MFA Status
+
+| Setting | Value |
+|---------|-------|
+| **Human Auth Policy** | {{ human_auth_methods }} |
+| **MFA Method** | {{ mfa_method }} |
+| **MFA Required** | {% if 'MFA' in human_auth_methods or 'Password with MFA' in human_auth_methods %}Yes{% else %}No (handled by SSO IdP){% endif %} |
+| **Support Contact** | {{ account_mfa_support_contact }} |
+
+### MFA Enforcement
+
+{%- if human_auth_methods == "SAML Only (SSO required)" %}
+
+**MFA via Identity Provider**
+
+Since you're using SAML-only authentication, MFA is handled by your Identity Provider ({{ identity_provider }}). Ensure your IdP is configured to require MFA for Snowflake access.
+
+{%- elif "MFA" in human_auth_methods or "Password with MFA" in human_auth_methods %}
+
+**MFA Required for Password Logins**
+
+Users authenticating with passwords must use MFA. They'll be prompted to enroll when they next log in.
+
+**Enrollment Process:**
+1. User logs in with username and password
+2. Snowflake prompts for MFA enrollment
+3. User scans QR code with authenticator app
+4. User enters the verification code
+5. MFA is now enabled for that user
+
+{%- else %}
+
+**MFA Not Required**
+
+⚠️ Your current authentication policy does not require MFA for password logins. Consider upgrading to "Password with MFA" for improved security.
+
+{%- endif %}
+
+### Administrator MFA Checklist
+
+Verify that all administrator users have MFA enabled:
+
+| User | Role | MFA Status |
+|------|------|------------|
+{%- for user in account_admin_users %}
+| {{ user.login_name }} | {{ user.admin_role | upper }} | ☐ Verify enrolled |
+{%- endfor %}
+
+### User Communication Template
+
+Share this information with users who need to enroll in MFA:
+
+---
+
+**Subject: Enable Multi-Factor Authentication for Snowflake**
+
+You have been granted access to the Snowflake account: `{{ new_account_name | upper }}`
+
+**Next Steps:**
+1. Log in to Snowflake at: `https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com`
+2. When prompted, set up multi-factor authentication
+3. Install an authenticator app if you don't have one (Duo, Google Authenticator, Microsoft Authenticator)
+4. Scan the QR code displayed in Snowflake
+5. Enter the 6-digit code from your authenticator app
+
+**Need Help?**
+Contact: {{ account_mfa_support_contact }}
+
+---

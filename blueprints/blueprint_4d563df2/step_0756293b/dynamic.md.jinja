@@ -21,8 +21,8 @@ This section documents the break-glass emergency access configuration for your S
 |---------|-------|
 | **Username** | `{{ account.username | upper }}` |
 | **Email** | `{{ account.email }}` |
-| **Authentication** | Password only (no SSO) |
-| **MFA** | Disabled (uses OTP workflow) |
+| **Authentication** | Password + OTP (one-time passcode) |
+| **MFA Method** | Pre-generated OTPs (stored securely) |
 | **Client Restriction** | Web UI only |
 {%- if account.allowed_ips | upper != "NONE" %}
 | **Allowed IPs** | `{{ account.allowed_ips }}` |
@@ -31,23 +31,42 @@ This section documents the break-glass emergency access configuration for your S
 {%- endif %}
 {%- endfor %}
 
-## One-Time Password (OTP) Workflow
+## One-Time Passcode (OTP) Workflow
 
-Each break-glass account uses a one-time password workflow:
+Snowflake supports pre-generated one-time passcodes (OTPs) specifically designed for break-glass scenarios. These OTPs:
+- Are generated in advance and stored securely
+- Serve as the MFA second factor (after password)
+- Are single-use — each OTP is invalidated after authentication
+- Do not require an authenticator app or device at login time
 
-1. **Pre-generate OTPs**: Create a set of strong, unique passwords for each account
-2. **Store securely**: Keep OTPs in a password vault or physical safe
-3. **Use once**: Each OTP is used for one login session only
-4. **Rotate after use**: Change the password immediately after each use
-5. **Document usage**: Log who used the account and why
+### ⚠️ IMPORTANT: Capturing OTPs
 
-### OTP Requirements
+When you run the SQL in this step, the `ALTER USER ... ADD MFA METHOD OTP` command will output the generated OTPs. **You must capture these immediately** — they cannot be retrieved later!
 
-Each one-time password should:
-- Be at least 16 characters
-- Include uppercase, lowercase, numbers, and special characters
-- Never be reused
-- Be stored encrypted at rest
+**Before running the SQL:**
+1. Have your password vault or secure storage ready
+2. Be prepared to copy the OTP output for each break-glass user
+3. Run the SQL in sections, not all at once, so you can capture each user's OTPs
+
+### OTP Storage Requirements
+
+Store the following for each break-glass account:
+- Username
+- Password (after changing from initial password)  
+- All generated OTPs (10 per user)
+- Account URL: `https://{{ snowflake_org_name | lower }}-{{ org_account_name | lower }}.snowflakecomputing.com`
+
+### OTP Regeneration
+
+OTPs should be regenerated:
+- After any OTP is used (even for testing)
+- Periodically (quarterly recommended)
+- If there's any suspicion of compromise
+
+To regenerate OTPs (invalidates all previous OTPs):
+```sql
+ALTER USER <username> ADD MFA METHOD OTP COUNT = 10;
+```
 
 ## Emergency Access Procedure
 
@@ -60,21 +79,22 @@ Each one-time password should:
 
 ### How to Use
 
-1. Retrieve the next unused OTP from secure storage
-2. Navigate directly to: `https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "NONE" %}{{ account_name_prefix | lower }}_{% endif %}{{ org_account_name | lower }}.snowflakecomputing.com`
+1. Retrieve the password AND next unused OTP from secure storage
+2. Navigate directly to: `https://{{ snowflake_org_name | lower }}-{{ org_account_name | lower }}.snowflakecomputing.com`
 3. Select "Sign in using Snowflake" (not SSO)
-4. Enter the break-glass username
-5. Enter the OTP as the password
+4. Enter the break-glass username and password
+5. When prompted for MFA, enter the OTP
 6. Fix the issue that required break-glass access
 7. Log out immediately after
-8. Mark the OTP as used
-9. Generate a new password for the account
-10. Document the incident
+8. Mark the OTP as used (it's now invalidated)
+9. Document the incident
+10. Consider regenerating OTPs if supply is low
 
 ## Security Considerations
 
-- **No MFA**: Break-glass accounts don't use MFA by design (IdP may be down)
+- **MFA Required**: Break-glass accounts require password + OTP for security
+- **Pre-generated OTPs**: No authenticator app needed at login time
 - **Auditing**: All break-glass logins are logged and should be reviewed
 - **Limited Scope**: Only use for emergency recovery, not routine operations
-- **Rotation**: Change the password after every use
 - **Testing**: Test the break-glass procedure periodically (quarterly recommended)
+  - Note: Any OTP used for testing is invalidated

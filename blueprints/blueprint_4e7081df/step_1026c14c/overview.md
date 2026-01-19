@@ -2,7 +2,7 @@ In this step, you'll configure an account-level resource monitor that provides a
 
 **Account Context:** This step should be executed from the newly created account.
 
-## Why is this important?
+## **Why is this important?**
 
 Resource monitors provide a safety net for cost control:
 - **Prevent runaway costs**: Automatically stop spending when limits are hit
@@ -10,13 +10,13 @@ Resource monitors provide a safety net for cost control:
 - **Active intervention**: Can suspend warehouses, not just alert
 - **Tiered response**: Different actions at different thresholds
 
-## External Prerequisites
+## **Prerequisites**
 
 - Account budget configured (recommended)
 - Understanding of acceptable downtime if warehouses are suspended
 - Knowledge of critical vs. non-critical workloads
 
-## Key Concepts
+## **Key Concepts**
 
 **Resource Monitor**
 A Snowflake object that tracks credit consumption and can take action (notify or suspend) when thresholds are reached.
@@ -41,7 +41,8 @@ Best practice is to configure multiple thresholds:
 - 75%: Notify (early warning)
 - 90%: Notify (urgent warning)
 - 100%: Suspend or notify (limit reached)
-- 110%: Suspend (catch overrun from running queries)
+
+**Note:** Snowflake allows only ONE suspend trigger per resource monitor, so the 100% threshold is your enforcement point.
 
 **More Information:**
 * [Resource Monitors](https://docs.snowflake.com/en/user-guide/resource-monitors) — Complete guide

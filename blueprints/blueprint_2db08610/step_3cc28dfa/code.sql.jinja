@@ -18,11 +18,8 @@ USE ROLE SYSADMIN;
 -- ============================================================================
 -- TAG DATABASE REFERENCE
 -- ============================================================================
-{%- if account_strategy == 'Single Account' %}
+-- Replicated databases maintain the same name as the source
 {%- set tag_db = platform_database_name | upper %}
-{%- else %}
-{%- set tag_db = platform_database_name | upper ~ '_SHARED' %}
-{%- endif %}
 
 -- ============================================================================
 -- CREATE SCHEMAS FOR EACH ZONE

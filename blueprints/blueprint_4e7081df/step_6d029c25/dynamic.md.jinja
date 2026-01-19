@@ -1,0 +1,53 @@
+## Account Administrators
+
+### Administrator List
+
+The following users will be configured as administrators for this account:
+
+| Login Name | Admin Role | Email | Name |
+|------------|------------|-------|------|
+{%- for user in account_admin_users %}
+| {{ user.login_name }} | {{ user.admin_role | upper }} | {{ user.email | default('-', true) }} | {{ user.first_name | default('', true) }} {{ user.last_name | default('', true) }} |
+{%- endfor %}
+
+### Role Distribution
+
+{%- set accountadmins = [] %}
+{%- set securityadmins = [] %}
+{%- set sysadmins = [] %}
+{%- set useradmins = [] %}
+{%- for user in account_admin_users %}
+{%- if user.admin_role | upper == "ACCOUNTADMIN" %}
+{%- set _ = accountadmins.append(user.login_name) %}
+{%- elif user.admin_role | upper == "SECURITYADMIN" %}
+{%- set _ = securityadmins.append(user.login_name) %}
+{%- elif user.admin_role | upper == "SYSADMIN" %}
+{%- set _ = sysadmins.append(user.login_name) %}
+{%- elif user.admin_role | upper == "USERADMIN" %}
+{%- set _ = useradmins.append(user.login_name) %}
+{%- endif %}
+{%- endfor %}
+
+| Role | Count | Users |
+|------|-------|-------|
+| ACCOUNTADMIN | {{ accountadmins | length }} | {{ accountadmins | join(', ') if accountadmins else '-' }} |
+| SECURITYADMIN | {{ securityadmins | length }} | {{ securityadmins | join(', ') if securityadmins else '-' }} |
+| SYSADMIN | {{ sysadmins | length }} | {{ sysadmins | join(', ') if sysadmins else '-' }} |
+| USERADMIN | {{ useradmins | length }} | {{ useradmins | join(', ') if useradmins else '-' }} |
+
+{%- if identity_provider != "None - Manual User Management" %}
+
+### SCIM Note
+
+These users should already exist in Snowflake via SCIM provisioning. If a user hasn't synced yet:
+1. Verify the user is assigned to the Snowflake application in your IdP
+2. Wait for the next sync cycle (or trigger a manual sync)
+3. Check `SHOW USERS;` to confirm the user exists
+
+{%- else %}
+
+### Manual User Creation
+
+Users will be created with temporary passwords that must be changed on first login.
+
+{%- endif %}

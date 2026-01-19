@@ -2,8 +2,8 @@ blueprint_id: blueprint_4e7081df
 name: Account Creation
 summary: Create and configure additional Snowflake accounts within your organization
   with security, identity, and cost management.
-overview: 'This blueprint guides you through creating a new Snowflake account within
-  your organization. It''s a repeatable blueprint designed to be run once for each
+overview: 'This workflow guides you through creating a new Snowflake account within
+  your organization. It''s a repeatable workflow designed to be run once for each
   account you need to provision.
 
 
@@ -15,7 +15,7 @@ overview: 'This blueprint guides you through creating a new Snowflake account wi
   monitors, and cost allocation tags).
 
 
-  By the end of this blueprint, you''ll have a fully configured Snowflake account that:
+  By the end of this workflow, you''ll have a fully configured Snowflake account that:
 
   - Follows your organization''s naming conventions
 
@@ -30,8 +30,8 @@ overview: 'This blueprint guides you through creating a new Snowflake account wi
   - Is properly tagged for cost allocation and chargeback reporting
 
 
-  **Prerequisites**: This blueprint assumes you have an existing Snowflake Organization
-  Account. While designed to work with the Platform Foundation blueprint, it can also
+  **Prerequisites**: This workflow assumes you have an existing Snowflake Organization
+  Account. While designed to work with the Platform Foundation workflow, it can also
   run independently if you provide the required configuration values.'
 is_repeatable: true
 steps:
@@ -41,16 +41,17 @@ steps:
 - step_2dfd194b
 - step_3f1eaffc
 - step_cc3fcc4b
-- step_3ab22328
+- step_4d700e41
 - step_79749347
-- step_541a2294
-- step_7b4513a3
-- step_f7697a30
-- step_0756293b
+- step_3e4df82e
+- step_6d029c25
+- step_350e5c00
+- step_8fc0d37f
+- step_cec591c6
 - step_06443707
 - step_81f92ada
-- step_399d3555
-- step_28ef3cb0
+- step_967b4922
+- step_a6f860f4
 - step_54d1babe
 - step_1026c14c
 - step_43d82dc2

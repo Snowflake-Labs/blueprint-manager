@@ -1,0 +1,77 @@
+## Infrastructure Database Replica Configuration
+
+### Replication Details
+
+| Setting | Value |
+|---------|-------|
+| **Replication Group** | `{{ infrastructure_replication_group | upper }}` |
+| **Source Account** | `{{ snowflake_org_name | upper }}.{{ org_account_name | upper }}` |
+| **Replica Database** | `{{ platform_database_name | upper }}` |
+| **Target Account** | `{{ snowflake_org_name | upper }}.{{ new_account_name | upper }}` |
+
+### What's Being Replicated
+
+The following objects from the Organization Account will be replicated to this account:
+
+**Database:** `{{ platform_database_name | upper }}`
+
+**Governance Schema (`{{ governance_name | upper }}`)**
+
+*Tags:*
+- `DOMAIN` - Business unit identifier (values: {{ domain_list | join(', ') }})
+- `ENVIRONMENT` - SDLC stage (values: {{ environment_list | join(', ') }})
+- `DATAPRODUCT` - Data product identifier
+- `WORKLOAD` - Workload type
+- `ZONE` - Data zone
+- `DATA_CLASSIFICATION` - Data sensitivity level
+
+*Network Rules (if configured):*
+- Allowed network rules (e.g., `corporate_vpn`, `cloud_services`)
+- Blocked network rules (if configured)
+
+*Views (if configured in Cost Management):*
+- `cost_by_domain` - Credit usage by domain
+- `cost_by_environment` - Credit usage by environment
+- `untagged_warehouses` - Resources missing required tags
+
+### Usage Example
+
+After creating the replica, you can apply governance tags to local objects:
+
+```sql
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+-- Apply domain tag to a warehouse (THIS NOW WORKS with replication!)
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = '{{ account_domain }}';
+
+-- Apply multiple tags
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT = 'prod',
+          {{ platform_database_name | upper }}.{{ governance_name | upper }}.WORKLOAD = 'analytics';
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+-- Apply environment tag to a warehouse (THIS NOW WORKS with replication!)
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ account_environment }}';
+
+-- Apply multiple tags
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = 'sales',
+          {{ platform_database_name | upper }}.{{ governance_name | upper }}.WORKLOAD = 'analytics';
+{%- else %}
+-- Apply tags to a warehouse (THIS NOW WORKS with replication!)
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = '{{ account_domain }}',
+          {{ platform_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ account_environment }}';
+{%- endif %}
+
+-- Query cost reporting views
+SELECT * FROM {{ platform_database_name | upper }}.{{ governance_name | upper }}.cost_by_domain;
+```
+
+### Important Notes
+
+- The replica database is **read-only** — you cannot directly modify the replicated objects
+- Tags, network rules, and views from the replica **can be applied/referenced** by local objects
+- Changes in the Organization Account are replicated **on schedule** (not immediately like shares)
+- There is **storage cost** for replica data (unlike shares, replicas store local copies)
+- Automatic refresh keeps the replica in sync with the source

@@ -2,56 +2,56 @@ In this step, you'll configure authentication policies to define how different t
 
 **Account Context:** These authentication policies apply to your Organization Account (if created) or your primary account.
 
-## Why is this important?
+## **Why is this important?**
 
 Authentication policies control which authentication methods are allowed for users. Different user types have different security requirements:
 
-- **Human users**: Should authenticate via SSO with MFA for security
-- **Service accounts**: Should use OAuth, key pairs, or tokens (not passwords)
-- **Break-glass accounts**: Need password access as a fallback
+* **Human users**: Should authenticate via SSO with MFA for security  
+* **Service accounts**: Should use OAuth, key pairs, or tokens (not passwords)  
+* **Break-glass accounts**: Need password access as a fallback
 
 Without proper authentication policies:
-- Service accounts might use insecure password authentication
-- Human users might bypass MFA requirements
-- Break-glass accounts might be used for routine operations
 
-## External Prerequisites
+* Service accounts might use insecure password authentication  
+* Human users might bypass MFA requirements  
+* Break-glass accounts might be used for routine operations
 
-- SAML/SSO integration configured
-- Break-glass account created
-- Understanding of your organization's authentication requirements
+## **External Prerequisites**
 
-## Key Concepts
+* SAML/SSO integration configured  
+* Break-glass account created  
+* Understanding of your organization's authentication requirements
 
-**Authentication Policy**
-A Snowflake object that specifies allowed authentication methods, MFA requirements, and client type restrictions. Think of authentication policies as "entry requirements" at different doors—you can have strict requirements at the front door (human users) and different requirements at the service entrance (service accounts).
+## **Key Concepts**
 
-**Authentication Methods**
-How a user proves their identity:
-- `PASSWORD`: Username and password
-- `SAML`: SSO via SAML assertion
-- `OAUTH`: OAuth 2.0 tokens
-- `KEYPAIR`: RSA key pair authentication
-- `PAT`: Personal Access Tokens
+**Authentication Policy** A Snowflake object that specifies allowed authentication methods, MFA requirements, and client type restrictions. Think of authentication policies as "entry requirements" at different doors—you can have strict requirements at the front door (human users) and different requirements at the service entrance (service accounts).
 
-**MFA Authentication Methods**
-Multi-factor authentication options:
-- `TOTP`: Time-based One-Time Password (authenticator apps)
-- `PASSKEY`: FIDO2/WebAuthn passkeys
+**Authentication Methods** How a user proves their identity:
 
-**Client Types**
-Which clients can use the authentication:
-- `SNOWFLAKE_UI`: Web interface
-- `SNOWSIGHT`: Snowsight web app
-- `DRIVERS`: JDBC, ODBC, Python, etc.
-- `SNOWSQL`: SnowSQL CLI
+* PASSWORD: Username and password  
+* SAML: SSO via SAML assertion  
+* OAUTH: OAuth 2.0 tokens  
+* KEYPAIR: RSA key pair authentication  
+* PAT: Personal Access Tokens
 
-**Best Practice: Layered Security**
-Different user types need different policies—like having VIP entrances, employee entrances, and delivery entrances at a building, each with appropriate security checks.
+**MFA Authentication Methods** Multi-factor authentication options:
+
+* TOTP: Time-based One-Time Password (authenticator apps)  
+* PASSKEY: FIDO2/WebAuthn passkeys
+
+**Client Types** Which clients can use the authentication:
+
+* SNOWFLAKE\_UI: Web interface  
+* SNOWSIGHT: Snowsight web app  
+* DRIVERS: JDBC, ODBC, Python, etc.  
+* SNOWSQL: SnowSQL CLI
+
+**Best Practice: Layered Security** Different user types need different policies—like having VIP entrances, employee entrances, and delivery entrances at a building, each with appropriate security checks.
 
 **More Information:**
-* [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies) — Overview of authentication policy options
-* [CREATE AUTHENTICATION POLICY](https://docs.snowflake.com/en/sql-reference/sql/create-authentication-policy) — SQL command reference
+
+* [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies) — Overview of authentication policy options  
+* [CREATE AUTHENTICATION POLICY](https://docs.snowflake.com/en/sql-reference/sql/create-authentication-policy) — SQL command reference  
 * [MFA in Snowflake](https://docs.snowflake.com/en/user-guide/security-mfa) — Multi-factor authentication setup
 
 ### Configuration Questions

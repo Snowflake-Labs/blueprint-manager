@@ -18,13 +18,6 @@ The resource monitor will be configured with tiered thresholds:
 | 75% | {{ (account_resource_monitor_limit | int * 0.75) | round | int }} | Notify |
 | 90% | {{ (account_resource_monitor_limit | int * 0.90) | round | int }} | Notify |
 | 100% | {{ account_resource_monitor_limit }} | {{ account_resource_monitor_action }} |
-{%- if account_resource_monitor_action == "Suspend Immediately" %}
-| 110% | {{ (account_resource_monitor_limit | int * 1.10) | round | int }} | Suspend Immediately |
-{%- elif account_resource_monitor_action == "Suspend After Current Queries" %}
-| 110% | {{ (account_resource_monitor_limit | int * 1.10) | round | int }} | Suspend After Current Queries |
-{%- else %}
-| 110% | {{ (account_resource_monitor_limit | int * 1.10) | round | int }} | Notify |
-{%- endif %}
 
 ### How Budgets + Resource Monitors Work Together
 

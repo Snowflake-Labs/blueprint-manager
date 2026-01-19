@@ -6,18 +6,22 @@
 -- Region: {{ new_account_region }}
 -- ============================================================================
 -- EXECUTE FROM: Organization Account
--- REQUIRED ROLE: ORGADMIN
+-- REQUIRED ROLE: GLOBALORGADMIN
 -- ============================================================================
 
-USE ROLE ORGADMIN;
+USE ROLE GLOBALORGADMIN;
 
 -- ============================================================================
 -- STEP 1: CREATE THE ACCOUNT
 -- ============================================================================
+-- NOTE: A temporary password is provided below. The user will be required to 
+--       change this password on first login (MUST_CHANGE_PASSWORD = TRUE).
+--       For production, replace with a unique secure password.
+-- ============================================================================
 
 CREATE ACCOUNT {{ new_account_name | upper }}
   ADMIN_NAME = '{{ new_account_admin_name }}'
-  ADMIN_PASSWORD = 'ChangeMe123!'  -- Initial password - MUST be changed on first login
+  ADMIN_PASSWORD = 'TempPass#2026!Snflk'
   EMAIL = '{{ new_account_admin_email }}'
   MUST_CHANGE_PASSWORD = TRUE
   EDITION = {{ new_account_edition | upper }}
@@ -35,15 +39,15 @@ SHOW ORGANIZATION ACCOUNTS;
 SHOW ORGANIZATION ACCOUNTS LIKE '{{ new_account_name | upper }}';
 
 -- ============================================================================
--- STEP 3: GRANT INFRASTRUCTURE SHARE TO NEW ACCOUNT
+-- STEP 3: ADD ACCOUNT TO INFRASTRUCTURE REPLICATION GROUP
 -- ============================================================================
--- Grant the new account access to the shared infrastructure database
+-- Grant the new account access to replicate the infrastructure database
 
-ALTER SHARE {{ infrastructure_share_name | upper }} 
-  ADD ACCOUNTS = {{ snowflake_org_name | upper }}.{{ new_account_name | upper }};
+ALTER REPLICATION GROUP {{ infrastructure_replication_group | upper }} 
+  SET ALLOWED_ACCOUNTS = {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}, {{ snowflake_org_name | upper }}.{{ new_account_name | upper }};
 
--- Verify the share was granted
-SHOW GRANTS OF SHARE {{ infrastructure_share_name | upper }};
+-- Verify the account was added
+SHOW REPLICATION GROUPS LIKE '{{ infrastructure_replication_group | upper }}';
 
 -- ============================================================================
 -- ACCOUNT CREATED
@@ -73,7 +77,8 @@ Region:          {{ new_account_region }}
 Initial Admin:   {{ new_account_admin_name }}
 Admin Email:     {{ new_account_admin_email }}
 
-Infrastructure Share: {{ infrastructure_share_name | upper }} has been granted to this account.
+Infrastructure Replication: {{ new_account_name | upper }} has been added to the 
+{{ infrastructure_replication_group | upper }} replication group.
 
 ============================================================================
 ⚠️  IMPORTANT: SWITCH TO THE NEW ACCOUNT
@@ -85,7 +90,7 @@ You must now LOG INTO THE NEW ACCOUNT to continue the setup:
 2. Navigate to: https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com
 3. Log in with: {{ new_account_admin_name }}
 4. Change the initial password immediately
-5. Continue with the Consume Infrastructure Share step from the NEW account
+5. Continue with the Create Infrastructure Database Replica step from the NEW account
 
 The remaining steps in this workflow must be executed from the new account.
 */

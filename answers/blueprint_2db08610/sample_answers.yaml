@@ -24,8 +24,9 @@ owner_users:
 - owner_users_Item 3
 warehouse_access_pattern: Dedicated (each role uses specific warehouses)
 cost_center: Sample cost center
+resource_monitor_limit: Sample resource monitor limit
+resource_monitor_action: Notify Only (continue running)
 resource_monitor_emails:
 - resource_monitor_emails_Item 1
 - resource_monitor_emails_Item 2
 - resource_monitor_emails_Item 3
-resource_monitor_action: Notify Only (continue running)

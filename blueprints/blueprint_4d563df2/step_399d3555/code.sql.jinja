@@ -13,34 +13,35 @@ USE ROLE ACCOUNTADMIN;
 {%- if human_auth_methods == "SAML Only (SSO required)" %}
 CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
   AUTHENTICATION_METHODS = (SAML)
-  MFA_AUTHENTICATION_METHODS = ()
-  CLIENT_TYPES = (SNOWFLAKE_UI, SNOWSIGHT, DRIVERS, SNOWSQL)
+  CLIENT_TYPES = (SNOWFLAKE_UI, DRIVERS, SNOWSQL)
   SECURITY_INTEGRATIONS = ({{ saml_integration_name | upper }})
   COMMENT = 'Human user policy - SAML SSO only';
 {%- elif human_auth_methods == "SAML or Password with MFA" %}
 CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
   AUTHENTICATION_METHODS = (SAML, PASSWORD)
+  MFA_ENROLLMENT = 'REQUIRED'
 {%- if mfa_method == "TOTP (Authenticator Apps)" %}
-  MFA_AUTHENTICATION_METHODS = (TOTP)
+  MFA_POLICY = (ALLOWED_METHODS = ('TOTP'))
 {%- elif mfa_method == "Passkey (FIDO2/WebAuthn)" %}
-  MFA_AUTHENTICATION_METHODS = (PASSKEY)
+  MFA_POLICY = (ALLOWED_METHODS = ('PASSKEY'))
 {%- else %}
-  MFA_AUTHENTICATION_METHODS = (TOTP, PASSKEY)
+  MFA_POLICY = (ALLOWED_METHODS = ('TOTP', 'PASSKEY'))
 {%- endif %}
-  CLIENT_TYPES = (SNOWFLAKE_UI, SNOWSIGHT, DRIVERS, SNOWSQL)
+  CLIENT_TYPES = (SNOWFLAKE_UI, DRIVERS, SNOWSQL)
   SECURITY_INTEGRATIONS = ({{ saml_integration_name | upper }})
   COMMENT = 'Human user policy - SAML or Password with MFA';
 {%- else %}
 CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
   AUTHENTICATION_METHODS = (PASSWORD)
+  MFA_ENROLLMENT = 'REQUIRED'
 {%- if mfa_method == "TOTP (Authenticator Apps)" %}
-  MFA_AUTHENTICATION_METHODS = (TOTP)
+  MFA_POLICY = (ALLOWED_METHODS = ('TOTP'))
 {%- elif mfa_method == "Passkey (FIDO2/WebAuthn)" %}
-  MFA_AUTHENTICATION_METHODS = (PASSKEY)
+  MFA_POLICY = (ALLOWED_METHODS = ('PASSKEY'))
 {%- else %}
-  MFA_AUTHENTICATION_METHODS = (TOTP, PASSKEY)
+  MFA_POLICY = (ALLOWED_METHODS = ('TOTP', 'PASSKEY'))
 {%- endif %}
-  CLIENT_TYPES = (SNOWFLAKE_UI, SNOWSIGHT, DRIVERS, SNOWSQL)
+  CLIENT_TYPES = (SNOWFLAKE_UI, DRIVERS, SNOWSQL)
   SECURITY_INTEGRATIONS = ()
   COMMENT = 'Human user policy - Password with MFA';
 {%- endif %}
@@ -52,28 +53,24 @@ CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
 {%- if service_auth_methods == "OAuth Only" %}
 CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
   AUTHENTICATION_METHODS = (OAUTH)
-  MFA_AUTHENTICATION_METHODS = ()
   CLIENT_TYPES = (DRIVERS)
   SECURITY_INTEGRATIONS = ()
   COMMENT = 'Service account policy - OAuth only, no UI access';
 {%- elif service_auth_methods == "Key Pair Only" %}
 CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
   AUTHENTICATION_METHODS = (KEYPAIR)
-  MFA_AUTHENTICATION_METHODS = ()
   CLIENT_TYPES = (DRIVERS)
   SECURITY_INTEGRATIONS = ()
   COMMENT = 'Service account policy - Key pair only, no UI access';
 {%- elif service_auth_methods == "OAuth or Key Pair" %}
 CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
   AUTHENTICATION_METHODS = (OAUTH, KEYPAIR)
-  MFA_AUTHENTICATION_METHODS = ()
   CLIENT_TYPES = (DRIVERS)
   SECURITY_INTEGRATIONS = ()
   COMMENT = 'Service account policy - OAuth or Key pair, no UI access';
 {%- else %}
 CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
   AUTHENTICATION_METHODS = (OAUTH, KEYPAIR)
-  MFA_AUTHENTICATION_METHODS = ()
   CLIENT_TYPES = (DRIVERS)
   SECURITY_INTEGRATIONS = ()
   COMMENT = 'Service account policy - OAuth, Key pair, or PAT, no UI access';
@@ -100,7 +97,7 @@ ALTER ACCOUNT SET AUTHENTICATION POLICY human_user_auth_policy;
 {%- endif %}
 {%- endif %}
 
--- Note: Break-glass user already has breakglass_auth_policy applied (from Step 2.4)
+-- Note: Break-glass user already has breakglass_auth_policy applied (from Create Break-Glass Emergency Access step)
 
 -- ============================================================================
 -- STEP 4: DOCUMENT POLICY ASSIGNMENTS

@@ -1,0 +1,160 @@
+-- ============================================================================
+-- CONFIGURE AUTHENTICATION POLICIES
+-- ============================================================================
+-- Account: {{ new_account_name | upper }}
+-- Human Auth: {{ human_auth_methods }}
+-- MFA Method: {{ mfa_method }}
+-- Service Auth: {{ service_auth_methods }}
+-- Account-Level: {{ apply_auth_policies_account_level }}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- ENSURE LOCAL INFRASTRUCTURE DATABASE EXISTS
+-- ============================================================================
+-- Authentication policies are schema-level objects and require a database context.
+-- We create a local infrastructure database for account-specific objects because
+-- the replicated {{ platform_database_name | upper }} database is read-only.
+-- ============================================================================
+
+CREATE DATABASE IF NOT EXISTS {{ local_infra_database | upper }}
+  COMMENT = 'Local infrastructure database for account-specific objects';
+CREATE SCHEMA IF NOT EXISTS {{ local_infra_database | upper }}.{{ local_policies_schema | upper }}
+  WITH MANAGED ACCESS
+  COMMENT = 'Schema for authentication and security policies';
+USE DATABASE {{ local_infra_database | upper }};
+USE SCHEMA {{ local_policies_schema | upper }};
+
+-- ============================================================================
+-- CREATE HUMAN USER AUTHENTICATION POLICY
+-- ============================================================================
+
+{%- if human_auth_methods == "SAML Only (SSO required)" %}
+CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
+  AUTHENTICATION_METHODS = (SAML)
+  CLIENT_TYPES = (SNOWFLAKE_UI, DRIVERS, SNOWSQL)
+  SECURITY_INTEGRATIONS = ({{ account_saml_integration_name | upper }})
+  COMMENT = 'Human user policy - SAML SSO only';
+{%- elif human_auth_methods == "SAML or Password with MFA" %}
+CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
+  AUTHENTICATION_METHODS = (SAML, PASSWORD)
+  MFA_ENROLLMENT = 'REQUIRED'
+{%- if mfa_method == "TOTP (Authenticator Apps)" %}
+  MFA_POLICY = (ALLOWED_METHODS = ('TOTP'))
+{%- elif mfa_method == "Passkey (FIDO2/WebAuthn)" %}
+  MFA_POLICY = (ALLOWED_METHODS = ('PASSKEY'))
+{%- else %}
+  MFA_POLICY = (ALLOWED_METHODS = ('TOTP', 'PASSKEY'))
+{%- endif %}
+  CLIENT_TYPES = (SNOWFLAKE_UI, DRIVERS, SNOWSQL)
+  SECURITY_INTEGRATIONS = ({{ account_saml_integration_name | upper }})
+  COMMENT = 'Human user policy - SAML or Password with MFA';
+{%- else %}
+CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
+  AUTHENTICATION_METHODS = (PASSWORD)
+  MFA_ENROLLMENT = 'REQUIRED'
+{%- if mfa_method == "TOTP (Authenticator Apps)" %}
+  MFA_POLICY = (ALLOWED_METHODS = ('TOTP'))
+{%- elif mfa_method == "Passkey (FIDO2/WebAuthn)" %}
+  MFA_POLICY = (ALLOWED_METHODS = ('PASSKEY'))
+{%- else %}
+  MFA_POLICY = (ALLOWED_METHODS = ('TOTP', 'PASSKEY'))
+{%- endif %}
+  CLIENT_TYPES = (SNOWFLAKE_UI, DRIVERS, SNOWSQL)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Human user policy - Password with MFA';
+{%- endif %}
+
+-- ============================================================================
+-- CREATE SERVICE ACCOUNT AUTHENTICATION POLICY
+-- ============================================================================
+
+{%- if service_auth_methods == "OAuth Only" %}
+CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
+  AUTHENTICATION_METHODS = (OAUTH)
+  CLIENT_TYPES = (DRIVERS)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Service account policy - OAuth only, no UI access';
+{%- elif service_auth_methods == "Key Pair Only" %}
+CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
+  AUTHENTICATION_METHODS = (KEYPAIR)
+  CLIENT_TYPES = (DRIVERS)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Service account policy - Key pair only, no UI access';
+{%- elif service_auth_methods == "OAuth or Key Pair" %}
+CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
+  AUTHENTICATION_METHODS = (OAUTH, KEYPAIR)
+  CLIENT_TYPES = (DRIVERS)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Service account policy - OAuth or Key pair, no UI access';
+{%- else %}
+CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
+  AUTHENTICATION_METHODS = (OAUTH, KEYPAIR, PROGRAMMATIC_ACCESS_TOKEN)
+  CLIENT_TYPES = (DRIVERS)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Service account policy - OAuth, Key pair, or PAT, no UI access';
+{%- endif %}
+
+-- ============================================================================
+-- APPLY AUTHENTICATION POLICIES
+-- ============================================================================
+
+{%- if apply_auth_policies_account_level == "Yes - Apply default policy to all users" %}
+-- Apply human user policy at account level
+ALTER ACCOUNT SET AUTHENTICATION POLICY human_user_auth_policy;
+{%- else %}
+-- Policies created but not applied at account level
+-- Apply to specific users as needed during phased rollout:
+-- ALTER USER <username> SET AUTHENTICATION POLICY human_user_auth_policy;
+{%- endif %}
+
+-- Note: Break-glass account already has breakglass_auth_policy applied
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- List all authentication policies
+SHOW AUTHENTICATION POLICIES;
+
+-- Describe each policy
+DESCRIBE AUTHENTICATION POLICY human_user_auth_policy;
+DESCRIBE AUTHENTICATION POLICY service_account_auth_policy;
+
+-- Check account-level authentication policy
+SHOW PARAMETERS LIKE 'AUTHENTICATION_POLICY' IN ACCOUNT;
+
+-- List users and their authentication policies
+SELECT 
+  name,
+  login_name,
+  email,
+  authentication_policy,
+  has_mfa
+FROM snowflake.account_usage.users
+WHERE deleted_on IS NULL
+ORDER BY name;
+
+/*
+SUMMARY:
+========
+Authentication policies configured for account {{ new_account_name | upper }}.
+
+Values inherited from Platform Foundation:
+- Human Authentication: {{ human_auth_methods }}
+- MFA Method: {{ mfa_method }}
+- Service Authentication: {{ service_auth_methods }}
+- Account-Level Enforcement: {{ apply_auth_policies_account_level }}
+
+Policies Created:
+- human_user_auth_policy: For human users
+- service_account_auth_policy: For service accounts
+- breakglass_auth_policy: For emergency access (if created)
+
+To apply the service policy to a service account:
+  ALTER USER <service_account> SET AUTHENTICATION POLICY service_account_auth_policy;
+*/

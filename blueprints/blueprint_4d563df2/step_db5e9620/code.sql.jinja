@@ -21,9 +21,14 @@ SHOW ORGANIZATION ACCOUNTS;
 -- ============================================================================
 -- CREATE ORGANIZATION ACCOUNT
 -- ============================================================================
+-- NOTE: A temporary password is provided below. The user will be required to 
+--       change this password on first login (MUST_CHANGE_PASSWORD = TRUE).
+--       For production, replace with a unique secure password.
+-- ============================================================================
 
 CREATE ORGANIZATION ACCOUNT {{ org_account_name | upper }}
   ADMIN_NAME = '{{ org_admin_name }}'
+  ADMIN_PASSWORD = 'TempPass#2026!Snflk'
   ADMIN_USER_TYPE = PERSON
   EMAIL = '{{ org_admin_email }}'
   MUST_CHANGE_PASSWORD = TRUE

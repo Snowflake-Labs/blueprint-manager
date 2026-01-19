@@ -1,0 +1,68 @@
+## Break-Glass Emergency Access Configuration
+
+### Break-Glass Accounts
+
+| Username | Email | Allowed IPs |
+|----------|-------|-------------|
+{%- for account in account_breakglass_accounts %}
+| `{{ account.username }}` | {{ account.email }} | {{ account.allowed_ips }} |
+{%- endfor %}
+
+### Security Configuration
+
+Each break-glass account will have:
+- **Role**: ACCOUNTADMIN (full access for emergency situations)
+- **Authentication**: Password + OTP (one-time passcode)
+- **MFA Method**: Pre-generated OTPs (stored securely)
+- **Network Restriction**: Limited to specified IP addresses
+- **Client Restriction**: Web UI only
+
+### One-Time Passcode (OTP) Workflow
+
+Snowflake supports pre-generated one-time passcodes (OTPs) specifically designed for break-glass scenarios. These OTPs:
+- Are generated in advance and stored securely
+- Serve as the MFA second factor (after password)
+- Are single-use — each OTP is invalidated after authentication
+- Do not require an authenticator app or device at login time
+
+### ⚠️ IMPORTANT: Capturing OTPs
+
+When you run the SQL in this step, the `ALTER USER ... ADD MFA METHOD OTP` command will output the generated OTPs. **You must capture these immediately** — they cannot be retrieved later!
+
+**Before running the SQL:**
+1. Have your password vault or secure storage ready
+2. Be prepared to copy the OTP output for each break-glass user
+3. Run the SQL in sections, not all at once, so you can capture each user's OTPs
+
+### OTP Storage Requirements
+
+Store the following for each break-glass account:
+- Username
+- Password (after changing from initial password)
+- All generated OTPs (10 per user)
+- Account URL: `https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com`
+
+### When to Use Break-Glass Access
+
+Use break-glass access ONLY when:
+- Your Identity Provider is completely unavailable
+- You are locked out due to misconfigured authentication policies
+- You need emergency access and no other admin can log in
+- You're responding to a critical security incident
+
+### How to Use
+
+1. Retrieve the password AND next unused OTP from secure storage
+2. Navigate to: `https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com`
+3. Select "Sign in using Snowflake" (not SSO)
+4. Enter the break-glass username and password
+5. When prompted for MFA, enter the OTP
+6. Fix the issue that required break-glass access
+7. Log out immediately after
+8. Mark the OTP as used (it's now invalidated)
+9. Document the incident
+
+**Do NOT use for:**
+- Routine administrative tasks
+- Convenience (to avoid SSO)
+- Sharing access with others

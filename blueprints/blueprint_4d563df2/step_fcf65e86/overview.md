@@ -4,57 +4,52 @@ In this step, you'll configure the **Account-Level Resource Monitor**. This acts
 
 **Account Context:** This step should be executed in your Organization Account (if created) or your primary account.
 
-## Why is this important?
+## **Why is this important?**
 
 The account-level resource monitor provides:
-- **Global protection** for all warehouses in the account
-- **Tiered alerts** at 75%, 90%, and 100% of the limit
-- **Configurable actions** from notification to immediate suspension
-- **Automatic reset** aligned with billing cycles
 
-## External Prerequisites
+* **Global protection** for all warehouses in the account  
+* **Tiered alerts** at 75%, 90%, and 100% of the limit  
+* **Configurable actions** from notification to immediate suspension  
+* **Automatic reset** aligned with billing cycles
 
-- Maximum credit limit approved by your finance team
-- Decision on suspension behavior (immediate vs. after current queries)
-- Understanding of reset frequency alignment with billing
+## **External Prerequisites**
 
-## Key Concepts
+* Maximum credit limit approved by your finance team  
+* Decision on suspension behavior (immediate vs. after current queries)  
+* Understanding of reset frequency alignment with billing
 
-**Credit Quota**
-The maximum number of credits allowed before action is taken.
+## **Key Concepts**
 
-**Tiered Thresholds**
-This configuration uses a **tiered threshold approach** with multiple warning points:
-- **75%**: First notification (early warning)
-- **90%**: Second notification (final warning)
-- **100%**: Your configured action (Suspend or Notify)
-- **110%**: Same action as 100% (catches overruns from running queries)
+**Credit Quota** The maximum number of credits allowed before action is taken.
 
-This tiered approach gives you multiple opportunities to investigate and respond before hitting the hard limit. The 110% threshold uses the same action as 100% because running queries may push usage past 100% before suspension takes effect.
+**Tiered Thresholds** This configuration uses a **tiered threshold approach** with multiple warning points:
 
-**Global vs Local Monitors**
-An account-level monitor is "omnipresent"—if it triggers a Suspend action, it shuts down every warehouse in the account. Warehouse-specific monitors (configured later) only affect the assigned warehouses.
+* **75%**: First notification (early warning)  
+* **90%**: Second notification (final warning)  
+* **100%**: Your configured action (Suspend or Notify)
 
-**Quota Alignment**
-If you plan warehouse-specific monitors (e.g., three departments with 500-credit budgets each), your account-level monitor should be at least 1,500+ credits to accommodate the sum of all local monitors.
+**Note:** Snowflake allows only ONE suspend trigger per resource monitor, so the 100% threshold is your single enforcement point. This tiered approach gives you multiple opportunities to investigate and respond before hitting the hard limit.
 
-**Notification Recipients**
-Account-level alerts go to all users with the `ACCOUNTADMIN` role. Ensure these users are monitoring their email for budget alerts.
+**Global vs Local Monitors** An account-level monitor is "omnipresent"—if it triggers a Suspend action, it shuts down every warehouse in the account. Warehouse-specific monitors (configured later) only affect the assigned warehouses.
+
+**Quota Alignment** If you plan warehouse-specific monitors (e.g., three departments with 500-credit budgets each), your account-level monitor should be at least 1,500+ credits to accommodate the sum of all local monitors.
+
+**Notification Recipients** Account-level alerts go to all users with the ACCOUNTADMIN role. Ensure these users are monitoring their email for budget alerts.
 
 **Trigger Actions**
-- `NOTIFY`: Sends email to ACCOUNTADMIN users (no impact on queries)
-- `SUSPEND`: Blocks new queries, lets running queries finish, then suspends warehouses
-- `SUSPEND_IMMEDIATE`: Terminates all queries immediately and suspends warehouses
 
-**Reset Frequency**
-How often the credit counter resets (Monthly, Weekly, Daily, or Never). Align with billing cycles for easier reconciliation.
+* NOTIFY: Sends email to ACCOUNTADMIN users (no impact on queries)  
+* SUSPEND: Blocks new queries, lets running queries finish, then suspends warehouses  
+* SUSPEND\_IMMEDIATE: Terminates all queries immediately and suspends warehouses
 
-**Working with Budgets**
-Resource monitors complement budgets: Budgets provide predictive alerts based on forecasting, while resource monitors provide real-time enforcement. Use both together for comprehensive cost management.
+**Reset Frequency** How often the credit counter resets (Monthly, Weekly, Daily, or Never). Align with billing cycles for easier reconciliation.
 
-## More Information
+**Working with Budgets** Resource monitors complement budgets: Budgets provide predictive alerts based on forecasting, while resource monitors provide real-time enforcement. Use both together for comprehensive cost management.
 
-* [Working with Resource Monitors](https://docs.snowflake.com/en/user-guide/resource-monitors) — Overview of resource monitor capabilities
+## **More Information**
+
+* [Working with Resource Monitors](https://docs.snowflake.com/en/user-guide/resource-monitors) — Overview of resource monitor capabilities  
 * [CREATE RESOURCE MONITOR](https://docs.snowflake.com/en/sql-reference/sql/create-resource-monitor) — SQL command reference
 
 ### Configuration Questions

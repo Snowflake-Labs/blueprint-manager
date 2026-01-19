@@ -61,11 +61,21 @@ Once created, this account will be accessible at:
 | **Initial Role** | ACCOUNTADMIN |
 | **Password** | System-generated (must change on first login) |
 
+### Local Infrastructure
+
+| Parameter | Value |
+|-----------|-------|
+| **Local Database** | `{{ local_infra_database | upper }}` |
+| **Policies Schema** | `{{ local_policies_schema | upper }}` |
+
+The local infrastructure database (`{{ local_infra_database | upper }}`) stores account-specific objects that cannot exist in the read-only replicated database. The policies schema (`{{ local_policies_schema | upper }}`) will contain authentication policies and other security configurations.
+
 ### Post-Creation Checklist
 
 After the account is created:
 - [ ] Initial administrator logs in and changes password
 - [ ] Enable MFA for the administrator
 - [ ] Add 1-2 additional ACCOUNTADMIN users for redundancy
-- [ ] Consume the infrastructure database share
+- [ ] Consume the infrastructure database replication
+- [ ] Create local infrastructure database and policies schema
 - [ ] Configure security policies (network, authentication)

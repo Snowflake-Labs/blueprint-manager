@@ -1,6 +1,6 @@
-In this step, you'll execute the SQL command to create the new Snowflake account within your organization. This command must be run from the Organization Account using the ORGADMIN role.
+In this step, you'll execute the SQL command to create the new Snowflake account within your organization. This command must be run from the Organization Account using the GLOBALORGADMIN role.
 
-**Account Context:** This step should be executed from your Organization Account using the ORGADMIN role.
+**Account Context:** This step should be executed from your Organization Account using the GLOBALORGADMIN role.
 
 ## **Why is this important?**
 
@@ -13,7 +13,7 @@ This is the moment where the new account is actually created in Snowflake. The C
 ## **Prerequisites**
 
 - Account purpose and parameters configured (previous steps)
-- ORGADMIN role access in the Organization Account
+- GLOBALORGADMIN role access in the Organization Account
 - Network connectivity to Snowflake
 
 ## **Key Concepts**
@@ -205,21 +205,18 @@ A clear description helps team members understand the account's purpose at a gla
 - "Finance domain account for financial reporting and analytics"
 - "HR domain account for people analytics and workforce planning"
 
-#### What name would you like to use for the infrastructure database share? (`infrastructure_share_name`: text)
-**What is this asking?** Choose a name for the SHARE object that will provide access to your infrastructure database.  
-
-  **Why does this matter?** This name will be visible to all accounts that consume the share. Choose something descriptive and aligned with your naming conventions.  
-  **Recommendations:**  
-  * Use lowercase with underscores  
-  * Include a clear identifier like infrastructure or governance  
-  * Keep it concise but descriptive  
-
+#### What name would you like to use for the infrastructure database replication group?   (`infrastructure_replication_group`: text)
+**What is this asking?** Choose a name for the REPLICATION GROUP object that will synchronize your infrastructure database to other accounts.  
+**Why does this matter?** This name will be used when creating secondary replication groups in target accounts. Choose something descriptive and aligned with your naming conventions.  
+**Recommendations:**  
+* Use lowercase with underscores  
+* Include a clear identifier like infrastructure or governance  
+* Keep it concise but descriptive  
 * **Examples:**  
-  * infrastructure\_share  
-  * governance\_share  
-  * platform\_share  
-
-* **Default recommendation:** infrastructure\_share
+* infrastructure_replication_group  
+* governance_replication_group  
+* platform_replication_group  
+* **Default recommendation:** infrastructure_replication_group
 
 #### What is your Snowflake organization name? (`snowflake_org_name`: text)
 Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
@@ -233,6 +230,24 @@ Your Snowflake organization name is the first part of your account URL and conne
 * **To request a custom name:** If you have a system-generated name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge) or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
   **More Information:**  
   * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
+
+#### What do you want to name your organization account? (`org_account_name`: text)
+**Recommended Name:** ORG  
+  Since there can be only one Organization Account per organization, the name should clearly indicate this special purpose. We recommend simply naming it ORG.  
+  
+  **Example URLs with Organization Account name ORG:**  
+  * With Custom Org Name: [https://ACME-ORG.snowflakecomputing.com](https://ACME-ORG.snowflakecomputing.com)  
+    * Org Name \= ACME  
+    * Org Account Name \= Org  
+  * System-generated Org Name: [https://XY12345-ORG.snowflakecomputing.com](https://XY12345-ORG.snowflakecomputing.com)  
+    * Org Name \= XY12345  
+    * Org Account Name \= Org  
+* **Requirements:**  
+  * Snowflake Enterprise Edition or higher  
+  * ORGADMIN role granted in the existing account  
+* **More Information:**  
+  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
+  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
 
 #### What account strategy do you wish to implement? (`account_strategy`: multi-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  

@@ -1,0 +1,62 @@
+-- ============================================================================
+-- INFRASTRUCTURE DATABASE REPLICATION CONFIGURATION
+-- ============================================================================
+-- Replication Group: {{ infrastructure_replication_group | upper }}
+-- Source Database: {{ platform_database_name | upper }}
+-- Strategy: {{ account_strategy }}
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: VERIFY REPLICATION IS ENABLED
+-- ============================================================================
+
+-- List accounts in your organization that can participate in replication
+SHOW REPLICATION ACCOUNTS;
+
+-- ============================================================================
+-- STEP 2: CREATE THE REPLICATION GROUP
+-- ============================================================================
+
+CREATE REPLICATION GROUP IF NOT EXISTS {{ infrastructure_replication_group | upper }}
+  OBJECT_TYPES = DATABASES
+  ALLOWED_DATABASES = {{ platform_database_name | upper }}
+  ALLOWED_ACCOUNTS = {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}
+{%- if replication_schedule == 'Every 10 minutes' %}
+  REPLICATION_SCHEDULE = '10 MINUTE'
+{%- elif replication_schedule == 'Every 30 minutes' %}
+  REPLICATION_SCHEDULE = '30 MINUTE'
+{%- elif replication_schedule == 'Every hour' %}
+  REPLICATION_SCHEDULE = '60 MINUTE'
+{%- endif %}
+  COMMENT = 'Replication group for infrastructure database - governance objects across organization accounts';
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify the replication group was created
+SHOW REPLICATION GROUPS LIKE '{{ infrastructure_replication_group | upper }}';
+
+-- View replication group details
+SELECT * FROM TABLE(INFORMATION_SCHEMA.REPLICATION_GROUP_REFRESH_HISTORY('{{ infrastructure_replication_group | upper }}'));
+
+-- ============================================================================
+-- ADDING NEW ACCOUNTS TO THE REPLICATION GROUP
+-- ============================================================================
+-- When you create a new account in your organization, run this command
+-- to allow it to create a secondary replication group:
+--
+-- ALTER REPLICATION GROUP {{ infrastructure_replication_group | upper }}
+--   SET ALLOWED_ACCOUNTS = {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}, {{ snowflake_org_name | upper }}.<new_account_name>;
+--
+-- Then, in the new account, create the secondary replication group:
+--
+-- CREATE REPLICATION GROUP {{ infrastructure_replication_group | upper }}
+--   AS REPLICA OF {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}.{{ infrastructure_replication_group | upper }};
+--
+-- ALTER REPLICATION GROUP {{ infrastructure_replication_group | upper }} REFRESH;
+--
+-- This will be done in the Account Creation workflow.
+-- ============================================================================

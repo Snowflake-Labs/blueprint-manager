@@ -1,13 +1,13 @@
 In this step, you'll make a foundational decision that shapes your entire Snowflake platform:
 
-1. **Account Strategy Selection** — Choose between Single Account or one of three Multi-Account patterns (Domain-based, Environment-based, or Domain \+ Environment)
+1. **Account Strategy Selection** — Choose between Single Account or one of three Multi-Account patterns (Domain-based, Environment-based, or Domain + Environment)
 
 This decision determines how every subsequent step in this workflow behaves. For example:
 
 * **Single Account:** All databases, warehouses, and data products exist in one account  
 * **Multi-Account:** You'll create additional accounts (in the Account Creation workflow) organized by domain, environment, or both
 
-Your answer here (account\_strategy) is referenced throughout this workflow to customize SQL output and guidance, and is inherited by the Account Creation and Data Product workflows.
+Your answer here (account_strategy) is referenced throughout this workflow to customize SQL output and guidance, and is inherited by the Account Creation and Data Product workflows.
 
 ## **Why is this important?**
 
@@ -16,7 +16,7 @@ Choosing your Snowflake account strategy is a critical foundational decision tha
 1. Single Account  
 2. Multi-Account (Domain-based)  
 3. Multi-Account (Environment-based)  
-4. Multi-Account (Domain \+ Environment)
+4. Multi-Account (Domain + Environment)
 
 ## **Prerequisites**
 
@@ -28,13 +28,13 @@ To select an account strategy, it is essential to understand what a Snowflake **
 
 **Snowflake Object Hierarchy**
 
-**![][image1]**
+![Snowflake Object Hierarchy](../../images/account_strategy_images/snowflake_object_hierarchy.png)
 
-[**Organization**](https://docs.snowflake.com/en/user-guide/organizations) \- An organization is a first-class Snowflake object that links the accounts owned by your business entity. This object exists whether or not you choose to create an organization account. An [**organization account**](https://docs.snowflake.com/en/user-guide/organization-accounts) (optional) is a special type of account that organization administrators use to perform tasks that affect all accounts under the organization (e.g., view org level data and query history, manage users across accounts, etc). 
-* **[Snowflake Accounts](https://docs.snowflake.com/en/user-guide/organizations-connect)** \- customers can create one or more accounts within an Organization. Each has its own distinct URL composed of the organization and account name. Each account is deployed in a single Cloud Provider (AWS, Azure, GCP) region with a specific [Snowflake Edition](https://docs.snowflake.com/en/user-guide/intro-editions).  
-  * **Accounts contain [databases](https://docs.snowflake.com/en/guides-overview-db)** \- each database belongs to a single Snowflake account; databases can be replicated to other accounts but they cannot span multiple accounts  
-    * **Databases contain [schemas](https://docs.snowflake.com/en/sql-reference/commands-database#schema)** \- each schema belongs to a single Snowflake database  
-      * **Schemas contain objects** \- objects include tables, views, file formats, sequences, UDFs, procedures, etc.
+[**Organization**](https://docs.snowflake.com/en/user-guide/organizations) - An organization is a first-class Snowflake object that links the accounts owned by your business entity. This object exists whether or not you choose to create an organization account. An [**organization account**](https://docs.snowflake.com/en/user-guide/organization-accounts) (optional) is a special type of account that organization administrators use to perform tasks that affect all accounts under the organization (e.g., view org level data and query history, manage users across accounts, etc). 
+* **[Snowflake Accounts](https://docs.snowflake.com/en/user-guide/organizations-connect)** - customers can create one or more accounts within an Organization. Each has its own distinct URL composed of the organization and account name. Each account is deployed in a single Cloud Provider (AWS, Azure, GCP) region with a specific [Snowflake Edition](https://docs.snowflake.com/en/user-guide/intro-editions).  
+  * **Accounts contain [databases](https://docs.snowflake.com/en/guides-overview-db)** - each database belongs to a single Snowflake account; databases can be replicated to other accounts but they cannot span multiple accounts  
+    * **Databases contain [schemas](https://docs.snowflake.com/en/sql-reference/commands-database#schema)** - each schema belongs to a single Snowflake database  
+      * **Schemas contain objects** - objects include tables, views, file formats, sequences, UDFs, procedures, etc.
 
 ## **Considerations**
 
@@ -64,7 +64,7 @@ An **Environment** represents a stage in the Software Development Life Cycle (SD
 
 * **Definition:** An SDLC phase used to separate development, testing, and production workloads  
 * **Examples:** SBX (Sandbox), DEV (Development), TST (QA/Testing), PRD (Production)  
-* **Role in Strategy:** Environments isolate changes to prevent non-production activities from impacting production stability. In an environment-based multi-account strategy, distinct accounts are created for each stage (e.g., \<org\>\_DEV, \<org\>\_PROD)
+* **Role in Strategy:** Environments isolate changes to prevent non-production activities from impacting production stability. In an environment-based multi-account strategy, distinct accounts are created for each stage (e.g., <org>_DEV, <org>_PROD)
 
 **By Domain**
 
@@ -80,7 +80,7 @@ NOTE: The options in this guide are common Snowflake account strategies, synthes
 
 Customers should also seek additional guidance if they have highly complex, specialized, or strict regulatory requirements. We recommend checking out [Snowflake Professional Services](https://www.snowflake.com/en/solutions/professional-services/) and/or our [Partner offerings](https://www.snowflake.com/en/why-snowflake/partners/)\!
 
-|  | Single Account | Multi-Account (Environment) | Multi-Account (Domain) | Multi-Account (Domain \+ Env) |
+|  | Single Account | Multi-Account (Environment) | Multi-Account (Domain) | Multi-Account (Domain + Env) |
 | :---- | :---- | :---- | :---- | :---- |
 | **Requirement** | "We need to get started quickly with minimal overhead for a PoC or a small team." | "Production data must be physically separated from developers." | "The Marketing team pays for their own compute and manages their own admins." | "We need strict regulatory compliance AND autonomous business units." |
 | **Ideal For** | Proof-of-concept or Small Orgs | Compliance Software Development | Autonomous business units | Larger enterprises |
@@ -91,7 +91,7 @@ Customers should also seek additional guidance if they have highly complex, spec
 
 ### **Which strategy is right for my organization?**
 
-**1\. Single Account Strategy**  
+**1. Single Account Strategy**  
 **Best For:** Small organizations, centralized data teams, and proof-of-concepts.
 
 **How does this strategy work?**
@@ -124,7 +124,7 @@ In this model, all data environments (Dev, Test, Prod) and business domains exis
 
 ---
 
-**2\. Multi-Account (Environment-based)**  
+**2. Multi-Account (Environment-based)**  
 **Best For:** Organizations requiring strong isolation between Software Development Lifecycle (SDLC) stages (e.g., Dev, Test, Prod).
 
 **How does this strategy work?**
@@ -157,7 +157,7 @@ This strategy separates environments into distinct Snowflake accounts. A common 
 
 ---
 
-**3\. Multi-Account (Domain-based)**  
+**3. Multi-Account (Domain-based)**  
 **Best For:** Large enterprises with autonomous business units (Domains) that operate independently.
 
 **How does this strategy work?**
@@ -189,12 +189,12 @@ In this federated model, distinct business units (e.g., Finance, Marketing, HR) 
 
 ---
 
-**4\. Multi-Account (Domain \+ Environment)**  
+**4. Multi-Account (Domain + Environment)**  
 **Best For:** Large organizations requiring maximum isolation and precise control over both domains and environments.
 
 **How does this strategy work?**
 
-This is the most complex and granular strategy. Each Business Unit has separate accounts for their environments (e.g., Finance\_Prod, Finance\_Dev, Marketing\_Prod).
+This is the most complex and granular strategy. Each Business Unit has separate accounts for their environments (e.g., Finance_Prod, Finance_Dev, Marketing_Prod).
 
 **Pros & Cons**
 

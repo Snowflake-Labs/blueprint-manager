@@ -28,9 +28,7 @@ Think of databases as separate filing cabinets — each zone gets its own cabine
 
 - Target account accessible with SYSADMIN role
 - Zone structure defined in the Configure Zone Structure step
-- Governance tags accessible:
-  - **Single Account**: Tags in `{{ platform_database_name }}.{{ governance_name }}`
-  - **Multi-Account**: Tags in `{{ platform_database_name }}_SHARED.{{ governance_name }}` (consumed share)
+- Governance tags accessible
 
 ## **Key Concepts**
 

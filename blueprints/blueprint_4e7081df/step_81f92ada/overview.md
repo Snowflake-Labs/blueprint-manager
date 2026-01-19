@@ -2,7 +2,7 @@ In this step, you'll create a network policy for this account that references th
 
 **Account Context:** This step should be executed from the newly created account.
 
-## Why is this important?
+## **Why is this important?**
 
 Using the shared network rules provides:
 - **Consistency**: All accounts use the same IP allowlists
@@ -10,21 +10,21 @@ Using the shared network rules provides:
 - **Reduced Configuration Errors**: No need to re-enter IP addresses
 - **Simplified Auditing**: Single source of truth for network access
 
-## External Prerequisites
+## **Prerequisites**
 
-- Infrastructure share consumed (access to shared network rules)
+- Infrastructure database replica created (access to replicated network rules)
 - Network rules created in Platform Foundation (Configure Network Rules and Policies step)
 
-## Key Concepts
+## **Key Concepts**
 
-**Shared Network Rules**
-Network rules are schema-level objects that were created in your Organization Account's Infrastructure database. When you consumed the infrastructure share, these rules became accessible in this account.
+**Replicated Network Rules**
+Network rules are schema-level objects that were created in your Organization Account's Infrastructure database. When you created the infrastructure database replica, these rules became local objects in this account — and unlike shared rules, replicated rules can be referenced in local network policies.
 
 **Account-Level Network Policy**
 While network rules can be shared, network policies are account-level objects. You'll create a policy in this account that references the shared rules.
 
-**Policy References Shared Rules**
-The network policy in this account will reference the fully-qualified names of the shared network rules (e.g., `INFRASTRUCTURE_SHARED.GOVERNANCE.CORPORATE_VPN`).
+**Policy References Replicated Rules**
+The network policy in this account will reference the fully-qualified names of the replicated network rules (e.g., `{{ platform_database_name | upper }}.GOVERNANCE.CORPORATE_VPN`).
 
 **More Information:**
 * [Network Rules](https://docs.snowflake.com/en/user-guide/network-rules) — Schema-level network rules
@@ -56,26 +56,22 @@ Based on your Platform Foundation settings, follow this pattern:
 **Best Practice:**
 Use the suggested name from the previous step unless you have a specific reason to customize it. Consistent naming makes governance and cost allocation easier.
 
-#### What name should be used for the shared infrastructure database in this account? (`shared_database_name`: text)
-**What is this asking?**
-Choose a name for the database that will be created from the infrastructure share. This is a local reference to the shared governance objects.
-
-**Why does this matter?**
-This database name will be used in SQL queries when referencing governance objects like tags and cost reporting views.
-
-**Recommendations:**
-- Use a name that indicates it's a shared resource
-- Keep it consistent across all accounts
-- Use lowercase with underscores
-
-**Examples:**
-- `infrastructure_shared`
-- `governance_shared`
-- `platform_shared`
-
-**Default recommendation:** `{{ platform_database_name | lower }}_shared`
-
-**Note:** This creates a read-only database. You cannot create objects in this database.
+#### What do you want to name the platform database? (`platform_database_name`: text)
+**What is the Platform/Infrastructure Database?**  
+  The Infrastructure Database is a centralized "hub" database that houses platform-wide objects including tags, network rules, governance policies, and shared procedures. It is owned by the central platform team and shared across all accounts in multi-account deployments.  
+  **Recommended Naming Approach:**  
+  Use a name that clearly identifies this as a platform-owned, infrastructure-focused database. The format should be: \<domain\>\_\<dataproduct\>  
+  * **Domain:** Use plat (short for "platform") or your platform team's acronym (e.g., cdp, snow, data)  
+  * **Data Product:** Use infra or another term indicating infrastructure purpose  
+* **Example:** PLAT\_INFRA — clearly indicates Platform team ownership and Infrastructure purpose  
+  **Alternative Examples:**  
+  * CDP\_INFRA — Cloud Data Platform Infrastructure  
+  * SNOW\_ADMIN — Snowflake Administration  
+  * DATA\_PLATFORM — Data Platform database  
+* **Important:** Choose carefully\! This name will eventually be referenced by dozens to hundreds of objects, policies, and procedures. Changing it later can be complex and risky.  
+  **More Information:**  
+  * [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)  
+  * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)
 
 #### What do you want to name the governance schema? (`governance_name`: text)
 **What is the Governance Schema?**  

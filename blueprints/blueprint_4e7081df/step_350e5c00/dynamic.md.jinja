@@ -1,0 +1,34 @@
+## SAML/SSO Configuration
+
+### Integration Settings
+
+| Setting | Value |
+|---------|-------|
+| **Integration Name** | `{{ account_saml_integration_name | upper }}` |
+| **Identity Provider** | {{ identity_provider }} |
+
+### IdP Configuration
+
+| Setting | Value |
+|---------|-------|
+| **SSO URL** | `{{ account_saml_sso_url }}` |
+| **Issuer/Entity ID** | `{{ account_saml_issuer }}` |
+| **Certificate** | (Provided - see SQL output) |
+
+### Snowflake Endpoints
+
+Your IdP needs these Snowflake URLs:
+
+| Endpoint | URL |
+|----------|-----|
+| **ACS URL** | `https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com/fed/login` |
+| **Entity ID** | `https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com` |
+| **Login URL** | `https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com` |
+
+### IdP Configuration Steps
+
+1. In your IdP, create or configure the Snowflake application for this account
+2. Set the ACS URL to: `https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com/fed/login`
+3. Set the Entity ID/Audience to: `https://{{ snowflake_org_name | lower }}-{{ new_account_name | lower }}.snowflakecomputing.com`
+4. Ensure the NameID format is set to `emailAddress`
+5. Assign users in your IdP to access this Snowflake application

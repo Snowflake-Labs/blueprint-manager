@@ -20,6 +20,8 @@ The Organization Account will be created with a single initial [ACCOUNTADMIN](ht
 * If you have Snowflake Standard, select or upgrade to [Snowflake Enterprise Edition](https://docs.snowflake.com/en/user-guide/intro-editions) or higher (Organization Accounts are not available with Standard Edition)  
 * [ORGADMIN](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system) role access to create the account
 
+**Note:** The ORGADMIN role is used in this step because you're executing from your initial (non-Organization) account. Once the Organization Account is created, future account management should use the GLOBALORGADMIN role from within the Organization Account. Snowflake is phasing out ORGADMIN for multi-account organizations.
+
 ## **Key Concepts**
 
 * It is important to note that the Organization Account and Organization Account Name are distinct from the Organization and Organization Name confirmed in prior steps:  

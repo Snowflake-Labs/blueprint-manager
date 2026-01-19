@@ -1,0 +1,133 @@
+-- ============================================================================
+-- CREATE INFRASTRUCTURE DATABASE REPLICA
+-- ============================================================================
+-- Replication Group: {{ infrastructure_replication_group | upper }}
+-- Source Account: {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}
+-- Database: {{ platform_database_name | upper }}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: VERIFY REPLICATION GROUP IS AVAILABLE
+-- ============================================================================
+
+-- List replication groups this account can access
+SHOW REPLICATION GROUPS;
+
+-- You should see the infrastructure replication group from the Organization Account
+-- Look for: {{ infrastructure_replication_group | upper }} from {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}
+
+-- ============================================================================
+-- STEP 2: CREATE SECONDARY REPLICATION GROUP
+-- ============================================================================
+
+-- Create a secondary replication group as a replica of the primary
+CREATE REPLICATION GROUP IF NOT EXISTS {{ infrastructure_replication_group | upper }}
+  AS REPLICA OF {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}.{{ infrastructure_replication_group | upper }};
+
+-- ============================================================================
+-- STEP 3: INITIAL REFRESH
+-- ============================================================================
+
+-- Refresh to pull the database from the source account
+-- This creates the replica database locally
+ALTER REPLICATION GROUP {{ infrastructure_replication_group | upper }} REFRESH;
+
+-- Note: The refresh runs asynchronously. Check status below.
+
+-- ============================================================================
+-- STEP 4: VERIFY REFRESH STATUS
+-- ============================================================================
+
+-- Check replication group status
+SHOW REPLICATION GROUPS LIKE '{{ infrastructure_replication_group | upper }}';
+
+-- View refresh history (may take a moment for first refresh to complete)
+SELECT *
+FROM TABLE(INFORMATION_SCHEMA.REPLICATION_GROUP_REFRESH_HISTORY('{{ infrastructure_replication_group | upper }}'))
+ORDER BY PHASE_NAME, START_TIME DESC
+LIMIT 10;
+
+-- ============================================================================
+-- STEP 5: VERIFY REPLICA DATABASE
+-- ============================================================================
+
+-- Show the replica database was created
+SHOW DATABASES LIKE '{{ platform_database_name | upper }}';
+
+-- Show schemas in the replica database
+SHOW SCHEMAS IN DATABASE {{ platform_database_name | upper }};
+
+-- Show tags available in the governance schema
+SHOW TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
+
+-- Show views available (if any were created in Cost Management)
+SHOW VIEWS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
+
+-- Show network rules (if any were created in Security & Identity)
+SHOW NETWORK RULES IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
+
+-- ============================================================================
+-- STEP 6: TEST TAG APPLICATION (THE KEY BENEFIT OF REPLICATION!)
+-- ============================================================================
+
+-- Unlike shared tags, replicated tags CAN be applied to local objects
+-- Let's verify this works by describing a tag and checking its properties
+
+DESCRIBE TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.DOMAIN;
+DESCRIBE TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT;
+
+-- You can now use these tags on any local object, for example:
+-- ALTER WAREHOUSE <warehouse_name> 
+--   SET TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = '<domain_value>';
+
+-- ============================================================================
+-- INFRASTRUCTURE REPLICA CREATED SUCCESSFULLY
+-- ============================================================================
+
+/*
+Infrastructure Replica Created!
+===============================
+
+Replication Group: {{ infrastructure_replication_group | upper }}
+Source Account:    {{ snowflake_org_name | upper }}.{{ org_account_name | upper }}
+Replica Database:  {{ platform_database_name | upper }}
+
+This account now has LOCAL copies of centralized governance objects:
+- FinOps tags (DOMAIN, ENVIRONMENT, DATAPRODUCT, etc.)
+- Network rules (if configured)
+- Cost reporting views (if configured)
+
+KEY BENEFIT: You can now APPLY these tags to local objects!
+==========================================================
+
+{%- if account_strategy == 'Multi-Account (Domain-based)' %}
+-- Apply domain tag to a warehouse
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = '{{ account_domain }}';
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+-- Apply environment tag to a warehouse
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ account_environment }}';
+{%- else %}
+-- Apply domain and environment tags to a warehouse
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.DOMAIN = '{{ account_domain }}';
+ALTER WAREHOUSE my_warehouse 
+  SET TAG {{ platform_database_name | upper }}.{{ governance_name | upper }}.ENVIRONMENT = '{{ account_environment }}';
+{%- endif %}
+
+Automatic Sync
+==============
+Changes to governance objects in the Organization Account will automatically
+replicate to this account based on the configured schedule.
+
+Account Provisioning Complete!
+==============================
+Infrastructure replica created successfully. This account is now integrated
+with your organization's governance framework.
+*/

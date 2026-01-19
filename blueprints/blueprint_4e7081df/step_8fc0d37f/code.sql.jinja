@@ -1,0 +1,110 @@
+-- ============================================================================
+-- CREATE BREAK-GLASS EMERGENCY ACCESS
+-- ============================================================================
+-- Account: {{ new_account_name | upper }}
+-- ============================================================================
+-- EXECUTE FROM: New Account ({{ new_account_name | upper }})
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- ENSURE LOCAL INFRASTRUCTURE DATABASE EXISTS
+-- ============================================================================
+-- Authentication policies are schema-level objects and require a database context.
+-- We create a local infrastructure database for account-specific objects because
+-- the replicated {{ platform_database_name | upper }} database is read-only.
+-- ============================================================================
+
+CREATE DATABASE IF NOT EXISTS {{ local_infra_database | upper }}
+  COMMENT = 'Local infrastructure database for account-specific objects';
+CREATE SCHEMA IF NOT EXISTS {{ local_infra_database | upper }}.{{ local_policies_schema | upper }}
+  WITH MANAGED ACCESS
+  COMMENT = 'Schema for authentication and security policies';
+USE DATABASE {{ local_infra_database | upper }};
+USE SCHEMA {{ local_policies_schema | upper }};
+
+{%- for account in account_breakglass_accounts %}
+
+-- ============================================================================
+-- BREAK-GLASS ACCOUNT: {{ account.username | upper }}
+-- ============================================================================
+
+-- Step 1: Create network rule for this break-glass account
+CREATE OR REPLACE NETWORK RULE {{ account.username | upper }}_NETWORK_RULE
+  MODE = INGRESS
+  TYPE = IPV4
+  VALUE_LIST = (
+{%- for ip in account.allowed_ips.split(',') %}
+    '{{ ip | trim }}'{% if not loop.last %},{% endif %}
+
+{%- endfor %}
+  )
+  COMMENT = 'Allowed IPs for break-glass account {{ account.username }}';
+
+-- Step 2: Create network policy for this break-glass account
+CREATE OR REPLACE NETWORK POLICY {{ account.username | upper }}_NETWORK_POLICY
+  ALLOWED_NETWORK_RULE_LIST = ({{ account.username | upper }}_NETWORK_RULE)
+  COMMENT = 'Network policy for break-glass account {{ account.username }}';
+
+-- Step 3: Create the break-glass user
+CREATE USER IF NOT EXISTS {{ account.username | upper }}
+  LOGIN_NAME = '{{ account.username }}'
+  EMAIL = '{{ account.email }}'
+  PASSWORD = 'BreakGlass{{ loop.index }}ChangeMe!'
+  MUST_CHANGE_PASSWORD = TRUE
+  DISABLED = FALSE
+  COMMENT = 'Break-glass emergency access account - RESTRICTED USE ONLY';
+
+-- Step 4: Assign ACCOUNTADMIN role
+GRANT ROLE ACCOUNTADMIN TO USER {{ account.username | upper }};
+
+-- Step 5: Apply network policy to this user
+ALTER USER {{ account.username | upper }} SET NETWORK_POLICY = '{{ account.username | upper }}_NETWORK_POLICY';
+
+{%- endfor %}
+
+-- ============================================================================
+-- CREATE AUTHENTICATION POLICY FOR BREAK-GLASS (Password + OTP)
+-- ============================================================================
+
+-- Create an auth policy that requires password + OTP for MFA
+-- OTPs can be pre-generated and stored securely for emergency use
+CREATE OR REPLACE AUTHENTICATION POLICY BREAKGLASS_AUTH_POLICY
+  AUTHENTICATION_METHODS = (PASSWORD)
+  MFA_ENROLLMENT = 'REQUIRED'
+  MFA_POLICY = (ALLOWED_METHODS = ('OTP'))
+  CLIENT_TYPES = (SNOWFLAKE_UI)
+  SECURITY_INTEGRATIONS = ()
+  COMMENT = 'Authentication policy for break-glass accounts - password + OTP, UI only';
+
+-- Apply the auth policy to break-glass users
+{%- for account in account_breakglass_accounts %}
+ALTER USER {{ account.username | upper }} SET AUTHENTICATION_POLICY = BREAKGLASS_AUTH_POLICY;
+{%- endfor %}
+
+-- ============================================================================
+-- GENERATE ONE-TIME PASSCODES (OTPs) FOR BREAK-GLASS ACCESS
+-- ============================================================================
+-- ⚠️  IMPORTANT: The output of these commands contains the OTPs!
+--    Capture and store them securely - they cannot be retrieved later.
+--    See the "Capturing OTPs" section above for details.
+-- ============================================================================
+
+{%- for account in account_breakglass_accounts %}
+-- Generate 10 OTPs for {{ account.username | upper }}
+-- ALTER USER {{ account.username | upper }} ADD MFA METHOD OTP COUNT = 10;
+{%- endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify break-glass users were created
+{%- for account in account_breakglass_accounts %}
+SHOW USERS LIKE '{{ account.username | upper }}';
+{%- endfor %}
+
+-- Verify authentication policy
+SHOW AUTHENTICATION POLICIES LIKE 'BREAKGLASS_AUTH_POLICY';
