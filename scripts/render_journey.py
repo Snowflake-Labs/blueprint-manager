@@ -514,18 +514,22 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
     return "\n".join(rendered_sections), rendered_count, skipped_count
 
 
-def validate_project_name(project_name):
+def validate_name(name, name_type="name"):
     """
-    Validate that project name contains only safe characters.
+    Validate that a name contains only safe characters.
     Prevents path traversal attacks by rejecting special characters.
+    
+    Args:
+        name: The name to validate
+        name_type: Description of what's being validated (e.g., "project name", "blueprint ID")
     
     Allowed: alphanumeric characters, underscores, and hyphens.
     """
     import re
-    if not re.match(r'^[a-zA-Z0-9_-]+$', project_name):
+    if not re.match(r'^[a-zA-Z0-9_-]+$', name):
         sys.stderr.write(
-            f"Error: Invalid project name '{project_name}'. "
-            "Project names can only contain alphanumeric characters, underscores, and hyphens.\n"
+            f"Error: Invalid {name_type} '{name}'. "
+            f"{name_type.capitalize()}s can only contain alphanumeric characters, underscores, and hyphens.\n"
         )
         sys.exit(1)
 
@@ -543,8 +547,8 @@ def setup_project_directories(base_dir, project_name, blueprint_id):
             │   └── sql/
             └── documentation/
     """
-    validate_project_name(project_name)
-    validate_project_name(blueprint_id)
+    validate_name(project_name, "project name")
+    validate_name(blueprint_id, "blueprint ID")
     project_dir = base_dir / "projects" / project_name
     
     (project_dir / "answers" / blueprint_id).mkdir(parents=True, exist_ok=True)
@@ -568,26 +572,23 @@ def main():
     script_dir = Path(__file__).parent
     base_dir = script_dir.parent
 
-    if args.project:
-        project_dir = setup_project_directories(base_dir, args.project, args.blueprint)
-        print(f"Using project: {args.project}")
-        print(f"Project directory: {project_dir}")
-        
-        if args.output_dir != "output/iac":
-            sys.stderr.write(
-                f"Warning: --output-dir is ignored when using project structure. "
-                f"Output will be written to: {project_dir / 'output' / 'iac'}\n"
-            )
-        if args.guidance_dir != "output/documentation":
-            sys.stderr.write(
-                f"Warning: --guidance-dir is ignored when using project structure. "
-                f"Documentation will be written to: {project_dir / 'output' / 'documentation'}\n"
-            )
-        output_base_dir = project_dir / "output" / "iac"
-        guidance_base_dir = project_dir / "output" / "documentation"
-    else:
-        output_base_dir = base_dir / args.output_dir
-        guidance_base_dir = base_dir / args.guidance_dir
+    project_name = args.project if args.project else "default-project"
+    project_dir = setup_project_directories(base_dir, project_name, args.blueprint)
+    print(f"Using project: {project_name}")
+    print(f"Project directory: {project_dir}")
+    
+    if args.output_dir != "output/iac":
+        sys.stderr.write(
+            f"Warning: --output-dir is ignored when using project structure. "
+            f"Output will be written to: {project_dir / 'output' / 'iac'}\n"
+        )
+    if args.guidance_dir != "output/documentation":
+        sys.stderr.write(
+            f"Warning: --guidance-dir is ignored when using project structure. "
+            f"Documentation will be written to: {project_dir / 'output' / 'documentation'}\n"
+        )
+    output_base_dir = project_dir / "output" / "iac"
+    guidance_base_dir = project_dir / "output" / "documentation"
 
     blueprints_dir = base_dir / "blueprints"
 
