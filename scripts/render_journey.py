@@ -546,7 +546,7 @@ def main():
     output_dir = base_dir / args.output_dir / args.lang
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    date_str = datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now().strftime("%Y%m%d%H%M%S")
     extension = get_language_extension(args.lang)
     output_file = output_dir / f"{args.blueprint}_{date_str}.{extension}"
 
