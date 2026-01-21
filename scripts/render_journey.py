@@ -72,6 +72,10 @@ def parse_args():
         action="store_true",
         help="Skip rendering guidance documents",
     )
+    parser.add_argument(
+        "--project",
+        help="Project/workspace name to organize artifacts by customer or use case",
+    )
     return parser.parse_args()
 
 
@@ -510,6 +514,28 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
     return "\n".join(rendered_sections), rendered_count, skipped_count
 
 
+def setup_project_directories(base_dir, project_name, blueprint_id):
+    """
+    Create project directory structure when --project is specified.
+    
+    Creates:
+        projects/<project_name>/
+        ├── answers/
+        │   └── <blueprint_id>/
+        └── output/
+            ├── iac/
+            │   └── sql/
+            └── documentation/
+    """
+    project_dir = base_dir / "projects" / project_name
+    
+    (project_dir / "answers" / blueprint_id).mkdir(parents=True, exist_ok=True)
+    (project_dir / "output" / "iac" / "sql").mkdir(parents=True, exist_ok=True)
+    (project_dir / "output" / "documentation").mkdir(parents=True, exist_ok=True)
+    
+    return project_dir
+
+
 def main():
     """Main entry point."""
     args = parse_args()
@@ -523,6 +549,12 @@ def main():
     # Determine base directory (assume script is in scripts/)
     script_dir = Path(__file__).parent
     base_dir = script_dir.parent
+
+    project_dir = None
+    if args.project:
+        project_dir = setup_project_directories(base_dir, args.project, args.blueprint)
+        print(f"Using project: {args.project}")
+        print(f"Project directory: {project_dir}")
 
     blueprints_dir = base_dir / "blueprints"
 
@@ -543,7 +575,10 @@ def main():
     )
 
     # Generate IaC output filename
-    output_dir = base_dir / args.output_dir / args.lang
+    if project_dir:
+        output_dir = project_dir / "output" / "iac" / args.lang
+    else:
+        output_dir = base_dir / args.output_dir / args.lang
     output_dir.mkdir(parents=True, exist_ok=True)
 
     date_str = datetime.now().strftime("%Y%m%d")
@@ -566,7 +601,10 @@ def main():
         )
 
         # Generate guidance output filename
-        guidance_dir = base_dir / args.guidance_dir
+        if project_dir:
+            guidance_dir = project_dir / "output" / "documentation"
+        else:
+            guidance_dir = base_dir / args.guidance_dir
         guidance_dir.mkdir(parents=True, exist_ok=True)
 
         guidance_file = guidance_dir / f"{args.blueprint}_{date_str}.md"
