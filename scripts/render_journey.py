@@ -568,21 +568,26 @@ def main():
     script_dir = Path(__file__).parent
     base_dir = script_dir.parent
 
-    project_name = args.project if args.project else "default-project"
-    project_dir = setup_project_directories(base_dir, project_name, args.blueprint)
-    print(f"Using project: {project_name}")
-    print(f"Project directory: {project_dir}")
-    
-    if args.output_dir != "output/iac":
-        sys.stderr.write(
-            f"Warning: --output-dir is ignored when using project structure. "
-            f"Output will be written to: {project_dir / 'output' / 'iac'}\n"
-        )
-    if args.guidance_dir != "output/documentation":
-        sys.stderr.write(
-            f"Warning: --guidance-dir is ignored when using project structure. "
-            f"Documentation will be written to: {project_dir / 'output' / 'documentation'}\n"
-        )
+    if args.project:
+        project_dir = setup_project_directories(base_dir, args.project, args.blueprint)
+        print(f"Using project: {args.project}")
+        print(f"Project directory: {project_dir}")
+        
+        if args.output_dir != "output/iac":
+            sys.stderr.write(
+                f"Warning: --output-dir is ignored when using project structure. "
+                f"Output will be written to: {project_dir / 'output' / 'iac'}\n"
+            )
+        if args.guidance_dir != "output/documentation":
+            sys.stderr.write(
+                f"Warning: --guidance-dir is ignored when using project structure. "
+                f"Documentation will be written to: {project_dir / 'output' / 'documentation'}\n"
+            )
+        output_base_dir = project_dir / "output" / "iac"
+        guidance_base_dir = project_dir / "output" / "documentation"
+    else:
+        output_base_dir = base_dir / args.output_dir
+        guidance_base_dir = base_dir / args.guidance_dir
 
     blueprints_dir = base_dir / "blueprints"
 
@@ -603,7 +608,7 @@ def main():
     )
 
     # Generate IaC output filename
-    output_dir = project_dir / "output" / "iac" / args.lang
+    output_dir = output_base_dir / args.lang
     output_dir.mkdir(parents=True, exist_ok=True)
 
     date_str = datetime.now().strftime("%Y%m%d")
@@ -626,7 +631,7 @@ def main():
         )
 
         # Generate guidance output filename
-        guidance_dir = project_dir / "output" / "documentation"
+        guidance_dir = guidance_base_dir
         guidance_dir.mkdir(parents=True, exist_ok=True)
 
         guidance_file = guidance_dir / f"{args.blueprint}_{date_str}.md"
