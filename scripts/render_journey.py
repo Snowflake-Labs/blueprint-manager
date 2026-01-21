@@ -567,11 +567,10 @@ def main():
     script_dir = Path(__file__).parent
     base_dir = script_dir.parent
 
-    project_dir = None
-    if args.project:
-        project_dir = setup_project_directories(base_dir, args.project, args.blueprint)
-        print(f"Using project: {args.project}")
-        print(f"Project directory: {project_dir}")
+    project_name = args.project if args.project else "default-project"
+    project_dir = setup_project_directories(base_dir, project_name, args.blueprint)
+    print(f"Using project: {project_name}")
+    print(f"Project directory: {project_dir}")
 
     blueprints_dir = base_dir / "blueprints"
 
@@ -592,10 +591,7 @@ def main():
     )
 
     # Generate IaC output filename
-    if project_dir:
-        output_dir = project_dir / "output" / "iac" / args.lang
-    else:
-        output_dir = base_dir / args.output_dir / args.lang
+    output_dir = project_dir / "output" / "iac" / args.lang
     output_dir.mkdir(parents=True, exist_ok=True)
 
     date_str = datetime.now().strftime("%Y%m%d")
@@ -618,10 +614,7 @@ def main():
         )
 
         # Generate guidance output filename
-        if project_dir:
-            guidance_dir = project_dir / "output" / "documentation"
-        else:
-            guidance_dir = base_dir / args.guidance_dir
+        guidance_dir = project_dir / "output" / "documentation"
         guidance_dir.mkdir(parents=True, exist_ok=True)
 
         guidance_file = guidance_dir / f"{args.blueprint}_{date_str}.md"
