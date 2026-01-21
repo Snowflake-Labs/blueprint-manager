@@ -544,6 +544,7 @@ def setup_project_directories(base_dir, project_name, blueprint_id):
             └── documentation/
     """
     validate_project_name(project_name)
+    validate_project_name(blueprint_id)
     project_dir = base_dir / "projects" / project_name
     
     (project_dir / "answers" / blueprint_id).mkdir(parents=True, exist_ok=True)
@@ -571,6 +572,17 @@ def main():
     project_dir = setup_project_directories(base_dir, project_name, args.blueprint)
     print(f"Using project: {project_name}")
     print(f"Project directory: {project_dir}")
+    
+    if args.output_dir != "output/iac":
+        sys.stderr.write(
+            f"Warning: --output-dir is ignored when using project structure. "
+            f"Output will be written to: {project_dir / 'output' / 'iac'}\n"
+        )
+    if args.guidance_dir != "output/documentation":
+        sys.stderr.write(
+            f"Warning: --guidance-dir is ignored when using project structure. "
+            f"Documentation will be written to: {project_dir / 'output' / 'documentation'}\n"
+        )
 
     blueprints_dir = base_dir / "blueprints"
 
