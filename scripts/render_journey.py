@@ -514,6 +514,22 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
     return "\n".join(rendered_sections), rendered_count, skipped_count
 
 
+def validate_project_name(project_name):
+    """
+    Validate that project name contains only safe characters.
+    Prevents path traversal attacks by rejecting special characters.
+    
+    Allowed: alphanumeric characters, underscores, and hyphens.
+    """
+    import re
+    if not re.match(r'^[a-zA-Z0-9_-]+$', project_name):
+        sys.stderr.write(
+            f"Error: Invalid project name '{project_name}'. "
+            "Project names can only contain alphanumeric characters, underscores, and hyphens.\n"
+        )
+        sys.exit(1)
+
+
 def setup_project_directories(base_dir, project_name, blueprint_id):
     """
     Create project directory structure when --project is specified.
@@ -527,6 +543,7 @@ def setup_project_directories(base_dir, project_name, blueprint_id):
             │   └── sql/
             └── documentation/
     """
+    validate_project_name(project_name)
     project_dir = base_dir / "projects" / project_name
     
     (project_dir / "answers" / blueprint_id).mkdir(parents=True, exist_ok=True)
