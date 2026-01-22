@@ -536,7 +536,10 @@ def validate_name(name, name_type="name"):
 
 def setup_project_directories(base_dir, project_name, blueprint_id):
     """
-    Create project directory structure when --project is specified.
+    Ensure project directory structure exists for the given project name and blueprint.
+    
+    This function is always called to organize artifacts by project. When --project
+    is not specified, the default project name 'default-project' is used.
     
     Creates:
         projects/<project_name>/
@@ -546,6 +549,14 @@ def setup_project_directories(base_dir, project_name, blueprint_id):
             ├── iac/
             │   └── sql/
             └── documentation/
+    
+    Args:
+        base_dir: Base directory of the repository
+        project_name: Name of the project (user-specified or 'default-project')
+        blueprint_id: ID of the blueprint being rendered
+    
+    Returns:
+        Path to the project directory
     """
     validate_name(project_name, "project name")
     validate_name(blueprint_id, "blueprint ID")
