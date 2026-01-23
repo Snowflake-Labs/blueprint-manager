@@ -72,6 +72,10 @@ def parse_args():
         action="store_true",
         help="Skip rendering guidance documents",
     )
+    parser.add_argument(
+        "--project",
+        help="Project/workspace name to organize artifacts by customer or use case",
+    )
     return parser.parse_args()
 
 
@@ -510,6 +514,61 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
     return "\n".join(rendered_sections), rendered_count, skipped_count
 
 
+def validate_name(name, name_type="name"):
+    """
+    Validate that a name contains only safe characters.
+    Prevents path traversal attacks by rejecting special characters.
+    
+    Args:
+        name: The name to validate
+        name_type: Description of what's being validated (e.g., "project name", "blueprint ID")
+    
+    Allowed: alphanumeric characters, underscores, and hyphens.
+    """
+    import re
+    if not re.match(r'^[a-zA-Z0-9_-]+$', name):
+        sys.stderr.write(
+            f"Error: Invalid {name_type} '{name}'. "
+            f"{name_type.capitalize()}s can only contain alphanumeric characters, underscores, and hyphens.\n"
+        )
+        sys.exit(1)
+
+
+def setup_project_directories(base_dir, project_name, blueprint_id):
+    """
+    Ensure project directory structure exists for the given project name and blueprint.
+    
+    This function is always called to organize artifacts by project. When --project
+    is not specified, the default project name 'default-project' is used.
+    
+    Creates:
+        projects/<project_name>/
+        ├── answers/
+        │   └── <blueprint_id>/
+        └── output/
+            ├── iac/
+            │   └── sql/
+            └── documentation/
+    
+    Args:
+        base_dir: Base directory of the repository
+        project_name: Name of the project (user-specified or 'default-project')
+        blueprint_id: ID of the blueprint being rendered
+    
+    Returns:
+        Path to the project directory
+    """
+    validate_name(project_name, "project name")
+    validate_name(blueprint_id, "blueprint ID")
+    project_dir = base_dir / "projects" / project_name
+    
+    (project_dir / "answers" / blueprint_id).mkdir(parents=True, exist_ok=True)
+    (project_dir / "output" / "iac" / "sql").mkdir(parents=True, exist_ok=True)
+    (project_dir / "output" / "documentation").mkdir(parents=True, exist_ok=True)
+    
+    return project_dir
+
+
 def main():
     """Main entry point."""
     args = parse_args()
@@ -523,6 +582,24 @@ def main():
     # Determine base directory (assume script is in scripts/)
     script_dir = Path(__file__).parent
     base_dir = script_dir.parent
+
+    project_name = args.project if args.project else "default-project"
+    project_dir = setup_project_directories(base_dir, project_name, args.blueprint)
+    print(f"Using project: {project_name}")
+    print(f"Project directory: {project_dir}")
+    
+    if args.output_dir != "output/iac":
+        sys.stderr.write(
+            f"Warning: --output-dir is ignored when using project structure. "
+            f"Output will be written to: {project_dir / 'output' / 'iac'}\n"
+        )
+    if args.guidance_dir != "output/documentation":
+        sys.stderr.write(
+            f"Warning: --guidance-dir is ignored when using project structure. "
+            f"Documentation will be written to: {project_dir / 'output' / 'documentation'}\n"
+        )
+    output_base_dir = project_dir / "output" / "iac"
+    guidance_base_dir = project_dir / "output" / "documentation"
 
     blueprints_dir = base_dir / "blueprints"
 
@@ -543,7 +620,7 @@ def main():
     )
 
     # Generate IaC output filename
-    output_dir = base_dir / args.output_dir / args.lang
+    output_dir = output_base_dir / args.lang
     output_dir.mkdir(parents=True, exist_ok=True)
 
     date_str = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -566,7 +643,7 @@ def main():
         )
 
         # Generate guidance output filename
-        guidance_dir = base_dir / args.guidance_dir
+        guidance_dir = guidance_base_dir
         guidance_dir.mkdir(parents=True, exist_ok=True)
 
         guidance_file = guidance_dir / f"{args.blueprint}_{date_str}.md"

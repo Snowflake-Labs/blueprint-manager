@@ -21,7 +21,7 @@ Invoke this skill when users:
 1. **Repository structure exists:**
    - `blueprints/` directory with blueprint definitions
    - `definitions/questions.yaml` with question definitions
-   - `answers/` directory for storing answer files
+   - `projects/` directory for organizing work by customer/use case
 
 2. **Blueprint components:**
    - Each blueprint has a `meta.yaml` with blueprint metadata
@@ -30,7 +30,79 @@ Invoke this skill when users:
 
 ## Workflow
 
-### Step 1: Discover Available Blueprints
+### Step 1: Select or Create Project
+
+**Goal:** Identify which project the user wants to work with, or create a new one
+
+**Actions:**
+
+1. **List existing projects** in the repository:
+   ```bash
+   ls -la projects/
+   ```
+
+2. **Present project options to user:**
+   ```
+   Projects organize your blueprint configurations by customer, account, or use case.
+   
+   Existing projects:
+   
+   1. sample-project (example project with sample answers)
+   [... any other existing projects ...]
+   
+   Would you like to:
+   
+   1. Work with an existing project
+   2. Create a new project
+   
+   Enter your choice (1-2):
+   ```
+
+**⚠️ MANDATORY STOPPING POINT**: Wait for user to select or create a project.
+
+**If user selects existing project:**
+- Note the project name for use in subsequent steps
+- Proceed to Step 2 (Discover Available Blueprints)
+
+**If user wants to create a new project:**
+1. **Prompt for project name:**
+   ```
+   Enter a name for your new project.
+   
+   Guidelines:
+   - Use only alphanumeric characters, underscores, and hyphens
+   - Example: customer_acme, prod-deployment, pilot-2024
+   
+   Project name:
+   ```
+
+2. **⚠️ MANDATORY STOPPING POINT**: Wait for user to provide project name.
+
+3. **Validate project name** (alphanumeric, underscores, hyphens only)
+
+4. **Create project directory structure:**
+   ```bash
+   mkdir -p projects/<project_name>/answers
+   mkdir -p projects/<project_name>/output/iac/sql
+   mkdir -p projects/<project_name>/output/documentation
+   ```
+
+5. **Confirm creation:**
+   ```
+   ✓ Created project: <project_name>
+   
+   Project directory: projects/<project_name>/
+   ├── answers/           (for answer files)
+   └── output/
+       ├── iac/sql/       (for generated SQL)
+       └── documentation/ (for generated docs)
+   ```
+
+6. **Proceed to Step 2** (Discover Available Blueprints)
+
+**Output:** Selected or created project name
+
+### Step 2: Discover Available Blueprints
 
 **Goal:** Identify which blueprints are available and which one the user wants to work with
 
@@ -63,15 +135,15 @@ Invoke this skill when users:
 
 **Output:** Selected blueprint ID and metadata
 
-### Step 2: Initialize or Select Answer File
+### Step 3: Initialize or Select Answer File
 
 **Goal:** Let user choose to create a new answer file or work with an existing one
 
 **Actions:**
 
-1. **Check for existing answer files:**
+1. **Check for existing answer files in the project:**
    ```bash
-   find answers/<blueprint_id> -name "*.yaml" -type f 2>/dev/null | sort -r
+   find projects/<project_name>/answers/<blueprint_id> -name "*.yaml" -type f 2>/dev/null | sort -r
    ```
 
 2. **Present options to user:**
@@ -95,25 +167,25 @@ Invoke this skill when users:
 
 2. **Create answer file directory:**
    ```bash
-   mkdir -p answers/<blueprint_id>
+   mkdir -p projects/<project_name>/answers/<blueprint_id>
    ```
 
 3. **Create initial answer file:**
-   - Path: `answers/<blueprint_id>/answers_<timestamp>.yaml`
-   - Initialize with header comments (blueprint name, date, blueprint ID)
+   - Path: `projects/<project_name>/answers/<blueprint_id>/answers_<timestamp>.yaml`
+   - Initialize with header comments (project name, blueprint name, date, blueprint ID)
 
-4. **Proceed to Step 3** (Collect User Context)
+4. **Proceed to Step 4** (Collect User Context)
 
 **If user selects "Work with an existing answer file":**
 
 1. **List available answer files:**
    ```
-   Existing answer files for this workflow:
+   Existing answer files for this project and blueprint:
    
-   1. answers/<blueprint_id>/answers_20251221214657.yaml
+   1. projects/<project_name>/answers/<blueprint_id>/answers_20251221214657.yaml
       Created: 2025-12-21 21:46:57
       
-   2. answers/<blueprint_id>/answers_20251221222441.yaml
+   2. projects/<project_name>/answers/<blueprint_id>/answers_20251221222441.yaml
       Created: 2025-12-21 22:24:41
    
    Which file would you like to work with? (1-N):
@@ -153,15 +225,15 @@ Invoke this skill when users:
 6. **⚠️ MANDATORY STOPPING POINT**: Wait for user choice.
 
 7. **Route based on selection:**
-   - Option 1 → Skip to Step 6 (Interactive Walkthrough)
-   - Option 2 → Skip to Step 7 (Fill in required values)
-   - Option 3 → Skip to Step 5 (Present Summary)
-   - Option 4 → Skip to Step 8 (Generate IaC)
-   - Option 5 → Proceed to Step 3 (will regenerate all answers based on new context)
+   - Option 1 → Skip to Step 7 (Interactive Walkthrough)
+   - Option 2 → Skip to Step 8 (Fill in required values)
+   - Option 3 → Skip to Step 6 (Present Summary)
+   - Option 4 → Skip to Step 9 (Generate IaC)
+   - Option 5 → Proceed to Step 4 (will regenerate all answers based on new context)
 
 **Output:** Path to answer file (new or existing) and current state
 
-### Step 3: Collect User Context (Open-Ended Description)
+### Step 4: Collect User Context (Open-Ended Description)
 
 **Goal:** Request a description of the user's organization and their plans for how they will use snowflake to understand their needs well enough to intelligently fill out all workflow answers.
 
@@ -235,17 +307,17 @@ Invoke this skill when users:
 **⚠️ MANDATORY STOPPING POINT**: Wait for user response.
 
 **If user provides a description:**
-- Proceed to Step 4 (Generate All Workflow Answers based on context)
+- Proceed to Step 5 (Generate All Workflow Answers based on context)
 
 **If user types "step-by-step" (or similar):**
-- Skip Step 4 entirely
+- Skip Step 5 entirely
 - Create answer file with all questions as `null`
-- Proceed directly to Step 6 (Interactive Step-by-Step Walkthrough)
+- Proceed directly to Step 7 (Interactive Step-by-Step Walkthrough)
 - Present each question with full guidance, one at a time
 
 **Output:** Either user context for auto-generation, or indication to use step-by-step mode
 
-### Step 4: Generate All Blueprint Answers
+### Step 5: Generate All Blueprint Answers
 
 **Goal:** Intelligently fill out blueprint answers based on user's context, being honest about what can and cannot be determined
 
@@ -328,7 +400,7 @@ Invoke this skill when users:
 
 **Output:** Answer file with honest answers and clear tracking of what was/wasn't answered
 
-### Step 5: Present Summary and Offer Walkthrough
+### Step 6: Present Summary and Offer Walkthrough
 
 **Goal:** Show user exactly what was configured, what wasn't, and why
 
@@ -415,18 +487,18 @@ Invoke this skill when users:
 
 **Route based on selection:**
 - Option 1 → Ask follow-up questions for Category C items, then regenerate
-- Option 2 → Proceed to Step 7 (Update user-specific values)
-- Option 3 → Proceed to Step 6 (Walkthrough)
-- Option 4 → Proceed to Step 8 (Generate IaC) — warn if many questions unanswered
+- Option 2 → Proceed to Step 8 (Update user-specific values)
+- Option 3 → Proceed to Step 7 (Walkthrough)
+- Option 4 → Proceed to Step 9 (Generate IaC) — warn if many questions unanswered
 - Option 5 → End workflow
 
-### Step 6: Interactive Step-by-Step Walkthrough
+### Step 7: Interactive Step-by-Step Walkthrough
 
 **Goal:** Walk through each blueprint step, showing questions, answers, reasoning, and allowing updates
 
 **For each step in blueprint.steps:**
 
-#### Step 6.1: Display Step Overview and Questions
+#### Step 7.1: Display Step Overview and Questions
 
 **Actions:**
 
@@ -510,7 +582,7 @@ Invoke this skill when users:
 
 **⚠️ MANDATORY STOPPING POINT**: Wait for user choice.
 
-#### Step 6.2: Handle User Choice
+#### Step 7.2: Handle User Choice
 
 **If user selects "Update answer":**
 
@@ -544,29 +616,29 @@ Invoke this skill when users:
    ✓ Updated [answer_title] to: [new value]
    ```
 
-6. **Return to step menu** (Step 6.1)
+6. **Return to step menu** (Step 7.1)
 
 **If user selects "Continue to next step":**
 - Increment step counter
-- Return to Step 6.1 with next step
+- Return to Step 7.1 with next step
 
 **If user selects "Go back to previous step":**
 - Decrement step counter
-- Return to Step 6.1 with previous step
+- Return to Step 7.1 with previous step
 
 **If user selects "Jump to specific step":**
 - Show list of all steps
 - Let user select step number
-- Return to Step 6.1 with selected step
+- Return to Step 7.1 with selected step
 
 **If user selects "Generate infrastructure code and exit":**
-- Proceed to Step 8 (Generate IaC)
+- Proceed to Step 9 (Generate IaC)
 
 **If user selects "Save and exit":**
 - Confirm save
 - End workflow
 
-### Step 7: Fill In Required Values
+### Step 8: Fill In Required Values
 
 **Goal:** Help user provide values that only they can supply (account names, emails, etc.)
 
@@ -627,13 +699,13 @@ Invoke this skill when users:
 **⚠️ MANDATORY STOPPING POINT**: Wait for user choice.
 
 **Route based on selection:**
-- Option 1 → Continue in Step 7
+- Option 1 → Continue in Step 8
 - Option 2 → Ask follow-up questions for ⚠️ INSUFFICIENT CONTEXT items
-- Option 3 → Return to Step 6 (Walkthrough)
-- Option 4 → Proceed to Step 8 (Generate IaC)
+- Option 3 → Return to Step 7 (Walkthrough)
+- Option 4 → Proceed to Step 9 (Generate IaC)
 - Option 5 → End workflow
 
-### Step 8: Generate Infrastructure Code
+### Step 9: Generate Infrastructure Code
 
 **Goal:** Run the render_journey.py script to generate SQL infrastructure code
 
@@ -668,12 +740,13 @@ Invoke this skill when users:
 
 **If user selects "Generate SQL now":**
 
-1. **Run render script:**
+1. **Run render script with project flag:**
    ```bash
    python scripts/render_journey.py \
      [answer_file_path] \
      --blueprint [blueprint_id] \
-     --lang sql
+     --lang sql \
+     --project [project_name]
    ```
    
    OR if venv exists:
@@ -681,19 +754,20 @@ Invoke this skill when users:
    ./venv/bin/python scripts/render_journey.py \
      [answer_file_path] \
      --blueprint [blueprint_id] \
-     --lang sql
+     --lang sql \
+     --project [project_name]
    ```
 
 2. **Check for output file:**
    ```bash
-   ls -lt iac/sql/ | head -5
+   ls -lt projects/[project_name]/output/iac/sql/ | head -5
    ```
 
 3. **Present results:**
    ```
    ✓ SQL infrastructure code generated successfully!
    
-   Output file: iac/sql/[workflow_id]_[timestamp].sql
+   Output file: projects/[project_name]/output/iac/sql/[workflow_id]_[timestamp].sql
    
    Next Steps:
    1. Review the generated SQL file
@@ -714,7 +788,8 @@ Invoke this skill when users:
    python scripts/render_journey.py \
      [answer_file_path] \
      --blueprint [blueprint_id] \
-     --lang sql
+     --lang sql \
+     --project [project_name]
    ```
    
    Or if you have a virtual environment:
@@ -723,18 +798,19 @@ Invoke this skill when users:
    ./venv/bin/python scripts/render_journey.py \
      [answer_file_path] \
      --blueprint [blueprint_id] \
-     --lang sql
+     --lang sql \
+     --project [project_name]
    ```
    
-   Output will be saved to: iac/sql/[blueprint_id]_[timestamp].sql
+   Output will be saved to: projects/[project_name]/output/iac/sql/[blueprint_id]_[timestamp].sql
    ```
 
 **If user selects "Go back":**
-- Return to Step 5 (Summary and offer walkthrough)
+- Return to Step 6 (Summary and offer walkthrough)
 
 **Output:** Generated SQL file or command instructions
 
-### Step 9: Final Summary
+### Step 10: Final Summary
 
 **Goal:** Provide final summary and close the workflow
 
@@ -905,11 +981,11 @@ Dynamically produce this at the initiation of the workflow based on the current 
 ## Output
 
 Upon completion, this skill produces:
-- An answer file at `answers/<blueprint_id>/answers_<timestamp>.yaml` with:
+- An answer file at `projects/<project_name>/answers/<blueprint_id>/answers_<timestamp>.yaml` with:
   - ✅ Auto-answered questions (where user context was sufficient)
   - ❓ User-specific questions marked as `null` with guidance on what's needed
   - ⚠️ Insufficient context questions marked as `null` with explanation of missing information
 - Clear inline comments explaining reasoning for each answered question
 - Explicit tracking of which questions were answered vs not answered (and why)
-- Optional: Generated SQL infrastructure code at `output/iac/sql/<blueprint_id>_<timestamp>.sql`
+- Optional: Generated SQL infrastructure code at `projects/<project_name>/output/iac/sql/<blueprint_id>_<timestamp>.sql`
 - Summary showing exact breakdown: auto-answered, needs user input, needs more context
