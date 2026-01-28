@@ -12,7 +12,7 @@ This repository contains infrastructure-as-code templates and blueprints for set
 
 ## Setting Up Your Blueprint using Snowflake Cortex (Recommended)
 
-The easiest way to configure your Snowflake Blueprint is using the **Answer File Builder** skill with Snowflake Cortex. This provides a guided, interactive experience.
+The easiest way to configure your Snowflake Blueprint is using the **Blueprint Builder** skill with Snowflake Cortex. This provides a guided, interactive experience.
 
 ### Getting Started
 
@@ -35,10 +35,10 @@ cd blueprint-manager
 cortex
 ```
 
-3. **Launch the skill:**
+3. **Launch the Blueprint Builder:**
 
 ```bash
-> Help me set up my Snowflake blueprint
+/create-blueprint
 ```
 
 ### How it works:
