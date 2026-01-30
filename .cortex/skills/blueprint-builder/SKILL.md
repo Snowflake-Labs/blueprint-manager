@@ -5,6 +5,49 @@ description: "Guide users through constructing answer files for Snowflake Bluepr
 
 # Blueprint Builder
 
+## CRITICAL: SQL/Output Generation Rules
+
+**⚠️ MANDATORY: ALL SQL GENERATION AND OUTPUT RENDERING MUST USE `render_journey.py`**
+
+When the user requests ANY of the following at ANY point during this skill's workflow:
+- Generate SQL
+- Generate infrastructure code
+- Generate output
+- Render the blueprint
+- Create the SQL file
+- Show me the SQL
+- Build the code
+- Export/produce/create infrastructure
+- Any variation of "generate", "render", "create", "build", "export" combined with "SQL", "code", "output", "infrastructure"
+
+**YOU MUST:**
+1. Use the `scripts/render_journey.py` script to generate ALL SQL and documentation output
+2. NEVER generate SQL code directly using ad-hoc logic or LLM inference
+3. NEVER write SQL blocks manually based on answer file contents
+4. NEVER attempt to "preview" or "show" SQL by constructing it yourself
+
+**The ONLY valid method to generate SQL/output is:**
+```bash
+python scripts/render_journey.py \
+  [answer_file_path] \
+  --blueprint [blueprint_id] \
+  --lang sql \
+  --project [project_name]
+```
+
+**WHY:** The `render_journey.py` script uses Jinja2 templates from the blueprint's step directories (`code.sql.jinja`, `dynamic.md.jinja`) to ensure:
+- Consistent, tested, and validated SQL output
+- Proper variable substitution from the answer file
+- Correct handling of missing/null values (steps are skipped appropriately)
+- Accurate documentation generation alongside code
+
+**If user asks to "see the SQL" or "preview the code":**
+- Run the render script first
+- Then read and display the generated output file
+- NEVER construct SQL manually
+
+---
+
 This skill guides users through constructing answer files for Snowflake Blueprint Manager blueprints by first understanding their organization through an open-ended description, then intelligently generating all configuration answers, and finally offering an optional step-by-step review.
 
 ## When to Use
@@ -709,6 +752,8 @@ Invoke this skill when users:
 
 **Goal:** Run the render_journey.py script to generate SQL infrastructure code
 
+**⚠️ CRITICAL REMINDER: You MUST use `scripts/render_journey.py` for ALL code generation. NEVER generate SQL manually or use ad-hoc logic. This applies even if the user asks to "just show me" or "preview" the SQL.**
+
 **Actions:**
 
 1. **Check if Python environment is available:**
@@ -943,13 +988,22 @@ enable_feature: 'Yes'  # Reasoning: user mentioned SOC2 compliance requirement
 3. ✅ **Be specific about what's needed** — "your Snowflake account name" not "fill in TODO"
 4. ✅ **Give users a clear path forward** — how to provide missing information
 
-**When generating IaC (Step 8):**
+**When generating IaC (Step 9):**
 
-1. ✅ **Check environment** verify Python availability
-2. ✅ **Handle errors gracefully** provide manual command if script fails
-3. ✅ **Confirm output** show where SQL file was created
-4. ✅ **Give clear next steps** what to do with the SQL
-5. ✅ **Warn about incomplete answers** — if many questions are unanswered, the generated code may be incomplete
+1. ✅ **ALWAYS use `render_journey.py`** — NEVER generate SQL manually or via ad-hoc logic
+2. ✅ **Check environment** verify Python availability
+3. ✅ **Handle errors gracefully** provide manual command if script fails
+4. ✅ **Confirm output** show where SQL file was created
+5. ✅ **Give clear next steps** what to do with the SQL
+6. ✅ **Warn about incomplete answers** — if many questions are unanswered, the generated code may be incomplete
+7. ✅ **For previews/display requests** — run the script first, then read the output file
+
+**What NOT to do when generating output:**
+
+1. ❌ **NEVER write SQL directly** — even for "quick previews" or "showing what it would look like"
+2. ❌ **NEVER construct SQL from answer file values** — the templates handle this correctly
+3. ❌ **NEVER bypass render_journey.py** — it ensures proper template rendering and validation
+4. ❌ **NEVER attempt to "explain" what the SQL would be** by writing it yourself
 
 ## Decision Logic Reference
 
