@@ -37,6 +37,121 @@ def load_yaml(file_path):
         return yaml.safe_load(f)
 
 
+def generate_slug_from_name(name):
+    """
+    Generate a slug from a blueprint name.
+    
+    Converts name to lowercase, replaces spaces with hyphens,
+    and removes any characters that aren't alphanumeric or hyphens.
+    
+    Args:
+        name: The blueprint name to convert
+        
+    Returns:
+        A URL-safe slug string
+    """
+    import re
+    # Convert to lowercase and replace spaces with hyphens
+    slug = name.lower().replace(" ", "-")
+    # Remove any characters that aren't alphanumeric, hyphens, or underscores
+    slug = re.sub(r'[^a-z0-9_-]', '', slug)
+    # Replace multiple consecutive hyphens with single hyphen
+    slug = re.sub(r'-+', '-', slug)
+    # Strip leading/trailing hyphens
+    slug = slug.strip('-')
+    return slug
+
+
+def resolve_blueprint_directory(blueprints_dir, blueprint_identifier):
+    """
+    Resolve a blueprint identifier (slug or UID) to its directory path.
+    
+    This function supports both slug-based and UID-based lookups with fallback:
+    1. First checks if the identifier matches a directory name directly (UID-based)
+    2. Then scans meta.yaml files to find a matching slug field
+    3. Finally, generates slugs from blueprint names to find a match
+    
+    Args:
+        blueprints_dir: Path to the blueprints directory
+        blueprint_identifier: Either a slug (e.g., 'account-creation') or 
+                             UID (e.g., 'blueprint_4e7081df')
+    
+    Returns:
+        tuple: (blueprint_dir, blueprint_slug, blueprint_uid)
+            - blueprint_dir: Path to the resolved blueprint directory
+            - blueprint_slug: The slug for the blueprint (for output naming)
+            - blueprint_uid: The UID/directory name of the blueprint
+        
+    Raises:
+        SystemExit: If no matching blueprint is found
+    """
+    # Strategy 1: Direct directory match (UID-based lookup)
+    direct_path = blueprints_dir / blueprint_identifier
+    if direct_path.exists() and direct_path.is_dir():
+        meta_file = direct_path / "meta.yaml"
+        if meta_file.exists():
+            meta = load_yaml(meta_file)
+            # Check for explicit slug field, otherwise generate from name
+            slug = meta.get("slug")
+            if not slug:
+                name = meta.get("name", blueprint_identifier)
+                slug = generate_slug_from_name(name)
+            return direct_path, slug, blueprint_identifier
+        return direct_path, blueprint_identifier, blueprint_identifier
+    
+    # Strategy 2 & 3: Scan all blueprints for slug match
+    # Collect all blueprint metadata for matching
+    blueprint_matches = []
+    
+    for entry in blueprints_dir.iterdir():
+        if not entry.is_dir():
+            continue
+        meta_file = entry / "meta.yaml"
+        if not meta_file.exists():
+            continue
+            
+        meta = load_yaml(meta_file)
+        if not meta:
+            continue
+            
+        uid = entry.name
+        explicit_slug = meta.get("slug")
+        name = meta.get("name", uid)
+        generated_slug = generate_slug_from_name(name)
+        
+        # Check explicit slug match first
+        if explicit_slug and explicit_slug == blueprint_identifier:
+            return entry, explicit_slug, uid
+        
+        # Check generated slug match
+        if generated_slug == blueprint_identifier:
+            blueprint_matches.append((entry, explicit_slug or generated_slug, uid))
+    
+    # Return first match from generated slugs
+    if blueprint_matches:
+        return blueprint_matches[0]
+    
+    # No match found - provide helpful error message
+    available_blueprints = []
+    for entry in blueprints_dir.iterdir():
+        if not entry.is_dir():
+            continue
+        meta_file = entry / "meta.yaml"
+        if meta_file.exists():
+            meta = load_yaml(meta_file)
+            if meta:
+                name = meta.get("name", entry.name)
+                slug = meta.get("slug") or generate_slug_from_name(name)
+                available_blueprints.append(f"  - {slug} ({entry.name})")
+    
+    sys.stderr.write(f"Error: Blueprint not found: '{blueprint_identifier}'\n")
+    if available_blueprints:
+        sys.stderr.write("Available blueprints:\n")
+        for bp in sorted(available_blueprints):
+            sys.stderr.write(f"{bp}\n")
+    sys.exit(1)
+
+
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -282,26 +397,38 @@ def render_step_guidance(step_path, answers, jinja_env, base_dir):
         return None, step_id, []
 
 
-def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
+def render_blueprint_code(blueprint_dir, lang, answers, base_dir, blueprint_slug=None):
     """
     Render all code templates in a workflow.
     Only renders steps where all required variables are available.
     Steps with missing variables include a skip note in the output.
     Returns the concatenated rendered code and count of rendered/skipped steps.
+    
+    Args:
+        blueprint_dir: Path to the blueprint directory
+        lang: Code language to render (sql or terraform)
+        answers: Dictionary of answers for template rendering
+        base_dir: Base directory for Jinja2 template loading
+        blueprint_slug: Optional slug for display in headers (defaults to directory name)
     """
-    blueprint_id = blueprint_dir.name
+    blueprint_uid = blueprint_dir.name
 
     # Load meta.yaml for workflow metadata and step ordering
     meta_file = blueprint_dir / "meta.yaml"
     if not meta_file.exists():
+        # Use slug in error message if available for better user experience
+        display_name = blueprint_slug or blueprint_uid
         sys.stderr.write(
-            f"Error: meta.yaml not found in blueprint directory: {blueprint_dir}\n"
+            f"Error: meta.yaml not found for blueprint '{display_name}': {blueprint_dir}\n"
         )
         sys.exit(1)
 
     meta = load_yaml(meta_file)
-    blueprint_name = meta.get("name", blueprint_id)
+    blueprint_name = meta.get("name", blueprint_slug or blueprint_uid)
     step_order = meta.get("steps", [])
+    
+    # Use slug for display, fall back to UID
+    display_id = blueprint_slug or blueprint_uid
 
     # Create Jinja2 environment once for all steps
     jinja_env = Environment(
@@ -315,12 +442,12 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
     rendered_count = 0
     skipped_count = 0
 
-    # Add header
+    # Add header with slug-based identification
     header = [
         f"{comment_char} ============================================================",
         f"{comment_char} RENDERED JOURNEY: {blueprint_name}",
         f"{comment_char} Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"{comment_char} Blueprint: {blueprint_id}",
+        f"{comment_char} Blueprint: {display_id}",
         f"{comment_char} Language: {lang}",
         f"{comment_char} ============================================================\n",
     ]
@@ -385,27 +512,38 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
     return "\n".join(rendered_sections), rendered_count, skipped_count
 
 
-def render_blueprint_guidance(blueprint_dir, answers, base_dir):
+def render_blueprint_guidance(blueprint_dir, answers, base_dir, blueprint_slug=None):
     """
     Render all guidance/overview documents in a workflow.
     Only renders steps where all required variables are available.
     Steps with missing variables include a skip note in the output.
     Returns the concatenated rendered guidance markdown and count of rendered/skipped steps.
+    
+    Args:
+        blueprint_dir: Path to the blueprint directory
+        answers: Dictionary of answers for template rendering
+        base_dir: Base directory for Jinja2 template loading
+        blueprint_slug: Optional slug for display in headers (defaults to directory name)
     """
-    blueprint_id = blueprint_dir.name
+    blueprint_uid = blueprint_dir.name
 
     # Load meta.yaml for workflow metadata and step ordering
     meta_file = blueprint_dir / "meta.yaml"
     if not meta_file.exists():
+        # Use slug in error message if available for better user experience
+        display_name = blueprint_slug or blueprint_uid
         sys.stderr.write(
-            f"Error: meta.yaml not found in blueprint directory: {blueprint_dir}\n"
+            f"Error: meta.yaml not found for blueprint '{display_name}': {blueprint_dir}\n"
         )
         sys.exit(1)
 
     meta = load_yaml(meta_file)
-    blueprint_name = meta.get("name", blueprint_id)
+    blueprint_name = meta.get("name", blueprint_slug or blueprint_uid)
     blueprint_overview = meta.get("overview", "")
     step_order = meta.get("steps", [])
+    
+    # Use slug for display, fall back to UID
+    display_id = blueprint_slug or blueprint_uid
 
     # Create Jinja2 environment with strict undefined checking
     jinja_env = Environment(
@@ -418,12 +556,12 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
     rendered_count = 0
     skipped_count = 0
 
-    # Add header
+    # Add header with slug-based identification
     header = [
         f"# {blueprint_name}",
         "",
         f"> Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"> Blueprint: {blueprint_id}",
+        f"> Blueprint: {display_id}",
         "",
         "---",
         "",
@@ -534,7 +672,7 @@ def validate_name(name, name_type="name"):
         sys.exit(1)
 
 
-def setup_project_directories(base_dir, project_name, blueprint_id):
+def setup_project_directories(base_dir, project_name, blueprint_slug):
     """
     Ensure project directory structure exists for the given project name and blueprint.
     
@@ -544,7 +682,7 @@ def setup_project_directories(base_dir, project_name, blueprint_id):
     Creates:
         projects/<project_name>/
         ├── answers/
-        │   └── <blueprint_id>/
+        │   └── <blueprint_slug>/
         └── output/
             ├── iac/
             │   └── sql/
@@ -553,16 +691,16 @@ def setup_project_directories(base_dir, project_name, blueprint_id):
     Args:
         base_dir: Base directory of the repository
         project_name: Name of the project (user-specified or 'default-project')
-        blueprint_id: ID of the blueprint being rendered
+        blueprint_slug: Slug of the blueprint being rendered (used for organization)
     
     Returns:
         Path to the project directory
     """
     validate_name(project_name, "project name")
-    validate_name(blueprint_id, "blueprint ID")
+    validate_name(blueprint_slug, "blueprint slug")
     project_dir = base_dir / "projects" / project_name
     
-    (project_dir / "answers" / blueprint_id).mkdir(parents=True, exist_ok=True)
+    (project_dir / "answers" / blueprint_slug).mkdir(parents=True, exist_ok=True)
     (project_dir / "output" / "iac" / "sql").mkdir(parents=True, exist_ok=True)
     (project_dir / "output" / "documentation").mkdir(parents=True, exist_ok=True)
     
@@ -583,10 +721,19 @@ def main():
     script_dir = Path(__file__).parent
     base_dir = script_dir.parent
 
+    blueprints_dir = base_dir / "blueprints"
+
+    # Resolve blueprint identifier (slug or UID) to directory path
+    # This supports both slug-based and legacy UID-based lookups
+    blueprint_dir, blueprint_slug, blueprint_uid = resolve_blueprint_directory(
+        blueprints_dir, args.blueprint
+    )
+
     project_name = args.project if args.project else "default-project"
-    project_dir = setup_project_directories(base_dir, project_name, args.blueprint)
+    project_dir = setup_project_directories(base_dir, project_name, blueprint_slug)
     print(f"Using project: {project_name}")
     print(f"Project directory: {project_dir}")
+    print(f"Blueprint: {blueprint_slug} (directory: {blueprint_uid})")
     
     if args.output_dir != "output/iac":
         sys.stderr.write(
@@ -601,31 +748,23 @@ def main():
     output_base_dir = project_dir / "output" / "iac"
     guidance_base_dir = project_dir / "output" / "documentation"
 
-    blueprints_dir = base_dir / "blueprints"
-
-    # Find workflow directory (external repo structure)
-    blueprint_dir = blueprints_dir / args.blueprint
-    if not blueprint_dir.exists() or not blueprint_dir.is_dir():
-        sys.stderr.write(f"Error: Blueprint directory not found: {blueprint_dir}\n")
-        sys.exit(1)
-
     # Load answers
     print(f"Loading answers from {answers_path}...")
     answers = load_yaml(answers_path) or {}
 
     # Render IaC code
-    print(f"Rendering blueprint '{args.blueprint}' for language '{args.lang}'...")
+    print(f"Rendering blueprint '{blueprint_slug}' for language '{args.lang}'...")
     rendered_code, code_rendered, code_skipped = render_blueprint_code(
-        blueprint_dir, args.lang, answers, base_dir
+        blueprint_dir, args.lang, answers, base_dir, blueprint_slug
     )
 
-    # Generate IaC output filename
+    # Generate IaC output filename using slug
     output_dir = output_base_dir / args.lang
     output_dir.mkdir(parents=True, exist_ok=True)
 
     date_str = datetime.now().strftime("%Y%m%d%H%M%S")
     extension = get_language_extension(args.lang)
-    output_file = output_dir / f"{args.blueprint}_{date_str}.{extension}"
+    output_file = output_dir / f"{blueprint_slug}_{date_str}.{extension}"
 
     # Write IaC output
     with open(output_file, "w", encoding="utf-8") as f:
@@ -639,14 +778,14 @@ def main():
     if not args.skip_guidance:
         print("\nRendering guidance documents...")
         rendered_guidance, guide_rendered, guide_skipped = render_blueprint_guidance(
-            blueprint_dir, answers, base_dir
+            blueprint_dir, answers, base_dir, blueprint_slug
         )
 
-        # Generate guidance output filename
+        # Generate guidance output filename using slug
         guidance_dir = guidance_base_dir
         guidance_dir.mkdir(parents=True, exist_ok=True)
 
-        guidance_file = guidance_dir / f"{args.blueprint}_{date_str}.md"
+        guidance_file = guidance_dir / f"{blueprint_slug}_{date_str}.md"
 
         # Write guidance output
         with open(guidance_file, "w", encoding="utf-8") as f:
