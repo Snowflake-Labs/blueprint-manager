@@ -8,6 +8,8 @@ concatenating them in order into output files.
 
 Only steps where ALL required variables are provided in the answers file will be rendered.
 Steps with missing variables are skipped entirely.
+
+Supports both slug-based and legacy UID-based directory structures with automatic fallback.
 """
 
 import argparse
@@ -116,6 +118,121 @@ def get_step_title(step_path):
     except Exception:
         pass
     return None
+
+
+def get_blueprint_slug(blueprint_dir, meta_data=None):
+    """
+    Get the slug for a blueprint.
+    
+    The slug is determined in the following order:
+    1. Explicit 'slug' field in meta.yaml
+    2. Directory name (assumed to be slug-based)
+    
+    Args:
+        blueprint_dir: Path to the blueprint directory
+        meta_data: Optional pre-loaded meta.yaml data
+        
+    Returns:
+        The blueprint slug string
+    """
+    if meta_data and "slug" in meta_data:
+        return meta_data["slug"]
+    # Use directory name as slug (already slug-based in the new structure)
+    return blueprint_dir.name
+
+
+def resolve_step_path(blueprint_dir, step_identifier, step_slug_map=None):
+    """
+    Resolve a step identifier to its actual directory path.
+    
+    Supports both slug-based and legacy UID-based directory structures.
+    First attempts to find the step by slug, then falls back to UID-based lookup.
+    
+    Args:
+        blueprint_dir: Path to the blueprint directory
+        step_identifier: Step identifier from meta.yaml (slug or UID)
+        step_slug_map: Optional mapping of step slugs to directory paths
+        
+    Returns:
+        Tuple of (step_path, step_slug, used_fallback)
+        - step_path: Path to the step directory
+        - step_slug: The human-readable slug for the step
+        - used_fallback: True if UID-based fallback was used
+    """
+    # First, try direct path resolution (slug-based naming)
+    step_path = blueprint_dir / step_identifier
+    if step_path.exists() and step_path.is_dir():
+        return step_path, step_identifier, False
+    
+    # Check if step_slug_map has a mapping for this identifier
+    if step_slug_map and step_identifier in step_slug_map:
+        mapped_path = step_slug_map[step_identifier]
+        if mapped_path.exists() and mapped_path.is_dir():
+            slug = mapped_path.name
+            return mapped_path, slug, False
+    
+    # Fallback: search for legacy UID-based directories
+    # Look for directories that might have a step.yaml or meta.yaml with matching ID
+    for child_dir in blueprint_dir.iterdir():
+        if not child_dir.is_dir():
+            continue
+        # Check if this could be a legacy UID directory matching the identifier
+        if child_dir.name.startswith("step_") or child_dir.name == step_identifier:
+            step_meta_file = child_dir / "step.yaml"
+            if step_meta_file.exists():
+                step_meta = load_yaml(step_meta_file)
+                if step_meta.get("step_id") == step_identifier or step_meta.get("slug") == step_identifier:
+                    slug = step_meta.get("slug", child_dir.name)
+                    sys.stderr.write(
+                        f"  Note: Using legacy UID path for step '{step_identifier}' -> '{child_dir.name}'\n"
+                    )
+                    return child_dir, slug, True
+    
+    # If no match found, return the original path (will fail gracefully later)
+    return step_path, step_identifier, False
+
+
+def build_step_slug_map(blueprint_dir):
+    """
+    Build a mapping of step identifiers to their directory paths.
+    
+    Scans the blueprint directory to create a lookup map for resolving
+    both slug-based and UID-based step references.
+    
+    Args:
+        blueprint_dir: Path to the blueprint directory
+        
+    Returns:
+        Dictionary mapping step identifiers (slugs and UIDs) to directory paths
+    """
+    slug_map = {}
+    
+    for child_dir in blueprint_dir.iterdir():
+        if not child_dir.is_dir():
+            continue
+        
+        # Skip non-step directories (like the meta.yaml file location)
+        if child_dir.name.startswith("."):
+            continue
+            
+        # Add directory name as a key (slug-based lookup)
+        slug_map[child_dir.name] = child_dir
+        
+        # Check for step metadata with additional identifiers
+        step_meta_file = child_dir / "step.yaml"
+        if step_meta_file.exists():
+            try:
+                step_meta = load_yaml(step_meta_file)
+                # Map step_id to directory path (for UID-based references)
+                if "step_id" in step_meta:
+                    slug_map[step_meta["step_id"]] = child_dir
+                # Map explicit slug if different from directory name
+                if "slug" in step_meta and step_meta["slug"] != child_dir.name:
+                    slug_map[step_meta["slug"]] = child_dir
+            except Exception:
+                pass  # Ignore malformed step.yaml files
+    
+    return slug_map
 
 
 def find_template_variables(template_source, jinja_env):
@@ -288,9 +405,9 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
     Only renders steps where all required variables are available.
     Steps with missing variables include a skip note in the output.
     Returns the concatenated rendered code and count of rendered/skipped steps.
+    
+    Supports both slug-based and legacy UID-based directory structures.
     """
-    blueprint_id = blueprint_dir.name
-
     # Load meta.yaml for workflow metadata and step ordering
     meta_file = blueprint_dir / "meta.yaml"
     if not meta_file.exists():
@@ -299,9 +416,13 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
         )
         sys.exit(1)
 
-    meta = load_yaml(meta_file)
-    blueprint_name = meta.get("name", blueprint_id)
-    step_order = meta.get("steps", [])
+    meta_data = load_yaml(meta_file)
+    blueprint_name = meta_data.get("name", blueprint_dir.name)
+    blueprint_slug = get_blueprint_slug(blueprint_dir, meta_data)
+    step_order = meta_data.get("steps", [])
+
+    # Build step slug map for resolving step identifiers
+    step_slug_map = build_step_slug_map(blueprint_dir)
 
     # Create Jinja2 environment once for all steps
     jinja_env = Environment(
@@ -315,25 +436,29 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
     rendered_count = 0
     skipped_count = 0
 
-    # Add header
+    # Add header with slug for better readability
     header = [
         f"{comment_char} ============================================================",
         f"{comment_char} RENDERED JOURNEY: {blueprint_name}",
         f"{comment_char} Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"{comment_char} Blueprint: {blueprint_id}",
+        f"{comment_char} Blueprint: {blueprint_slug}",
         f"{comment_char} Language: {lang}",
         f"{comment_char} ============================================================\n",
     ]
     rendered_sections.append("\n".join(header))
 
     # Process steps in the order defined in meta.yaml
-    for step_id in step_order:
-        step_path = blueprint_dir / step_id
+    for step_identifier in step_order:
+        # Resolve step path using slug-based lookup with UID fallback
+        step_path, step_slug, used_fallback = resolve_step_path(
+            blueprint_dir, step_identifier, step_slug_map
+        )
+        
         if not step_path.exists():
-            sys.stderr.write(f"Warning: Step directory not found: {step_path}\n")
+            sys.stderr.write(f"Warning: Step directory not found for '{step_slug}': {step_path}\n")
             continue
 
-        rendered_code, step_id, missing_vars = render_step_code(
+        rendered_code, _, missing_vars = render_step_code(
             step_path, lang, answers, jinja_env, base_dir
         )
 
@@ -350,11 +475,11 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
                 # Get step title for better readability
                 step_title = get_step_title(step_path)
                 if step_title:
-                    skip_header = f"SKIPPED: {step_title} ({step_id})"
+                    skip_header = f"SKIPPED: {step_title} ({step_slug})"
                 else:
-                    skip_header = f"SKIPPED: {step_id}"
+                    skip_header = f"SKIPPED: {step_slug}"
 
-                # Build skip note
+                # Build skip note with slug reference
                 skip_note = [
                     "",
                     f"{comment_char} ============================================================",
@@ -391,9 +516,9 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
     Only renders steps where all required variables are available.
     Steps with missing variables include a skip note in the output.
     Returns the concatenated rendered guidance markdown and count of rendered/skipped steps.
+    
+    Supports both slug-based and legacy UID-based directory structures.
     """
-    blueprint_id = blueprint_dir.name
-
     # Load meta.yaml for workflow metadata and step ordering
     meta_file = blueprint_dir / "meta.yaml"
     if not meta_file.exists():
@@ -402,10 +527,14 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
         )
         sys.exit(1)
 
-    meta = load_yaml(meta_file)
-    blueprint_name = meta.get("name", blueprint_id)
-    blueprint_overview = meta.get("overview", "")
-    step_order = meta.get("steps", [])
+    meta_data = load_yaml(meta_file)
+    blueprint_name = meta_data.get("name", blueprint_dir.name)
+    blueprint_slug = get_blueprint_slug(blueprint_dir, meta_data)
+    blueprint_overview = meta_data.get("overview", "")
+    step_order = meta_data.get("steps", [])
+
+    # Build step slug map for resolving step identifiers
+    step_slug_map = build_step_slug_map(blueprint_dir)
 
     # Create Jinja2 environment with strict undefined checking
     jinja_env = Environment(
@@ -418,12 +547,12 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
     rendered_count = 0
     skipped_count = 0
 
-    # Add header
+    # Add header with slug for better readability
     header = [
         f"# {blueprint_name}",
         "",
         f"> Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-        f"> Blueprint: {blueprint_id}",
+        f"> Blueprint: {blueprint_slug}",
         "",
         "---",
         "",
@@ -439,13 +568,17 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
 
     # Process steps in the order defined in meta.yaml
     step_num = 1
-    for step_id in step_order:
-        step_path = blueprint_dir / step_id
+    for step_identifier in step_order:
+        # Resolve step path using slug-based lookup with UID fallback
+        step_path, step_slug, used_fallback = resolve_step_path(
+            blueprint_dir, step_identifier, step_slug_map
+        )
+        
         if not step_path.exists():
-            sys.stderr.write(f"Warning: Step directory not found: {step_path}\n")
+            sys.stderr.write(f"Warning: Step directory not found for '{step_slug}': {step_path}\n")
             continue
 
-        rendered_guidance, step_id, missing_vars = render_step_guidance(
+        rendered_guidance, _, missing_vars = render_step_guidance(
             step_path, answers, jinja_env, base_dir
         )
 
@@ -462,16 +595,16 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
                 # Get step title for better readability
                 step_title = get_step_title(step_path)
                 if step_title:
-                    step_heading = f"{step_title} ({step_id})"
+                    step_heading = f"{step_title} ({step_slug})"
                 else:
-                    step_heading = step_id
+                    step_heading = step_slug
 
-                # Build skip note
+                # Build skip note with slug reference
                 skip_note = [
                     "",
                     f"## Step {step_num}: {step_heading}",
                     "",
-                    "> ⚠️ **SKIPPED:** This step could not be rendered due to missing answers.",
+                    "> **SKIPPED:** This step could not be rendered due to missing answers.",
                     ">",
                 ]
                 if missing_only:
@@ -497,10 +630,10 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
                 step_num += 1
             continue
 
-        # Add step header
+        # Add step header with slug for better readability
         step_header = [
             "",
-            f"## Step {step_num}: {step_id}",
+            f"## Step {step_num}: {step_slug}",
             "",
         ]
 
@@ -583,8 +716,56 @@ def main():
     script_dir = Path(__file__).parent
     base_dir = script_dir.parent
 
+    blueprints_dir = base_dir / "blueprints"
+
+    # Find blueprint directory - support both slug-based and legacy UID-based lookups
+    blueprint_dir = blueprints_dir / args.blueprint
+    blueprint_slug = args.blueprint  # Default to the provided argument
+    
+    if not blueprint_dir.exists() or not blueprint_dir.is_dir():
+        # Try to find a blueprint directory by searching for meta.yaml with matching blueprint_id
+        found = False
+        for child_dir in blueprints_dir.iterdir():
+            if not child_dir.is_dir():
+                continue
+            meta_file = child_dir / "meta.yaml"
+            if meta_file.exists():
+                try:
+                    meta_data = load_yaml(meta_file)
+                    if meta_data.get("blueprint_id") == args.blueprint or meta_data.get("slug") == args.blueprint:
+                        blueprint_dir = child_dir
+                        blueprint_slug = get_blueprint_slug(child_dir, meta_data)
+                        sys.stderr.write(
+                            f"Note: Resolved blueprint '{args.blueprint}' to directory '{child_dir.name}'\n"
+                        )
+                        found = True
+                        break
+                except Exception:
+                    pass
+        
+        if not found:
+            sys.stderr.write(f"Error: Blueprint '{args.blueprint}' not found in {blueprints_dir}\n")
+            sys.stderr.write("Available blueprints:\n")
+            for child_dir in blueprints_dir.iterdir():
+                if child_dir.is_dir():
+                    meta_file = child_dir / "meta.yaml"
+                    if meta_file.exists():
+                        try:
+                            meta_data = load_yaml(meta_file)
+                            name = meta_data.get("name", child_dir.name)
+                            sys.stderr.write(f"  - {child_dir.name}: {name}\n")
+                        except Exception:
+                            sys.stderr.write(f"  - {child_dir.name}\n")
+            sys.exit(1)
+    else:
+        # Load meta.yaml to get the slug
+        meta_file = blueprint_dir / "meta.yaml"
+        if meta_file.exists():
+            meta_data = load_yaml(meta_file)
+            blueprint_slug = get_blueprint_slug(blueprint_dir, meta_data)
+
     project_name = args.project if args.project else "default-project"
-    project_dir = setup_project_directories(base_dir, project_name, args.blueprint)
+    project_dir = setup_project_directories(base_dir, project_name, blueprint_slug)
     print(f"Using project: {project_name}")
     print(f"Project directory: {project_dir}")
     
@@ -601,37 +782,29 @@ def main():
     output_base_dir = project_dir / "output" / "iac"
     guidance_base_dir = project_dir / "output" / "documentation"
 
-    blueprints_dir = base_dir / "blueprints"
-
-    # Find workflow directory (external repo structure)
-    blueprint_dir = blueprints_dir / args.blueprint
-    if not blueprint_dir.exists() or not blueprint_dir.is_dir():
-        sys.stderr.write(f"Error: Blueprint directory not found: {blueprint_dir}\n")
-        sys.exit(1)
-
     # Load answers
     print(f"Loading answers from {answers_path}...")
     answers = load_yaml(answers_path) or {}
 
     # Render IaC code
-    print(f"Rendering blueprint '{args.blueprint}' for language '{args.lang}'...")
+    print(f"Rendering blueprint '{blueprint_slug}' for language '{args.lang}'...")
     rendered_code, code_rendered, code_skipped = render_blueprint_code(
         blueprint_dir, args.lang, answers, base_dir
     )
 
-    # Generate IaC output filename
+    # Generate IaC output filename with slug-based naming (e.g., account-creation_20260205.sql)
     output_dir = output_base_dir / args.lang
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    date_str = datetime.now().strftime("%Y%m%d%H%M%S")
+    date_str = datetime.now().strftime("%Y%m%d")
     extension = get_language_extension(args.lang)
-    output_file = output_dir / f"{args.blueprint}_{date_str}.{extension}"
+    output_file = output_dir / f"{blueprint_slug}_{date_str}.{extension}"
 
     # Write IaC output
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(rendered_code)
 
-    print(f"✓ Successfully rendered IaC to: {output_file}")
+    print(f"Successfully rendered IaC to: {output_file}")
     print(f"  Steps rendered: {code_rendered}, skipped (missing vars): {code_skipped}")
     print(f"  Total size: {len(rendered_code)} characters")
 
@@ -642,17 +815,17 @@ def main():
             blueprint_dir, answers, base_dir
         )
 
-        # Generate guidance output filename
+        # Generate guidance output filename with slug-based naming
         guidance_dir = guidance_base_dir
         guidance_dir.mkdir(parents=True, exist_ok=True)
 
-        guidance_file = guidance_dir / f"{args.blueprint}_{date_str}.md"
+        guidance_file = guidance_dir / f"{blueprint_slug}_{date_str}.md"
 
         # Write guidance output
         with open(guidance_file, "w", encoding="utf-8") as f:
             f.write(rendered_guidance)
 
-        print(f"✓ Successfully rendered guidance to: {guidance_file}")
+        print(f"Successfully rendered guidance to: {guidance_file}")
         print(
             f"  Steps rendered: {guide_rendered}, skipped (missing vars): {guide_skipped}"
         )
