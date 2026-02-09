@@ -746,8 +746,8 @@ def main():
                         )
                         found = True
                         break
-                except Exception:
-                    pass
+                except Exception as e:
+                    sys.stderr.write(f"Warning: Failed to read {meta_file}: {e}\n")
         
         if not found:
             sys.stderr.write(f"Error: Blueprint '{args.blueprint}' not found in {blueprints_dir}\n")
