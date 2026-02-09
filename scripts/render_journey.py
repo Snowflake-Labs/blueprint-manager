@@ -205,6 +205,11 @@ def build_step_slug_map(blueprint_dir):
             continue
             
         # Add directory name as a key (slug-based lookup)
+        if child_dir.name in slug_map:
+            sys.stderr.write(
+                f"Warning: Duplicate step identifier '{child_dir.name}' - "
+                f"'{child_dir}' overwrites '{slug_map[child_dir.name]}'\n"
+            )
         slug_map[child_dir.name] = child_dir
         
         # Check for step metadata with additional identifiers
@@ -214,10 +219,22 @@ def build_step_slug_map(blueprint_dir):
                 step_meta = load_yaml(step_meta_file)
                 # Map step_id to directory path (for UID-based references)
                 if "step_id" in step_meta:
-                    slug_map[step_meta["step_id"]] = child_dir
+                    step_id = step_meta["step_id"]
+                    if step_id in slug_map and slug_map[step_id] != child_dir:
+                        sys.stderr.write(
+                            f"Warning: Duplicate step_id '{step_id}' - "
+                            f"'{child_dir}' overwrites '{slug_map[step_id]}'\n"
+                        )
+                    slug_map[step_id] = child_dir
                 # Map explicit slug if different from directory name
                 if "slug" in step_meta and step_meta["slug"] != child_dir.name:
-                    slug_map[step_meta["slug"]] = child_dir
+                    slug = step_meta["slug"]
+                    if slug in slug_map and slug_map[slug] != child_dir:
+                        sys.stderr.write(
+                            f"Warning: Duplicate slug '{slug}' - "
+                            f"'{child_dir}' overwrites '{slug_map[slug]}'\n"
+                        )
+                    slug_map[slug] = child_dir
             except yaml.YAMLError as e:
                 sys.stderr.write(f"Warning: Invalid YAML in {step_meta_file}: {e}\n")
             except (IOError, OSError) as e:
