@@ -146,12 +146,12 @@ def resolve_step_path(blueprint_dir, step_identifier, step_slug_map=None):
     Resolve a step identifier to its actual directory path.
     
     Supports both slug-based and legacy UID-based directory structures.
-    First attempts to find the step by slug, then falls back to UID-based lookup.
+    Uses the pre-built step_slug_map for O(1) lookups instead of directory scanning.
     
     Args:
         blueprint_dir: Path to the blueprint directory
         step_identifier: Step identifier from meta.yaml (slug or UID)
-        step_slug_map: Optional mapping of step slugs to directory paths
+        step_slug_map: Mapping of step slugs/UIDs to directory paths (required for efficient lookup)
         
     Returns:
         Tuple of (step_path, step_slug, used_fallback)
@@ -164,29 +164,18 @@ def resolve_step_path(blueprint_dir, step_identifier, step_slug_map=None):
     if step_path.exists() and step_path.is_dir():
         return step_path, step_identifier, False
     
-    # Check if step_slug_map has a mapping for this identifier
+    # Use the pre-built step_slug_map for O(1) lookup (handles both slug and UID references)
     if step_slug_map and step_identifier in step_slug_map:
         mapped_path = step_slug_map[step_identifier]
         if mapped_path.exists() and mapped_path.is_dir():
             slug = mapped_path.name
-            return mapped_path, slug, False
-    
-    # Fallback: search for legacy UID-based directories
-    # Look for directories that might have a step.yaml or meta.yaml with matching ID
-    for child_dir in blueprint_dir.iterdir():
-        if not child_dir.is_dir():
-            continue
-        # Check if this could be a legacy UID directory matching the identifier
-        if child_dir.name.startswith("step_") or child_dir.name == step_identifier:
-            step_meta_file = child_dir / "step.yaml"
-            if step_meta_file.exists():
-                step_meta = load_yaml(step_meta_file)
-                if step_meta.get("step_id") == step_identifier or step_meta.get("slug") == step_identifier:
-                    slug = step_meta.get("slug", child_dir.name)
-                    sys.stderr.write(
-                        f"  Note: Using legacy UID path for step '{step_identifier}' -> '{child_dir.name}'\n"
-                    )
-                    return child_dir, slug, True
+            # Check if this was a UID-based lookup (identifier differs from directory name)
+            used_fallback = step_identifier != slug
+            if used_fallback:
+                sys.stderr.write(
+                    f"  Note: Using legacy UID path for step '{step_identifier}' -> '{slug}'\n"
+                )
+            return mapped_path, slug, used_fallback
     
     # If no match found, return the original path (will fail gracefully later)
     return step_path, step_identifier, False
@@ -399,7 +388,7 @@ def render_step_guidance(step_path, answers, jinja_env, base_dir):
         return None, step_id, []
 
 
-def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
+def render_blueprint_code(blueprint_dir, lang, answers, base_dir, step_slug_map=None):
     """
     Render all code templates in a workflow.
     Only renders steps where all required variables are available.
@@ -407,6 +396,14 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
     Returns the concatenated rendered code and count of rendered/skipped steps.
     
     Supports both slug-based and legacy UID-based directory structures.
+    
+    Args:
+        blueprint_dir: Path to the blueprint directory
+        lang: Target language (sql, terraform)
+        answers: Dictionary of template variables
+        base_dir: Base directory for Jinja2 template loading
+        step_slug_map: Optional pre-built mapping of step identifiers to directory paths.
+                       If not provided, will be built internally (less efficient if called multiple times).
     """
     # Load meta.yaml for workflow metadata and step ordering
     meta_file = blueprint_dir / "meta.yaml"
@@ -421,8 +418,9 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
     blueprint_slug = get_blueprint_slug(blueprint_dir, meta_data)
     step_order = meta_data.get("steps", [])
 
-    # Build step slug map for resolving step identifiers
-    step_slug_map = build_step_slug_map(blueprint_dir)
+    # Use provided step_slug_map or build one (for backwards compatibility)
+    if step_slug_map is None:
+        step_slug_map = build_step_slug_map(blueprint_dir)
 
     # Create Jinja2 environment once for all steps
     jinja_env = Environment(
@@ -510,7 +508,7 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
     return "\n".join(rendered_sections), rendered_count, skipped_count
 
 
-def render_blueprint_guidance(blueprint_dir, answers, base_dir):
+def render_blueprint_guidance(blueprint_dir, answers, base_dir, step_slug_map=None):
     """
     Render all guidance/overview documents in a workflow.
     Only renders steps where all required variables are available.
@@ -518,6 +516,13 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
     Returns the concatenated rendered guidance markdown and count of rendered/skipped steps.
     
     Supports both slug-based and legacy UID-based directory structures.
+    
+    Args:
+        blueprint_dir: Path to the blueprint directory
+        answers: Dictionary of template variables
+        base_dir: Base directory for Jinja2 template loading
+        step_slug_map: Optional pre-built mapping of step identifiers to directory paths.
+                       If not provided, will be built internally (less efficient if called multiple times).
     """
     # Load meta.yaml for workflow metadata and step ordering
     meta_file = blueprint_dir / "meta.yaml"
@@ -533,8 +538,9 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
     blueprint_overview = meta_data.get("overview", "")
     step_order = meta_data.get("steps", [])
 
-    # Build step slug map for resolving step identifiers
-    step_slug_map = build_step_slug_map(blueprint_dir)
+    # Use provided step_slug_map or build one (for backwards compatibility)
+    if step_slug_map is None:
+        step_slug_map = build_step_slug_map(blueprint_dir)
 
     # Create Jinja2 environment with strict undefined checking
     jinja_env = Environment(
@@ -786,10 +792,13 @@ def main():
     print(f"Loading answers from {answers_path}...")
     answers = load_yaml(answers_path) or {}
 
+    # Build step slug map once for efficient lookup in both render functions
+    step_slug_map = build_step_slug_map(blueprint_dir)
+
     # Render IaC code
     print(f"Rendering blueprint '{blueprint_slug}' for language '{args.lang}'...")
     rendered_code, code_rendered, code_skipped = render_blueprint_code(
-        blueprint_dir, args.lang, answers, base_dir
+        blueprint_dir, args.lang, answers, base_dir, step_slug_map
     )
 
     # Generate IaC output filename with slug-based naming (e.g., account-creation_20260205_143022.sql)
@@ -812,7 +821,7 @@ def main():
     if not args.skip_guidance:
         print("\nRendering guidance documents...")
         rendered_guidance, guide_rendered, guide_skipped = render_blueprint_guidance(
-            blueprint_dir, answers, base_dir
+            blueprint_dir, answers, base_dir, step_slug_map
         )
 
         # Generate guidance output filename with slug-based naming
