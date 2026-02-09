@@ -229,8 +229,8 @@ def build_step_slug_map(blueprint_dir):
                 # Map explicit slug if different from directory name
                 if "slug" in step_meta and step_meta["slug"] != child_dir.name:
                     slug_map[step_meta["slug"]] = child_dir
-            except Exception:
-                pass  # Ignore malformed step.yaml files
+            except Exception as e:
+                sys.stderr.write(f"Warning: Failed to load {step_meta_file}: {e}\n")
     
     return slug_map
 
