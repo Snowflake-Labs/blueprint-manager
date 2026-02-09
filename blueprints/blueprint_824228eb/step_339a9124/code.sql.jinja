@@ -1,0 +1,118 @@
+-- ============================================================================
+-- GRANT DATABASE ACCESS TO ROLES
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: {{ data_product_name | upper }}_RBAC (to manage access grants)
+-- ============================================================================
+
+-- Derive the data product prefix for object names
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+USE ROLE {{ prefix }}_RBAC;
+
+-- ============================================================================
+-- GRANT WAREHOUSE ACCESS TO CUSTOM ROLES
+-- ============================================================================
+{%- if custom_read_roles %}
+
+-- Custom roles need warehouse access to execute queries
+-- Grant the most appropriate warehouse for each custom role's use case
+
+{% for role in custom_read_roles %}
+{%- set role_name = prefix ~ '_CUSTOM_' ~ role.name | upper %}
+
+-- Grant default warehouse access to {{ role_name }}
+-- Adjust based on workload requirements
+{% for wh in warehouse_configuration %}
+{%- set wh_access_role = prefix ~ '_WH_U_' ~ wh.name | upper %}
+-- Uncomment to grant {{ wh.name }} warehouse:
+-- GRANT ROLE {{ wh_access_role }} TO ROLE {{ role_name }};
+{% endfor %}
+
+{% endfor %}
+
+{%- else %}
+-- No custom read roles configured
+-- Warehouse access was already granted to core roles in Step 3.2
+{%- endif %}
+
+-- ============================================================================
+-- CROSS-DATA PRODUCT ACCESS (Optional)
+-- ============================================================================
+-- Use this pattern to grant access to roles from other data products
+-- 
+-- Example: Grant read access to another data product's role
+-- USE ROLE {{ prefix }}_RBAC;
+-- GRANT DATABASE ROLE {{ prefix }}_GOLD.DB_R TO ROLE <other_prefix>_READ;
+-- GRANT ROLE {{ prefix }}_WH_U_ANALYTICS TO ROLE <other_prefix>_READ;
+
+-- ============================================================================
+-- SERVICE ACCOUNT ACCESS (Optional)
+-- ============================================================================
+-- Use this pattern to grant access to service accounts
+--
+-- Example: Grant read access to an ETL service account role
+-- USE ROLE {{ prefix }}_RBAC;
+-- GRANT ROLE {{ prefix }}_READ TO ROLE SVC_ETL;
+-- GRANT ROLE {{ prefix }}_WH_U_ETL TO ROLE SVC_ETL;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+{%- if custom_read_roles %}
+
+-- Verify custom role grants
+{% for role in custom_read_roles %}
+{%- set role_name = prefix ~ '_CUSTOM_' ~ role.name | upper %}
+SHOW GRANTS TO ROLE {{ role_name }};
+{% endfor %}
+
+{%- else %}
+
+-- Verify core role grants
+SHOW GRANTS TO ROLE {{ prefix }}_READ;
+SHOW GRANTS TO ROLE {{ prefix }}_WRITE;
+SHOW GRANTS TO ROLE {{ prefix }}_CREATE;
+
+{%- endif %}
+
+/*
+DATABASE ACCESS GRANTS
+======================
+
+Core Roles (configured in Step 3.3):
+  - {{ prefix }}_READ → DB_R all zones + all warehouses
+  - {{ prefix }}_WRITE → DB_W all zones + all warehouses
+  - {{ prefix }}_CREATE → DB_C all zones + all warehouses
+  - {{ prefix }}_ADMIN → Full ownership
+
+{%- if custom_read_roles %}
+
+Custom Roles (warehouse grants may need to be enabled):
+{%- for role in custom_read_roles %}
+  - {{ prefix }}_CUSTOM_{{ role.name | upper }}
+{%- endfor %}
+{%- endif %}
+
+To grant additional access:
+  1. Use role {{ prefix }}_RBAC
+  2. GRANT ROLE <access_role> TO ROLE <target_role>;
+
+NEXT STEPS:
+- Task 5: Resource Management (optional)
+- Assign users to roles via SCIM or direct grants
+*/

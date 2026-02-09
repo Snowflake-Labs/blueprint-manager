@@ -1,0 +1,43 @@
+## Warehouse Access Roles
+
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+### Access Roles to Create
+
+| Warehouse | Access Role | Privileges |
+|-----------|-------------|------------|
+{%- for wh in warehouse_configuration %}
+| `{{ prefix }}_WH_{{ wh.name | upper }}` | `{{ prefix }}_WH_U_{{ wh.name | upper }}` | USAGE, MONITOR, OPERATE |
+{%- endfor %}
+
+### Role Properties
+
+| Property | Value |
+|----------|-------|
+| **Owner** | `{{ prefix }}_RBAC` |
+| **Can Grant** | Any role via RBAC |
+
+### Access Pattern
+
+```
+User → Account Role → Warehouse Access Role → Warehouse
+                            ↓
+                     USAGE, MONITOR, OPERATE
+```
+
+### Recommended Assignments
+
+| Warehouse Type | Typical Users |
+|----------------|---------------|
+| ETL/Transform | Data Engineers, Service Accounts |
+| Analytics | Data Analysts, BI Tools |
+| Interactive | Ad-hoc query users |
+| Production | Application service accounts |

@@ -1,0 +1,44 @@
+-- ============================================================================
+-- ZONE STRUCTURE CONFIGURATION
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+-- Zones: {% for zone in data_zones %}{{ zone.name | upper }}{% if not loop.last %}, {% endif %}{% endfor %}
+-- ============================================================================
+-- This step captures zone structure for planning purposes.
+-- Databases are created in Task 2, Step 2.2.
+-- ============================================================================
+
+/*
+ZONE STRUCTURE DEFINED
+======================
+
+Data Product: {{ data_product_name }}
+Number of Zones: {{ data_zones | length }}
+
+Databases to be Created:
+{%- for zone in data_zones %}
+{%- if account_strategy == 'Single Account' %}
+- {{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ zone.name | upper }}_{{ data_product_environment | upper }}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+- {{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ zone.name | upper }}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+- {{ data_product_name | upper }}_{{ zone.name | upper }}_{{ data_product_environment | upper }}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+- {{ data_product_name | upper }}_{{ zone.name | upper }}
+{%- endif %}
+{%- endfor %}
+
+Zone Details:
+{%- for zone in data_zones %}
+{{ loop.index }}. {{ zone.name | upper }}
+   - Purpose: {{ zone.description }}
+   - Time Travel: {{ zone.time_travel_days }} days
+   - Database Roles: DB_R, DB_W, DB_C
+{%- endfor %}
+
+Tags Applied to Each Database:
+- DOMAIN = '{{ data_product_domain | upper }}'
+- ENVIRONMENT = '{{ data_product_environment | upper }}'
+- DATAPRODUCT = '{{ data_product_name | upper }}'
+- ZONE = '<zone_name>'
+*/

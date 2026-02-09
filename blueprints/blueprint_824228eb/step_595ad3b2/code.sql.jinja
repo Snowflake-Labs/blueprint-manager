@@ -1,0 +1,82 @@
+-- ============================================================================
+-- SCHEMA ORGANIZATION PLANNING
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+-- ============================================================================
+-- This step captures schema structure for planning purposes.
+-- Schemas are created in Task 2, Step 2.3.
+-- ============================================================================
+
+/*
+SCHEMA ORGANIZATION DEFINED
+===========================
+
+Data Product: {{ data_product_name }}
+
+{%- for config in schema_configuration %}
+{%- set zone = config.zone | upper %}
+{%- set schemas = config.schemas.split(',') | map('trim') | list %}
+
+{{ zone }} Zone Schemas:
+{%- for schema in schemas %}
+  - {{ schema | upper }}
+    - SC_R_{{ schema | upper }} (Read)
+    - SC_W_{{ schema | upper }} (Write)
+    - SC_C_{{ schema | upper }} (Create)
+{%- endfor %}
+{%- endfor %}
+
+Schema Properties:
+- All schemas: WITH MANAGED ACCESS
+- Schema owner: {{ data_product_name | upper }}_ADMIN
+- Access role owner: {{ data_product_name | upper }}_RBAC
+
+Database Role Hierarchy:
+- SC_R_* (Schema Read) → DB_R (Database Read)
+- SC_W_* (Schema Write) → DB_W (Database Write)
+- SC_C_* (Schema Create) → DB_C (Database Create)
+
+Account Role Connections:
+- DB_R → {{ data_product_name | upper }}_READ
+- DB_W → {{ data_product_name | upper }}_WRITE
+- DB_C → {{ data_product_name | upper }}_CREATE
+*/
+
+-- ============================================================================
+-- PREVIEW: Schema Creation SQL (generated in Step 2.3)
+-- ============================================================================
+
+/*
+Example schema creation pattern:
+
+USE ROLE IDENTIFIER($afrAdmin);
+USE DATABASE IDENTIFIER($dbNm);
+
+-- Create schema with managed access
+CREATE SCHEMA IF NOT EXISTS IDENTIFIER($scNm) WITH MANAGED ACCESS;
+
+-- Create schema access roles
+CREATE DATABASE ROLE IF NOT EXISTS IDENTIFIER($sarR);  -- SC_R_<schema>
+CREATE DATABASE ROLE IF NOT EXISTS IDENTIFIER($sarW);  -- SC_W_<schema>
+CREATE DATABASE ROLE IF NOT EXISTS IDENTIFIER($sarC);  -- SC_C_<schema>
+
+-- Grant privileges to schema roles
+GRANT USAGE ON SCHEMA <schema> TO DATABASE ROLE SC_R_<schema>;
+GRANT SELECT ON ALL TABLES IN SCHEMA <schema> TO DATABASE ROLE SC_R_<schema>;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA <schema> TO DATABASE ROLE SC_R_<schema>;
+-- ... additional grants per role
+
+-- Establish role hierarchy
+GRANT DATABASE ROLE SC_R_<schema> TO DATABASE ROLE SC_W_<schema>;
+GRANT DATABASE ROLE SC_W_<schema> TO DATABASE ROLE SC_C_<schema>;
+
+-- Roll up to database level
+GRANT DATABASE ROLE SC_R_<schema> TO DATABASE ROLE DB_R;
+GRANT DATABASE ROLE SC_W_<schema> TO DATABASE ROLE DB_W;
+GRANT DATABASE ROLE SC_C_<schema> TO DATABASE ROLE DB_C;
+
+-- Transfer ownership to RBAC role
+GRANT OWNERSHIP ON DATABASE ROLE SC_R_<schema> TO ROLE {{ data_product_name | upper }}_RBAC COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON DATABASE ROLE SC_W_<schema> TO ROLE {{ data_product_name | upper }}_RBAC COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON DATABASE ROLE SC_C_<schema> TO ROLE {{ data_product_name | upper }}_RBAC COPY CURRENT GRANTS;
+*/

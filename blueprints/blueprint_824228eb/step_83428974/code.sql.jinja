@@ -1,0 +1,128 @@
+-- ============================================================================
+-- CREATE CUSTOM READ ROLES
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: {{ data_product_name | upper }}_RBAC (owns access roles)
+-- ============================================================================
+
+-- Derive the data product prefix for object names
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+{%- if custom_read_roles %}
+
+USE ROLE SECURITYADMIN;
+
+-- ============================================================================
+-- CREATE CUSTOM READ ROLES
+-- ============================================================================
+{% for role in custom_read_roles %}
+{%- set role_name = prefix ~ '_CUSTOM_' ~ role.name | upper %}
+
+-- ----------------------------------------------------------------------------
+-- ROLE: {{ role_name }}
+-- Description: {{ role.description }}
+-- ----------------------------------------------------------------------------
+
+-- Create the custom role
+CREATE ROLE IF NOT EXISTS {{ role_name }}
+  COMMENT = '{{ role.description }}';
+
+-- Grant schema access
+{%- set schemas = role.schema_access.split(',') | map('trim') | list %}
+{%- for schema_spec in schemas %}
+{%- set parts = schema_spec.split('.') %}
+{%- if parts | length == 2 %}
+{%- set zone = parts[0] | upper %}
+{%- set schema = parts[1] | upper %}
+{%- set db_name = prefix ~ '_' ~ zone %}
+-- Grant read access to {{ zone }}.{{ schema }}
+GRANT DATABASE ROLE {{ db_name }}.SC_R_{{ schema }} TO ROLE {{ role_name }};
+{%- else %}
+{%- set zone = schema_spec | upper %}
+{%- set db_name = prefix ~ '_' ~ zone %}
+-- Grant full read access to {{ zone }} zone
+GRANT DATABASE ROLE {{ db_name }}.DB_R TO ROLE {{ role_name }};
+{%- endif %}
+{%- endfor %}
+
+-- Transfer ownership to RBAC role
+GRANT OWNERSHIP ON ROLE {{ role_name }} TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
+
+{% endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Show all custom roles
+SHOW ROLES LIKE '{{ prefix }}_CUSTOM_%';
+
+{% for role in custom_read_roles %}
+{%- set role_name = prefix ~ '_CUSTOM_' ~ role.name | upper %}
+-- Show grants for {{ role_name }}
+SHOW GRANTS TO ROLE {{ role_name }};
+{% endfor %}
+
+{%- else %}
+
+-- ============================================================================
+-- NO CUSTOM READ ROLES CONFIGURED
+-- ============================================================================
+-- 
+-- To create custom read roles, add entries to the custom_read_roles answer:
+--
+-- Example:
+--   custom_read_roles:
+--     - name: PARTNER_A
+--       description: Read access for Partner A
+--       schema_access: GOLD.REPORTING,GOLD.ANALYTICS
+--     - name: BI_TEAM
+--       description: Read access for BI team
+--       schema_access: GOLD,SILVER.CLEANSED
+--
+-- Schema access format:
+--   - "ZONE.SCHEMA" → Grants SC_R_<SCHEMA> from that database
+--   - "ZONE" → Grants full DB_R from that database
+--
+-- ============================================================================
+
+SELECT 'No custom read roles configured' AS status;
+
+{%- endif %}
+
+/*
+CUSTOM READ ROLES
+=================
+
+{%- if custom_read_roles %}
+Created {{ custom_read_roles | length }} custom read role(s):
+
+{%- for role in custom_read_roles %}
+  {{ loop.index }}. {{ prefix }}_CUSTOM_{{ role.name | upper }}
+     Description: {{ role.description }}
+     Access: {{ role.schema_access }}
+{%- endfor %}
+
+Ownership: {{ prefix }}_RBAC
+
+{%- else %}
+No custom read roles were configured.
+{%- endif %}
+
+NEXT STEPS:
+- Step 4.2: Grant database access to custom roles
+- Assign warehouse access to custom roles as needed
+*/

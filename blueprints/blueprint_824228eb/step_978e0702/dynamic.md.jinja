@@ -1,0 +1,42 @@
+## Target Account Selection
+
+### Selected Account
+
+| Property | Value |
+|----------|-------|
+| **Target Account** | {{ target_account_name | upper }} |
+| **Account Strategy** | {{ account_strategy }} |
+
+### Implied Naming Components
+
+{%- if account_strategy == 'Multi-Account (Environment-based)' %}
+Based on your **Environment-based** account strategy:
+- **Environment**: Implied by account name (`{{ target_account_name | upper }}`)
+- **Domain**: Must be specified in object names
+- **Data Product**: Must be specified in object names
+
+Object names will follow the pattern: `<domain>_<dataproduct>_<zone>`
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+Based on your **Domain-based** account strategy:
+- **Domain**: Implied by account name (`{{ target_account_name | upper }}`)
+- **Environment**: Must be specified in object names
+- **Data Product**: Must be specified in object names
+
+Object names will follow the pattern: `<dataproduct>_<zone>_<env>`
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+Based on your **Domain + Environment** account strategy:
+- **Domain**: Implied by account name (first component)
+- **Environment**: Implied by account name (second component)
+- **Data Product**: Must be specified in object names
+
+Object names will follow the pattern: `<dataproduct>_<zone>`
+{%- endif %}
+
+### Connection Information
+
+To execute SQL in subsequent steps, connect to:
+- **Account**: `{{ target_account_name | upper }}`
+- **Required Role**: SYSADMIN (for object creation)
+- **Connection URL**: `https://<org>-{{ target_account_name | lower }}.snowflakecomputing.com`
+
+> **Important:** Ensure you have SYSADMIN access to this account before proceeding.

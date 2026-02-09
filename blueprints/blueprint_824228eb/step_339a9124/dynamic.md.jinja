@@ -1,0 +1,53 @@
+## Database Access Summary
+
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+### Core Role Access (Already Configured)
+
+| Role | Database Access | Warehouse Access |
+|------|-----------------|------------------|
+| `{{ prefix }}_READ` | DB_R (all zones) | All warehouses |
+| `{{ prefix }}_WRITE` | DB_W (all zones) | All warehouses |
+| `{{ prefix }}_CREATE` | DB_C (all zones) | All warehouses |
+| `{{ prefix }}_ADMIN` | Full ownership | All warehouses |
+
+### Custom Role Access Status
+
+{%- if custom_read_roles %}
+
+| Role | Data Access | Warehouse Access |
+|------|-------------|------------------|
+{%- for role in custom_read_roles %}
+| `{{ prefix }}_CUSTOM_{{ role.name | upper }}` | {{ role.schema_access }} | **Needs Grant** |
+{%- endfor %}
+
+Custom roles require explicit warehouse grants to execute queries.
+
+{%- else %}
+
+No custom read roles configured. All access is through core roles.
+
+{%- endif %}
+
+### Available Warehouse Access Roles
+
+{%- for wh in warehouse_configuration %}
+| `{{ prefix }}_WH_U_{{ wh.name | upper }}` | USAGE on `{{ prefix }}_WH_{{ wh.name | upper }}` |
+{%- endfor %}
+
+### Grant Warehouse Access to Custom Roles
+
+To grant warehouse access to a custom role:
+
+```sql
+USE ROLE {{ prefix }}_RBAC;
+GRANT ROLE {{ prefix }}_WH_U_<warehouse> TO ROLE {{ prefix }}_CUSTOM_<name>;
+```

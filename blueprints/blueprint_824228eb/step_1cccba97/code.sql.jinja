@@ -1,0 +1,234 @@
+-- ============================================================================
+-- CREATE SCHEMAS
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: {{ data_product_name | upper }}_ADMIN (delegated admin)
+-- ============================================================================
+
+-- Derive the data product prefix for object names
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+-- Use the delegated admin role (owns the databases)
+USE ROLE {{ prefix }}_ADMIN;
+
+-- ============================================================================
+-- CREATE SCHEMAS FOR EACH ZONE
+-- ============================================================================
+{% for config in schema_configuration %}
+{%- set zone = config.zone | upper %}
+{%- set schemas = config.schemas.split(',') | map('trim') | list %}
+{%- set db_name = prefix ~ '_' ~ zone %}
+
+-- ----------------------------------------------------------------------------
+-- DATABASE: {{ db_name }} ({{ zone }} Zone)
+-- ----------------------------------------------------------------------------
+
+USE DATABASE {{ db_name }};
+
+{% for schema in schemas %}
+{%- set schema_name = schema | upper %}
+
+-- ============================================================================
+-- SCHEMA: {{ schema_name }}
+-- ============================================================================
+
+-- Step 1: Create schema with managed access
+CREATE SCHEMA IF NOT EXISTS {{ schema_name }} WITH MANAGED ACCESS
+  COMMENT = '{{ schema_name }} schema in {{ zone }} zone for {{ data_product_name }}';
+
+-- Step 2: Create schema access database roles
+CREATE DATABASE ROLE IF NOT EXISTS SC_R_{{ schema_name }}
+  COMMENT = 'Read access to {{ schema_name }} schema';
+
+CREATE DATABASE ROLE IF NOT EXISTS SC_W_{{ schema_name }}
+  COMMENT = 'Write access to {{ schema_name }} schema';
+
+CREATE DATABASE ROLE IF NOT EXISTS SC_C_{{ schema_name }}
+  COMMENT = 'Create access to {{ schema_name }} schema';
+
+-- ============================================================================
+-- SC_R (READ) PRIVILEGES
+-- ============================================================================
+-- Read-only access to all data objects in the schema
+
+-- Schema usage
+GRANT USAGE ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+GRANT MONITOR ON DATABASE {{ db_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+
+-- Tables (current and future)
+GRANT SELECT ON ALL TABLES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+GRANT SELECT ON FUTURE TABLES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+
+-- Views (current and future)
+GRANT SELECT ON ALL VIEWS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+GRANT SELECT ON FUTURE VIEWS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+
+-- External Tables (current and future)
+GRANT SELECT ON ALL EXTERNAL TABLES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+GRANT SELECT ON FUTURE EXTERNAL TABLES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+
+-- Dynamic Tables (current and future)
+GRANT SELECT ON ALL DYNAMIC TABLES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+GRANT SELECT ON FUTURE DYNAMIC TABLES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+
+-- Materialized Views (current and future)
+GRANT SELECT ON ALL MATERIALIZED VIEWS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+GRANT SELECT ON FUTURE MATERIALIZED VIEWS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+
+-- Functions (current and future)
+GRANT USAGE ON ALL FUNCTIONS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+GRANT USAGE ON FUTURE FUNCTIONS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_R_{{ schema_name }};
+
+-- ============================================================================
+-- SC_W (WRITE) PRIVILEGES
+-- ============================================================================
+-- Data modification privileges (DML and operational)
+
+-- Tables - DML
+GRANT INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+GRANT INSERT, UPDATE, DELETE, TRUNCATE ON FUTURE TABLES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+
+-- Streams
+GRANT SELECT ON ALL STREAMS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+GRANT SELECT ON FUTURE STREAMS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+
+-- Procedures
+GRANT USAGE ON ALL PROCEDURES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+GRANT USAGE ON FUTURE PROCEDURES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+
+-- Sequences
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+GRANT USAGE ON FUTURE SEQUENCES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+
+-- Tasks
+GRANT MONITOR, OPERATE ON ALL TASKS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+GRANT MONITOR, OPERATE ON FUTURE TASKS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+
+-- File Formats
+GRANT USAGE ON ALL FILE FORMATS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+GRANT USAGE ON FUTURE FILE FORMATS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+
+-- Stages
+GRANT USAGE, READ, WRITE ON ALL STAGES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+GRANT USAGE, READ, WRITE ON FUTURE STAGES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+
+-- Dynamic Tables (operational)
+GRANT MONITOR, OPERATE ON ALL DYNAMIC TABLES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+GRANT MONITOR, OPERATE ON FUTURE DYNAMIC TABLES IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+
+-- Alerts
+GRANT MONITOR, OPERATE ON ALL ALERTS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+GRANT MONITOR, OPERATE ON FUTURE ALERTS IN SCHEMA {{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+
+-- ============================================================================
+-- SC_C (CREATE) PRIVILEGES
+-- ============================================================================
+-- Object creation privileges
+
+GRANT CREATE TABLE ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE VIEW ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE STREAM ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE FUNCTION ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE PROCEDURE ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE SEQUENCE ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE TASK ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE FILE FORMAT ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE STAGE ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE EXTERNAL TABLE ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE PIPE ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE DYNAMIC TABLE ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE MATERIALIZED VIEW ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE STREAMLIT ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE ALERT ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE TAG ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE MASKING POLICY ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+GRANT CREATE ROW ACCESS POLICY ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+
+-- ============================================================================
+-- ESTABLISH SCHEMA ROLE HIERARCHY
+-- ============================================================================
+-- SC_R ← SC_W ← SC_C
+
+GRANT DATABASE ROLE SC_R_{{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
+GRANT DATABASE ROLE SC_W_{{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
+
+-- ============================================================================
+-- CONNECT TO DATABASE-LEVEL ROLES
+-- ============================================================================
+
+GRANT DATABASE ROLE SC_R_{{ schema_name }} TO DATABASE ROLE DB_R;
+GRANT DATABASE ROLE SC_W_{{ schema_name }} TO DATABASE ROLE DB_W;
+GRANT DATABASE ROLE SC_C_{{ schema_name }} TO DATABASE ROLE DB_C;
+
+-- ============================================================================
+-- TRANSFER OWNERSHIP TO RBAC ROLE
+-- ============================================================================
+
+GRANT OWNERSHIP ON DATABASE ROLE SC_R_{{ schema_name }} TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON DATABASE ROLE SC_W_{{ schema_name }} TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON DATABASE ROLE SC_C_{{ schema_name }} TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
+
+{% endfor %}
+{% endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Show all schemas
+{% for config in schema_configuration %}
+{%- set zone = config.zone | upper %}
+{%- set db_name = prefix ~ '_' ~ zone %}
+SHOW SCHEMAS IN DATABASE {{ db_name }};
+{% endfor %}
+
+-- Show all database roles
+{% for config in schema_configuration %}
+{%- set zone = config.zone | upper %}
+{%- set db_name = prefix ~ '_' ~ zone %}
+SHOW DATABASE ROLES IN DATABASE {{ db_name }};
+{% endfor %}
+
+/*
+SCHEMAS CREATED
+===============
+
+Created schemas for {{ data_product_name }} data product:
+
+{%- for config in schema_configuration %}
+{%- set zone = config.zone | upper %}
+{%- set schemas = config.schemas.split(',') | map('trim') | list %}
+{%- set db_name = prefix ~ '_' ~ zone %}
+
+{{ zone }} Zone ({{ db_name }}):
+{%- for schema in schemas %}
+  - {{ schema | upper }}
+    - SC_R_{{ schema | upper }} (read)
+    - SC_W_{{ schema | upper }} (write)
+    - SC_C_{{ schema | upper }} (create)
+{%- endfor %}
+{%- endfor %}
+
+Schema Role Ownership: {{ prefix }}_RBAC
+
+Role Hierarchy:
+- SC_R_* → DB_R → {{ prefix }}_READ
+- SC_W_* → DB_W → {{ prefix }}_WRITE
+- SC_C_* → DB_C → {{ prefix }}_CREATE
+
+NEXT STEPS:
+- Task 3: Warehouse & Access Configuration
+*/
