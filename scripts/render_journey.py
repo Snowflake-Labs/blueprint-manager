@@ -218,8 +218,10 @@ def build_step_slug_map(blueprint_dir):
                 # Map explicit slug if different from directory name
                 if "slug" in step_meta and step_meta["slug"] != child_dir.name:
                     slug_map[step_meta["slug"]] = child_dir
-            except Exception as e:
-                sys.stderr.write(f"Warning: Failed to load {step_meta_file}: {e}\n")
+            except yaml.YAMLError as e:
+                sys.stderr.write(f"Warning: Invalid YAML in {step_meta_file}: {e}\n")
+            except (IOError, OSError) as e:
+                sys.stderr.write(f"Warning: Failed to read {step_meta_file}: {e}\n")
     
     return slug_map
 
@@ -729,8 +731,8 @@ def main():
     blueprint_slug = args.blueprint  # Default to the provided argument
     
     if not blueprint_dir.exists() or not blueprint_dir.is_dir():
-        # Try to find a blueprint directory by searching for meta.yaml with matching blueprint_id
-        found = False
+        # Scan blueprints directory once and cache results for both lookup and error reporting
+        available_blueprints = []  # List of (dir_path, name, blueprint_id, slug) tuples
         for child_dir in blueprints_dir.iterdir():
             if not child_dir.is_dir():
                 continue
@@ -738,30 +740,37 @@ def main():
             if meta_file.exists():
                 try:
                     meta_data = load_yaml(meta_file)
-                    if meta_data.get("blueprint_id") == args.blueprint or meta_data.get("slug") == args.blueprint:
-                        blueprint_dir = child_dir
-                        blueprint_slug = get_blueprint_slug(child_dir, meta_data)
-                        sys.stderr.write(
-                            f"Note: Resolved blueprint '{args.blueprint}' to directory '{child_dir.name}'\n"
-                        )
-                        found = True
-                        break
-                except Exception as e:
+                    available_blueprints.append((
+                        child_dir,
+                        meta_data.get("name", child_dir.name),
+                        meta_data.get("blueprint_id"),
+                        meta_data.get("slug"),
+                        meta_data
+                    ))
+                except yaml.YAMLError as e:
+                    sys.stderr.write(f"Warning: Invalid YAML in {meta_file}: {e}\n")
+                    available_blueprints.append((child_dir, child_dir.name, None, None, None))
+                except (IOError, OSError) as e:
                     sys.stderr.write(f"Warning: Failed to read {meta_file}: {e}\n")
+                    available_blueprints.append((child_dir, child_dir.name, None, None, None))
+        
+        # Try to find a blueprint by matching blueprint_id or slug
+        found = False
+        for child_dir, name, bp_id, slug, meta_data in available_blueprints:
+            if bp_id == args.blueprint or slug == args.blueprint:
+                blueprint_dir = child_dir
+                blueprint_slug = get_blueprint_slug(child_dir, meta_data)
+                sys.stderr.write(
+                    f"Note: Resolved blueprint '{args.blueprint}' to directory '{child_dir.name}'\n"
+                )
+                found = True
+                break
         
         if not found:
             sys.stderr.write(f"Error: Blueprint '{args.blueprint}' not found in {blueprints_dir}\n")
             sys.stderr.write("Available blueprints:\n")
-            for child_dir in blueprints_dir.iterdir():
-                if child_dir.is_dir():
-                    meta_file = child_dir / "meta.yaml"
-                    if meta_file.exists():
-                        try:
-                            meta_data = load_yaml(meta_file)
-                            name = meta_data.get("name", child_dir.name)
-                            sys.stderr.write(f"  - {child_dir.name}: {name}\n")
-                        except Exception:
-                            sys.stderr.write(f"  - {child_dir.name}\n")
+            for child_dir, name, _, _, _ in available_blueprints:
+                sys.stderr.write(f"  - {child_dir.name}: {name}\n")
             sys.exit(1)
     else:
         # Load meta.yaml to get the slug
