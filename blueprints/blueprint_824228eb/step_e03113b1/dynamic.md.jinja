@@ -1,0 +1,56 @@
+## Warehouse Requirements
+
+### Configured Warehouses
+
+| Warehouse Name | Workload | Size | Timeout | Comment |
+|----------------|----------|------|---------|---------|
+{%- for wh in warehouse_configuration %}
+{%- if account_strategy == 'Single Account' %}
+| `{{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ data_product_environment | upper }}_{{ wh.workload | upper }}` | {{ wh.workload | upper }} | {{ wh.size }} | {{ wh.timeout_minutes }} min | {{ wh.comment }} |
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+| `{{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ wh.workload | upper }}` | {{ wh.workload | upper }} | {{ wh.size }} | {{ wh.timeout_minutes }} min | {{ wh.comment }} |
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+| `{{ data_product_name | upper }}_{{ data_product_environment | upper }}_{{ wh.workload | upper }}` | {{ wh.workload | upper }} | {{ wh.size }} | {{ wh.timeout_minutes }} min | {{ wh.comment }} |
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+| `{{ data_product_name | upper }}_{{ wh.workload | upper }}` | {{ wh.workload | upper }} | {{ wh.size }} | {{ wh.timeout_minutes }} min | {{ wh.comment }} |
+{%- endif %}
+{%- endfor %}
+
+### Warehouse Access Roles
+
+Each warehouse gets an access role for USAGE and MONITOR privileges:
+
+| Warehouse | Access Role | Grants |
+|-----------|-------------|--------|
+{%- for wh in warehouse_configuration %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.workload | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.workload | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.workload | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.workload | upper %}
+{%- endif %}
+| `{{ wh_name }}` | `_WH_U_{{ wh_name }}` | USAGE, MONITOR |
+{%- endfor %}
+
+### Cost Estimation
+
+| Size | Credits/Hour | Warehouses | Potential Credits/Hour |
+|------|--------------|------------|------------------------|
+{%- set size_map = {'X-Small': 1, 'Small': 2, 'Medium': 4, 'Large': 8, 'X-Large': 16, '2X-Large': 32} %}
+{%- for wh in warehouse_configuration %}
+| {{ wh.size }} | {{ size_map.get(wh.size, 1) }} | 1 | {{ size_map.get(wh.size, 1) }} |
+{%- endfor %}
+
+> **Note:** Actual costs depend on warehouse utilization and auto-suspend settings. All warehouses are created with AUTO_SUSPEND = 60 seconds by default.
+
+### Warehouse Properties
+
+All warehouses will be created with:
+- **Auto Suspend:** 60 seconds
+- **Auto Resume:** TRUE
+- **Initially Suspended:** TRUE
+- **Owner:** `{{ data_product_name | upper }}_ADMIN` role
+- **Tagged with:** DOMAIN, ENVIRONMENT, DATAPRODUCT, WORKLOAD

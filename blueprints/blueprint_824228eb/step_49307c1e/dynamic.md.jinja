@@ -1,0 +1,47 @@
+## Warehouse Configuration
+
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+### Warehouses to Create
+
+| Warehouse | Size | Min Clusters | Max Clusters | Auto-Suspend | Access Role |
+|-----------|------|--------------|--------------|--------------|-------------|
+{%- for wh in warehouse_configuration %}
+| `{{ prefix }}_WH_{{ wh.name | upper }}` | {{ wh.size }} | {{ wh.min_cluster_count }} | {{ wh.max_cluster_count }} | {{ wh.auto_suspend_seconds }}s | `{{ prefix }}_WH_U_{{ wh.name | upper }}` |
+{%- endfor %}
+
+### Governance Tags Applied
+
+Each warehouse will be tagged with:
+
+| Tag | Value |
+|-----|-------|
+| DOMAIN | `{{ data_product_domain }}` |
+| ENVIRONMENT | `{{ data_product_environment }}` |
+| DATAPRODUCT | `{{ data_product_name }}` |
+| WORKLOAD | `<warehouse name>` |
+
+### Ownership
+
+| Property | Value |
+|----------|-------|
+| **Created By** | `{{ prefix }}_CREATE` |
+| **Final Owner** | `{{ prefix }}_ADMIN` |
+
+### Credit Estimates
+
+| Warehouse | Credits/Hour (Idle) | Credits/Hour (Full) |
+|-----------|---------------------|---------------------|
+{%- for wh in warehouse_configuration %}
+{%- set credits_per_hour = {'X-SMALL': 1, 'SMALL': 2, 'MEDIUM': 4, 'LARGE': 8, 'X-LARGE': 16, '2X-LARGE': 32, '3X-LARGE': 64, '4X-LARGE': 128, '5X-LARGE': 256, '6X-LARGE': 512} %}
+{%- set hourly = credits_per_hour.get(wh.size | upper, 1) %}
+| `{{ prefix }}_WH_{{ wh.name | upper }}` | {{ hourly * wh.min_cluster_count }} | {{ hourly * wh.max_cluster_count }} |
+{%- endfor %}

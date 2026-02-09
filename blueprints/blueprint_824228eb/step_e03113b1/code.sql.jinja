@@ -1,0 +1,82 @@
+-- ============================================================================
+-- WAREHOUSE REQUIREMENTS PLANNING
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+-- Number of Warehouses: {{ warehouse_configuration | length }}
+-- ============================================================================
+-- This step captures warehouse requirements for planning purposes.
+-- Warehouses are created in Task 3, Step 3.1.
+-- ============================================================================
+
+/*
+WAREHOUSE REQUIREMENTS DEFINED
+==============================
+
+Data Product: {{ data_product_name }}
+
+Warehouses to be Created:
+{%- for wh in warehouse_configuration %}
+{%- if account_strategy == 'Single Account' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.workload | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.workload | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.workload | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set wh_name = data_product_name | upper ~ '_' ~ wh.workload | upper %}
+{%- endif %}
+
+{{ loop.index }}. {{ wh_name }}
+   - Workload: {{ wh.workload | upper }}
+   - Size: {{ wh.size }}
+   - Query Timeout: {{ wh.timeout_minutes }} minutes
+   - Comment: {{ wh.comment }}
+   - Access Role: _WH_U_{{ wh_name }}
+{%- endfor %}
+
+Warehouse Properties:
+- Auto Suspend: 60 seconds
+- Auto Resume: TRUE
+- Initially Suspended: TRUE
+- Owner: {{ data_product_name | upper }}_ADMIN
+- Access Role Owner: {{ data_product_name | upper }}_RBAC
+
+Tags Applied:
+- DOMAIN = '{{ data_product_domain | upper }}'
+- ENVIRONMENT = '{{ data_product_environment | upper }}'
+- DATAPRODUCT = '{{ data_product_name | upper }}'
+- WORKLOAD = '<workload_type>'
+*/
+
+-- ============================================================================
+-- PREVIEW: Warehouse Creation SQL (generated in Step 3.1)
+-- ============================================================================
+
+/*
+Example warehouse creation pattern:
+
+USE ROLE SYSADMIN;
+
+CREATE WAREHOUSE IF NOT EXISTS IDENTIFIER($whNm) WITH
+  WAREHOUSE_SIZE                = $whSize
+  INITIALLY_SUSPENDED           = TRUE
+  AUTO_RESUME                   = TRUE
+  AUTO_SUSPEND                  = 60
+  STATEMENT_TIMEOUT_IN_SECONDS  = $queryTimeoutSec
+  WITH TAG (IDENTIFIER($dpDomainTag) = $beNm) 
+  COMMENT                       = $whComment;
+
+-- Transfer ownership to delegated admin
+GRANT OWNERSHIP ON WAREHOUSE IDENTIFIER($whNm) TO ROLE IDENTIFIER($afrAdmin);
+
+-- Create warehouse access role
+USE ROLE USERADMIN;
+CREATE ROLE IF NOT EXISTS IDENTIFIER($warU) WITH TAG (IDENTIFIER($dpDomainTag) = $beNm);
+
+-- Grant warehouse privileges to access role
+USE ROLE SECURITYADMIN;
+GRANT MONITOR, USAGE ON WAREHOUSE IDENTIFIER($whNm) TO ROLE IDENTIFIER($warU);
+
+-- Transfer ownership of access role to RBAC admin
+GRANT OWNERSHIP ON ROLE IDENTIFIER($warU) TO ROLE IDENTIFIER($afrRbac) COPY CURRENT GRANTS;
+*/

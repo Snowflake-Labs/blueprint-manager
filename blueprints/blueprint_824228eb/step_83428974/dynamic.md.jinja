@@ -1,0 +1,66 @@
+## Custom Read Roles Configuration
+
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+{%- if custom_read_roles %}
+
+### Roles to Create
+
+| Role | Description | Schema Access |
+|------|-------------|---------------|
+{%- for role in custom_read_roles %}
+| `{{ prefix }}_CUSTOM_{{ role.name | upper }}` | {{ role.description }} | {{ role.schema_access }} |
+{%- endfor %}
+
+### Detailed Access Matrix
+
+{%- for role in custom_read_roles %}
+
+#### {{ prefix }}_CUSTOM_{{ role.name | upper }}
+
+**Description:** {{ role.description }}
+
+**Schema Grants:**
+{%- set schemas = role.schema_access.split(',') | map('trim') | list %}
+{%- for schema_spec in schemas %}
+{%- set parts = schema_spec.split('.') %}
+{%- if parts | length == 2 %}
+- `{{ parts[0] | upper }}.{{ parts[1] | upper }}` → `SC_R_{{ parts[1] | upper }}`
+{%- else %}
+- `{{ schema_spec | upper }}` (full zone access) → `DB_R`
+{%- endif %}
+{%- endfor %}
+
+{%- endfor %}
+
+### Role Properties
+
+| Property | Value |
+|----------|-------|
+| **Owner** | `{{ prefix }}_RBAC` |
+| **Granted To** | As needed |
+| **Warehouse Access** | Must grant separately |
+
+{%- else %}
+
+### No Custom Read Roles Configured
+
+Custom read roles are optional. Use this feature when you need:
+- Fine-grained access for external partners
+- Restricted access for specific applications
+- Compliance-driven access controls
+
+To add custom read roles, update the `custom_read_roles` answer with:
+- `name`: Role identifier (e.g., "PARTNER_A")
+- `description`: Purpose of the role
+- `schema_access`: Comma-separated list of zone.schema (e.g., "GOLD.REPORTING,GOLD.ANALYTICS")
+
+{%- endif %}

@@ -1,0 +1,70 @@
+## Alert Notification Configuration
+
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+{%- if notification_email %}
+
+### Notification Integration
+
+| Property | Value |
+|----------|-------|
+| **Name** | `{{ prefix }}_NOTIFY_EMAIL` |
+| **Type** | Email |
+| **Recipient** | `{{ notification_email }}` |
+
+### Alert Configuration
+
+| Property | Value |
+|----------|-------|
+| **Alert Name** | `RESOURCE_MONITOR_ALERT` |
+| **Location** | `{{ prefix }}_{{ data_zones[0].name | upper }}.ALERTS` |
+| **Schedule** | Every hour |
+| **Warehouse** | `{{ prefix }}_WH_{{ warehouse_configuration[0].name | upper }}` |
+| **Condition** | Resource monitor >= 75% usage |
+
+### Alert Triggers
+
+When the resource monitor crosses these thresholds, you'll receive notifications:
+
+| Threshold | Action | Via |
+|-----------|--------|-----|
+| 50% | Notify | Built-in (account admins) |
+| 75% | Notify | Built-in + Custom alert |
+| 90% | Notify | Built-in (account admins) |
+| 100% | Suspend | Warehouses suspended |
+
+{%- else %}
+
+### No Notification Email Configured
+
+To enable notifications, provide an email address in the `notification_email` answer.
+
+**Alternative Notifications:**
+1. **Snowsight Notifications**: Configure in Admin → Notifications
+2. **Built-in Monitor Notifications**: Sent to account admins automatically
+3. **Third-party Integration**: Use webhooks or message queues
+
+{%- endif %}
+
+---
+
+## 🎉 Data Product Deployment Complete!
+
+Your **{{ data_product_name }}** data product is now fully configured:
+
+| Component | Status |
+|-----------|--------|
+| Core Roles | ✅ Created |
+| Databases | ✅ {{ data_zones | length }} zone(s) |
+| Schemas | ✅ Configured per zone |
+| Warehouses | ✅ {{ warehouse_configuration | length }} warehouse(s) |
+| Resource Monitor | ✅ {{ resource_monitor_credits }} credits/{{ resource_monitor_frequency }} |
+| Notifications | {% if notification_email %}✅ {{ notification_email }}{% else %}⚠️ Not configured{% endif %} |

@@ -1,0 +1,61 @@
+## Schema Organization
+
+### Schemas by Zone
+
+{%- for config in schema_configuration %}
+{%- set zone = config.zone | upper %}
+{%- set schemas = config.schemas.split(',') | map('trim') | list %}
+
+#### {{ zone }} Zone
+
+| Schema | Database Role (Read) | Database Role (Write) | Database Role (Create) |
+|--------|---------------------|----------------------|------------------------|
+{%- for schema in schemas %}
+| `{{ schema | upper }}` | `SC_R_{{ schema | upper }}` | `SC_W_{{ schema | upper }}` | `SC_C_{{ schema | upper }}` |
+{%- endfor %}
+
+{%- endfor %}
+
+### Total Objects to Create
+
+| Object Type | Count |
+|-------------|-------|
+| **Databases** | {{ data_zones | length }} |
+| **Schemas** | {% set total_schemas = 0 %}{% for config in schema_configuration %}{% set schemas = config.schemas.split(',') | map('trim') | list %}{% set total_schemas = total_schemas + schemas | length %}{% endfor %}{{ total_schemas }} |
+| **Schema Access Roles** | {{ total_schemas * 3 }} |
+
+### Access Control Hierarchy
+
+Each schema's database roles inherit up to the database level:
+
+```
+Database: {{ data_product_name | upper }}_<ZONE>
+├── DB_R (Database Read)
+│   {%- for config in schema_configuration %}
+│   {%- set schemas = config.schemas.split(',') | map('trim') | list %}
+│   {%- for schema in schemas %}
+│   ├── SC_R_{{ schema | upper }}
+│   {%- endfor %}
+│   {%- endfor %}
+├── DB_W (Database Write)
+│   {%- for config in schema_configuration %}
+│   {%- set schemas = config.schemas.split(',') | map('trim') | list %}
+│   {%- for schema in schemas %}
+│   ├── SC_W_{{ schema | upper }}
+│   {%- endfor %}
+│   {%- endfor %}
+└── DB_C (Database Create)
+    {%- for config in schema_configuration %}
+    {%- set schemas = config.schemas.split(',') | map('trim') | list %}
+    {%- for schema in schemas %}
+    ├── SC_C_{{ schema | upper }}
+    {%- endfor %}
+    {%- endfor %}
+```
+
+### Schema Properties
+
+All schemas will be created with:
+- **Managed Access:** `WITH MANAGED ACCESS` (centralized grant control)
+- **Owner:** `{{ data_product_name | upper }}_ADMIN` role
+- **Database Role Owner:** `{{ data_product_name | upper }}_RBAC` role

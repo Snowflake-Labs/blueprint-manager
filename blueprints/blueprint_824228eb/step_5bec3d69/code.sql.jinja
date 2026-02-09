@@ -1,0 +1,143 @@
+-- ============================================================================
+-- CONFIGURE ALERT NOTIFICATIONS
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: ACCOUNTADMIN (to manage notification integrations)
+-- ============================================================================
+
+-- Derive the data product prefix for object names
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+-- Notification configuration requires ACCOUNTADMIN
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- CREATE NOTIFICATION INTEGRATION (Email)
+-- ============================================================================
+{%- if notification_email %}
+
+CREATE NOTIFICATION INTEGRATION IF NOT EXISTS {{ prefix }}_NOTIFY_EMAIL
+  TYPE = EMAIL
+  ENABLED = TRUE
+  ALLOWED_RECIPIENTS = ('{{ notification_email }}')
+  COMMENT = 'Email notifications for {{ data_product_name }} data product';
+
+-- ============================================================================
+-- CREATE ALERT FOR RESOURCE MONITOR
+-- ============================================================================
+
+-- Switch to a role that can create alerts
+USE ROLE {{ prefix }}_ADMIN;
+
+-- Create an alert schema if it doesn't exist
+CREATE SCHEMA IF NOT EXISTS {{ prefix }}_{{ data_zones[0].name | upper }}.ALERTS;
+
+-- Create alert to notify on resource monitor status
+CREATE OR REPLACE ALERT {{ prefix }}_{{ data_zones[0].name | upper }}.ALERTS.RESOURCE_MONITOR_ALERT
+  WAREHOUSE = {{ prefix }}_WH_{{ warehouse_configuration[0].name | upper }}
+  SCHEDULE = 'USING CRON 0 * * * * UTC'
+  IF (EXISTS (
+    SELECT 1 
+    FROM SNOWFLAKE.ACCOUNT_USAGE.RESOURCE_MONITORS
+    WHERE NAME = '{{ prefix }}_MONITOR'
+      AND USED_CREDITS / NULLIF(CREDIT_QUOTA, 0) >= 0.75
+      AND END_TIME IS NULL
+  ))
+  THEN
+    CALL SYSTEM$SEND_EMAIL(
+      '{{ prefix }}_NOTIFY_EMAIL',
+      '{{ notification_email }}',
+      '{{ data_product_name }} Resource Monitor Alert',
+      'Resource monitor {{ prefix }}_MONITOR has exceeded 75% of credit quota. Current usage requires attention.'
+    );
+
+-- Enable the alert
+ALTER ALERT {{ prefix }}_{{ data_zones[0].name | upper }}.ALERTS.RESOURCE_MONITOR_ALERT RESUME;
+
+-- Grant execute alert permission (required for alert to run)
+USE ROLE SECURITYADMIN;
+GRANT EXECUTE ALERT ON ACCOUNT TO ROLE {{ prefix }}_ADMIN;
+
+{%- else %}
+
+-- ============================================================================
+-- NO NOTIFICATION EMAIL CONFIGURED
+-- ============================================================================
+-- 
+-- To enable email notifications:
+-- 1. Set the notification_email answer
+-- 2. Re-run this step
+--
+-- Alternative: Configure notifications manually in Snowsight:
+-- Admin → Notifications → Create Notification
+--
+-- ============================================================================
+
+SELECT 'No notification email configured' AS status;
+
+{%- endif %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+{%- if notification_email %}
+
+-- Show notification integration
+SHOW NOTIFICATION INTEGRATIONS LIKE '{{ prefix }}_NOTIFY%';
+
+-- Show alerts
+SHOW ALERTS LIKE '%RESOURCE_MONITOR%' IN SCHEMA {{ prefix }}_{{ data_zones[0].name | upper }}.ALERTS;
+
+{%- endif %}
+
+/*
+ALERT NOTIFICATIONS CONFIGURED
+==============================
+
+{%- if notification_email %}
+Email Integration: {{ prefix }}_NOTIFY_EMAIL
+Recipient: {{ notification_email }}
+
+Alert: {{ prefix }}_{{ data_zones[0].name | upper }}.ALERTS.RESOURCE_MONITOR_ALERT
+Schedule: Every hour
+Condition: Resource monitor >= 75% usage
+{%- else %}
+No notification email configured.
+{%- endif %}
+
+DATA PRODUCT DEPLOYMENT COMPLETE!
+=================================
+
+Your {{ data_product_name }} data product is now fully configured with:
+
+✓ Core RBAC Roles (ADMIN, CREATE, WRITE, RBAC, READ)
+✓ Databases for each zone ({{ data_zones | map(attribute='name') | join(', ') }})
+✓ Schemas with database roles (SC_R, SC_W, SC_C)
+✓ Warehouses with access roles
+✓ Role hierarchy wired
+✓ Resource monitoring ({{ resource_monitor_credits }} credits/{{ resource_monitor_frequency }})
+{%- if notification_email %}
+✓ Alert notifications to {{ notification_email }}
+{%- endif %}
+{%- if scim_prefix %}
+✓ SCIM integration via {{ scim_prefix }}_PROVISIONER
+{%- endif %}
+
+NEXT STEPS:
+- Assign users to data product roles
+- Start creating tables and loading data
+- Monitor usage in Snowsight or ACCOUNT_USAGE views
+*/

@@ -1,0 +1,42 @@
+## Resource Monitor Assignment
+
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+### Monitor Assignment Summary
+
+| Warehouse | Resource Monitor |
+|-----------|------------------|
+{%- for wh in warehouse_configuration %}
+| `{{ prefix }}_WH_{{ wh.name | upper }}` | `{{ prefix }}_MONITOR` |
+{%- endfor %}
+
+### Quota Distribution
+
+**Shared Quota:** {{ resource_monitor_credits }} credits ({{ resource_monitor_frequency }})
+
+All {{ warehouse_configuration | length }} warehouse(s) share this quota. Credit consumption is aggregated across all assigned warehouses.
+
+### Credit Allocation
+
+| Warehouse | Est. Credits/Hour | Recommended Max Usage |
+|-----------|-------------------|----------------------|
+{%- set credits_per_hour = {'X-SMALL': 1, 'SMALL': 2, 'MEDIUM': 4, 'LARGE': 8, 'X-LARGE': 16, '2X-LARGE': 32, '3X-LARGE': 64, '4X-LARGE': 128} %}
+{%- for wh in warehouse_configuration %}
+{%- set hourly = credits_per_hour.get(wh.size | upper, 1) * wh.max_cluster_count %}
+| `{{ prefix }}_WH_{{ wh.name | upper }}` | {{ hourly }} | {{ (resource_monitor_credits / (warehouse_configuration | length)) | int }} |
+{%- endfor %}
+
+### After Assignment
+
+Once assigned, the resource monitor will:
+1. Track credit consumption from all assigned warehouses
+2. Send notifications at 50%, 75%, and 90% thresholds
+3. Suspend warehouses at 100% consumption

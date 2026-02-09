@@ -1,0 +1,66 @@
+## Core Roles Configuration
+
+### Roles to Create
+
+{%- if scim_prefix | upper != 'NONE' %}
+{%- set owner_role = scim_prefix | upper ~ '_PROVISIONER' %}
+{%- else %}
+{%- set owner_role = 'USERADMIN' %}
+{%- endif %}
+
+| Role | Name | Purpose | Owner |
+|------|------|---------|-------|
+| **ADMIN** | `{{ data_product_name | upper }}_ADMIN` | Owns infrastructure (databases, schemas, warehouses) | `{{ owner_role }}` |
+| **CREATE** | `{{ data_product_name | upper }}_CREATE` | Creates objects, receives account access roles | `{{ owner_role }}` |
+| **WRITE** | `{{ data_product_name | upper }}_WRITE` | Modifies data (DML operations) | `{{ owner_role }}` |
+| **RBAC** | `{{ data_product_name | upper }}_RBAC` | Owns access roles for delegated governance | `{{ owner_role }}` |
+| **READ** | `{{ data_product_name | upper }}_READ` | Read-only access to data product | `{{ owner_role }}` |
+
+### Role Hierarchy
+
+```
+SYSADMIN
+└── {{ data_product_name | upper }}_ADMIN
+    ├── {{ data_product_name | upper }}_CREATE
+    │   ├── _AR_EXEC_TASK (execute tasks)
+    │   ├── _AR_VIEW_AUSG (view account usage)
+    │   ├── _AR_APPLY_DDM (apply masking policies)
+    │   ├── _AR_APPLY_RAP (apply row access policies)
+    │   └── _AR_APPLY_TAG (apply tags)
+    └── {{ data_product_name | upper }}_RBAC
+```
+
+### SCIM Configuration
+
+{%- if scim_prefix | upper != 'NONE' %}
+| Setting | Value |
+|---------|-------|
+| **SCIM Enabled** | Yes |
+| **SCIM Prefix** | `{{ scim_prefix | upper }}` |
+| **Role Owner** | `{{ scim_prefix | upper }}_PROVISIONER` |
+| **User Assignment** | Via identity provider groups |
+
+> **Note:** After roles are created, configure your identity provider ({{ scim_prefix }}) to map groups to these roles for automatic user assignment.
+{%- else %}
+| Setting | Value |
+|---------|-------|
+| **SCIM Enabled** | No |
+| **Role Owner** | `USERADMIN` |
+| **User Assignment** | Manual GRANT statements |
+
+> **Note:** Use `GRANT ROLE <role> TO USER <user>` to assign users to these roles.
+{%- endif %}
+
+### Account Access Roles
+
+The following account access roles will be granted to `{{ data_product_name | upper }}_CREATE`:
+
+| Access Role | Purpose |
+|-------------|---------|
+| `_AR_EXEC_TASK` | Execute Snowflake tasks (scheduled jobs) |
+| `_AR_VIEW_AUSG` | View Account Usage data for monitoring |
+| `_AR_APPLY_DDM` | Apply dynamic data masking policies |
+| `_AR_APPLY_RAP` | Apply row access policies |
+| `_AR_APPLY_TAG` | Apply tags to objects |
+
+> **Note:** These roles must exist in the account. If they don't exist, the grants will be skipped with warnings.

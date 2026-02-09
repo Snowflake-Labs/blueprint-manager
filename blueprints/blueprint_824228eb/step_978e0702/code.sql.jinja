@@ -1,0 +1,41 @@
+-- ============================================================================
+-- TARGET ACCOUNT SELECTION
+-- ============================================================================
+-- Account Strategy: {{ account_strategy }}
+-- Target Account: {{ target_account_name | upper }}
+-- ============================================================================
+-- This step captures target account information for planning purposes.
+-- No SQL is executed in this step.
+-- ============================================================================
+
+/*
+TARGET ACCOUNT SELECTED
+=======================
+
+Account: {{ target_account_name | upper }}
+Strategy: {{ account_strategy }}
+
+{%- if account_strategy == 'Multi-Account (Environment-based)' %}
+Implied Environment: {{ target_account_name | upper }}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+Implied Domain: {{ target_account_name | upper }}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+Implied Domain + Environment: {{ target_account_name | upper }}
+{%- endif %}
+
+NEXT STEPS:
+1. Ensure you can connect to {{ target_account_name | upper }}
+2. Verify SYSADMIN role access
+3. Proceed to Define Data Product Identity (Step 1.2)
+
+CONNECTION VERIFICATION (run in target account):
+*/
+
+-- Verify account access (run this in {{ target_account_name | upper }})
+SELECT CURRENT_ACCOUNT() AS current_account,
+       CURRENT_ROLE() AS current_role,
+       CURRENT_USER() AS current_user;
+
+-- Verify SYSADMIN access
+USE ROLE SYSADMIN;
+SELECT 'SYSADMIN access verified' AS status;

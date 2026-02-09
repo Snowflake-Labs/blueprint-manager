@@ -1,0 +1,72 @@
+## Role Hierarchy Configuration
+
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+### Core Role Hierarchy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      ADMIN                                   │
+│         {{ prefix }}_ADMIN                                   │
+│           ┌─────────┼─────────┐                              │
+│           ▼         ▼         ▼                              │
+│       CREATE      RBAC    Account Access                     │
+│           │         │      Roles (5)                         │
+│           ▼         │                                        │
+│        WRITE ◄──────┤                                        │
+│           │         │                                        │
+│           ▼         ▼                                        │
+│         READ ◄──────┘                                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Database Role Connections
+
+| Database | DB_R → | DB_W → | DB_C → |
+|----------|--------|--------|--------|
+{%- for config in schema_configuration %}
+{%- set zone = config.zone | upper %}
+{%- set db_name = prefix ~ '_' ~ zone %}
+| `{{ db_name }}` | `{{ prefix }}_READ` | `{{ prefix }}_WRITE` | `{{ prefix }}_CREATE` |
+{%- endfor %}
+
+### Account Access Roles
+
+| Role | Privilege | Granted To |
+|------|-----------|------------|
+| `{{ prefix }}_AR_EXEC_TASK` | EXECUTE TASK | `{{ prefix }}_ADMIN` |
+| `{{ prefix }}_AR_VIEW_AUSG` | View SNOWFLAKE DB | `{{ prefix }}_ADMIN` |
+| `{{ prefix }}_AR_APPLY_DDM` | APPLY MASKING POLICY | `{{ prefix }}_ADMIN` |
+| `{{ prefix }}_AR_APPLY_RAP` | APPLY ROW ACCESS POLICY | `{{ prefix }}_ADMIN` |
+| `{{ prefix }}_AR_APPLY_TAG` | APPLY TAG | `{{ prefix }}_ADMIN` |
+
+### SCIM Integration
+
+{%- if scim_prefix %}
+| Connection | Target |
+|------------|--------|
+| `{{ prefix }}_ADMIN` | → `{{ scim_prefix }}_PROVISIONER` |
+
+Users can be assigned to data product roles through your identity provider.
+{%- else %}
+*No SCIM prefix configured. Users must be assigned to roles manually.*
+{%- endif %}
+
+### Summary of Ownership
+
+| Object Type | Owner |
+|-------------|-------|
+| Core Roles | `SECURITYADMIN` |
+| Databases | `{{ prefix }}_ADMIN` |
+| Database Roles | `{{ prefix }}_RBAC` |
+| Warehouses | `{{ prefix }}_ADMIN` |
+| Warehouse Access Roles | `{{ prefix }}_RBAC` |
+| Account Access Roles | `{{ prefix }}_RBAC` |

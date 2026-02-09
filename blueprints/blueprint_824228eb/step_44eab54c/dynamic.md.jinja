@@ -1,0 +1,66 @@
+## Data Product Identity
+
+### Core Identity
+
+| Property | Value |
+|----------|-------|
+| **Data Product Name** | {{ data_product_name }} |
+| **Domain** | {{ data_product_domain | upper }} |
+| **Environment** | {{ data_product_environment | upper }} |
+| **Description** | {{ data_product_description }} |
+{%- if account_strategy != 'Single Account' %}
+| **Target Account** | {{ target_account_name | upper }} |
+{%- endif %}
+
+### SCIM Configuration
+
+{%- if scim_prefix | upper != 'NONE' %}
+| Property | Value |
+|----------|-------|
+| **SCIM Enabled** | Yes |
+| **SCIM Prefix** | {{ scim_prefix | upper }} |
+| **Role Owner** | {{ scim_prefix | upper }}_PROVISIONER |
+| **User Assignment** | Via identity provider groups |
+
+> **Note:** Roles created for this data product will be owned by `{{ scim_prefix | upper }}_PROVISIONER`. Custom read roles should be assigned to users via your identity provider ({{ scim_prefix }}) group mappings.
+{%- else %}
+| Property | Value |
+|----------|-------|
+| **SCIM Enabled** | No |
+| **Role Owner** | USERADMIN |
+| **User Assignment** | Manual GRANT statements |
+
+> **Note:** Roles created for this data product will be owned by `USERADMIN`. Custom read roles must be manually granted to users.
+{%- endif %}
+
+### Derived Role Owner
+
+Based on your SCIM configuration:
+
+```
+{%- if scim_prefix | upper != 'NONE' %}
+Owner Role: {{ scim_prefix | upper }}_PROVISIONER
+  └── {{ data_product_name | upper }}_ADMIN
+  └── {{ data_product_name | upper }}_CREATE
+  └── {{ data_product_name | upper }}_WRITE
+  └── {{ data_product_name | upper }}_RBAC
+  └── {{ data_product_name | upper }}_READ
+{%- else %}
+Owner Role: USERADMIN
+  └── {{ data_product_name | upper }}_ADMIN
+  └── {{ data_product_name | upper }}_CREATE
+  └── {{ data_product_name | upper }}_WRITE
+  └── {{ data_product_name | upper }}_RBAC
+  └── {{ data_product_name | upper }}_READ
+{%- endif %}
+```
+
+### Cost Allocation Tags
+
+The following tags will be applied to all resources:
+
+| Tag | Value |
+|-----|-------|
+| `DOMAIN` | {{ data_product_domain | upper }} |
+| `ENVIRONMENT` | {{ data_product_environment | upper }} |
+| `DATAPRODUCT` | {{ data_product_name | upper }} |
