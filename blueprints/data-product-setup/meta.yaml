@@ -38,19 +38,19 @@ overview: 'This repeatable workflow guides you through configuring a complete da
   '
 is_repeatable: true
 steps:
-- step_978e0702
-- step_44eab54c
-- step_ec3e01c5
-- step_595ad3b2
-- step_e03113b1
-- step_d38fae64
-- step_ed63fb30
-- step_1cccba97
-- step_49307c1e
-- step_ba2f4dfa
-- step_9934ae6e
-- step_83428974
-- step_339a9124
-- step_25d82cd2
-- step_4eecf6d6
-- step_5bec3d69
+- select-target-account
+- define-data-product-identity
+- configure-zone-structure
+- plan-schema-organization
+- plan-warehouse-requirements
+- create-data-product-core-roles
+- create-databases
+- create-schemas
+- create-warehouses
+- create-warehouse-access-roles
+- transfer-ownership-wire-hierarchy
+- create-custom-read-roles
+- grant-database-access-to-roles
+- create-resource-monitors
+- assign-monitors-to-warehouses
+- configure-alert-notifications
