@@ -792,11 +792,11 @@ def main():
         blueprint_dir, args.lang, answers, base_dir
     )
 
-    # Generate IaC output filename with slug-based naming (e.g., account-creation_20260205.sql)
+    # Generate IaC output filename with slug-based naming (e.g., account-creation_20260205_143022.sql)
     output_dir = output_base_dir / args.lang
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    date_str = datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     extension = get_language_extension(args.lang)
     output_file = output_dir / f"{blueprint_slug}_{date_str}.{extension}"
 
