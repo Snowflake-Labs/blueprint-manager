@@ -1,0 +1,86 @@
+-- ============================================================================
+-- DATA PRODUCT IDENTITY
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+-- Domain: {{ data_product_domain }}
+-- Environment: {{ data_product_environment }}
+-- SCIM Prefix: {{ scim_prefix }}
+-- Account Strategy: {{ account_strategy }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- This step captures identity information for planning purposes.
+-- No SQL is executed in this step.
+-- ============================================================================
+
+/*
+DATA PRODUCT IDENTITY DEFINED
+=============================
+
+Core Identity:
+- Name: {{ data_product_name }}
+- Domain: {{ data_product_domain }}
+- Environment: {{ data_product_environment }}
+- Description: {{ data_product_description }}
+
+SCIM Configuration:
+{%- if scim_prefix | upper != 'NONE' %}
+- SCIM Enabled: Yes
+- SCIM Prefix: {{ scim_prefix | upper }}
+- Role Owner: {{ scim_prefix | upper }}_PROVISIONER
+- User Assignment: Via identity provider groups
+{%- else %}
+- SCIM Enabled: No
+- Role Owner: USERADMIN
+- User Assignment: Manual GRANT statements
+{%- endif %}
+
+Naming Components (based on {{ account_strategy }}):
+{%- if account_strategy == 'Single Account' %}
+- Full pattern: <domain>_<dataproduct>_<zone>_<env>
+- Example: {{ data_product_domain | upper }}_{{ data_product_name | upper }}_RAW_{{ data_product_environment | upper }}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+- Pattern: <domain>_<dataproduct>_<zone> (environment implicit)
+- Example: {{ data_product_domain | upper }}_{{ data_product_name | upper }}_RAW
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+- Pattern: <dataproduct>_<zone>_<env> (domain implicit)
+- Example: {{ data_product_name | upper }}_RAW_{{ data_product_environment | upper }}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+- Pattern: <dataproduct>_<zone> (domain and environment implicit)
+- Example: {{ data_product_name | upper }}_RAW
+{%- endif %}
+
+Core Roles to be Created:
+- {{ data_product_name | upper }}_ADMIN  (owns infrastructure)
+- {{ data_product_name | upper }}_CREATE (creates objects)
+- {{ data_product_name | upper }}_WRITE  (modifies data)
+- {{ data_product_name | upper }}_RBAC   (owns access roles)
+- {{ data_product_name | upper }}_READ   (read-only access)
+
+Cost Allocation Tags:
+- DOMAIN = '{{ data_product_domain | upper }}'
+- ENVIRONMENT = '{{ data_product_environment | upper }}'
+- DATAPRODUCT = '{{ data_product_name | upper }}'
+*/
+
+-- ============================================================================
+-- VERIFICATION: Check SCIM Configuration (optional)
+-- ============================================================================
+-- Run these queries to verify your SCIM setup before proceeding
+
+{%- if scim_prefix | upper != 'NONE' %}
+
+-- Verify SCIM provisioner role exists
+SHOW ROLES LIKE '{{ scim_prefix | upper }}_PROVISIONER';
+
+-- Check SCIM security integration
+SHOW SECURITY INTEGRATIONS LIKE '%{{ scim_prefix | upper }}%';
+
+{%- else %}
+
+-- No SCIM - verify USERADMIN is available
+USE ROLE USERADMIN;
+SELECT 'USERADMIN access verified' AS status;
+
+{%- endif %}

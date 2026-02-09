@@ -1,0 +1,34 @@
+blueprint_id: blueprint_4d563df2
+name: Platform Foundation Setup
+summary: Establish core platform infrastructure including naming conventions, accounts,
+  security, and cost management
+overview: The Platform Foundation Setup workflow establishes the core infrastructure
+  and security controls for your Snowflake environment. This workflow guides you through
+  critical architectural decisions, account configuration, administrative access setup,
+  security policies, and cost management controls. By completing this workflow, you'll
+  have a well-architected, secure, and cost-controlled Snowflake platform ready for
+  data product deployment.
+is_repeatable: false
+steps:
+- determine-account-strategy
+- configure-organization-name-for-connectivity
+- enable-organization-account
+- create-organization-account
+- create-infrastructure-database
+- define-domains-environments-and-object-naming-conventions
+- configure-infrastructure-database-replication
+- select-identity-management-approach
+- configure-scim-integration
+- provision-account-administrators
+- create-organization-account-administrators
+- configure-samlsso
+- create-break-glass-emergency-access
+- configure-network-rules-and-policies
+- configure-authentication-policies
+- enable-multi-factor-authentication
+- enable-spending-budgets
+- configure-spending-budgets
+- enable-resource-monitors
+- configure-resource-monitors
+- enable-cost-allocation-tags
+- configure-cost-allocation-tags

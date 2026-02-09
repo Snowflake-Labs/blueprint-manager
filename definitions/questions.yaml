@@ -4,16 +4,16 @@
   is_org_scope: false
   guidance: '**What is the Policies Schema?**
 
-    The Policies Schema is created within the Local Infrastructure Database and contains
-    account-specific security objects including authentication policies, network policies,
-    and other configurations that cannot be replicated.
+    The Policies Schema is created within the Local Infrastructure Database and contains account-specific
+    security objects including authentication policies, network policies, and other configurations that
+    cannot be replicated.
 
 
     **Recommended Name:** `POLICIES`
 
 
-    This is a straightforward, self-descriptive name that clearly communicates the
-    schema''s purpose. Alternative options include:
+    This is a straightforward, self-descriptive name that clearly communicates the schema''s purpose.
+    Alternative options include:
 
     - `SECURITY` — Security-focused objects
 
@@ -26,17 +26,14 @@
 
     This schema will be created with **Managed Access** enabled, which means:
 
-    - Only the schema owner (typically SECURITYADMIN or ACCOUNTADMIN) can grant privileges
-    on objects
+    - Only the schema owner (typically SECURITYADMIN or ACCOUNTADMIN) can grant privileges on objects
 
-    - Prevents "shadow" security configurations where object creators grant their
-    own access
+    - Prevents "shadow" security configurations where object creators grant their own access
 
     - Provides centralized control over who can access security policy objects
 
 
-    **Best Practice:** Use a simple, single-word name that represents the functional
-    purpose.
+    **Best Practice:** Use a simple, single-word name that represents the functional purpose.
 
 
     **More Information:**
@@ -52,23 +49,22 @@
   is_org_scope: false
   guidance: '**What is the Local Infrastructure Database?**
 
-    The Local Infrastructure Database is a writable database within this account that
-    stores account-specific administrative and governance objects. This is separate
-    from the replicated infrastructure database which is read-only.
+    The Local Infrastructure Database is a writable database within this account that stores account-specific
+    administrative and governance objects. This is separate from the replicated infrastructure database
+    which is read-only.
 
 
     **Why is this needed?**
 
-    The infrastructure database replicated from the Organization Account is **read-only**.
-    Account-specific objects like authentication policies, local procedures, and account-level
-    configurations must be created in a local, writable database.
+    The infrastructure database replicated from the Organization Account is **read-only**. Account-specific
+    objects like authentication policies, local procedures, and account-level configurations must be created
+    in a local, writable database.
 
 
     **Recommended Naming Approach:**
 
-    Use a name that clearly identifies this as a local, account-specific infrastructure
-    database. Follow the same naming pattern as your platform infrastructure database.
-    Consider formats like:
+    Use a name that clearly identifies this as a local, account-specific infrastructure database. Follow
+    the same naming pattern as your platform infrastructure database. Consider formats like:
 
     - `<domain>_LOCAL` — e.g., `PLAT_LOCAL`, `CDP_LOCAL`
 
@@ -77,8 +73,7 @@
     - `LOCAL_<purpose>` — e.g., `LOCAL_INFRA`, `LOCAL_ADMIN`
 
 
-    **Example:** `PLAT_LOCAL` — clearly indicates Platform team ownership and local
-    (non-replicated) scope
+    **Example:** `PLAT_LOCAL` — clearly indicates Platform team ownership and local (non-replicated) scope
 
 
     **Alternative Examples:**
@@ -90,8 +85,7 @@
     - `LOCAL_ADMIN` — Local administration database
 
 
-    **Important:** This name should be distinct from the replicated infrastructure
-    database to avoid confusion.
+    **Important:** This name should be distinct from the replicated infrastructure database to avoid confusion.
 
 
     **More Information:**
@@ -100,8 +94,7 @@
 
     * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)'
 - answer_title: replication_schedule
-  question_text: How frequently should the infrastructure database be replicated to
-    target accounts?
+  question_text: How frequently should the infrastructure database be replicated to target accounts?
   answer_type: multi-select
   is_org_scope: false
   options:
@@ -109,122 +102,25 @@
   - text: Every 30 minutes
   - text: Every hour
   - text: Manual only
-  guidance: "**What is this asking?** Choose how often Snowflake should automatically\
-    \ synchronize the infrastructure database to all target accounts.  \n**Why does\
-    \ this matter?** More frequent replication means changes (new tags, updated views)\
-    \ are available sooner in target accounts, but may have minor cost implications.\
-    \  \n**Recommendations:**  \n* **Every 10 minutes** — Best for active development,\
-    \ changes propagate quickly\n* **Every 30 minutes** — Good balance for most organizations\n\
-    * **Every hour** — Suitable for stable environments with infrequent changes\n\
-    * **Manual only** — For environments where you want explicit control over when\
-    \ changes propagate\n\n**Note:** Infrastructure database changes (new tags, views)\
-    \ are typically infrequent, so even hourly refresh is usually sufficient."
+  guidance: "**What is this asking?** Choose how often Snowflake should automatically synchronize the\
+    \ infrastructure database to all target accounts.  \n**Why does this matter?** More frequent replication\
+    \ means changes (new tags, updated views) are available sooner in target accounts, but may have minor\
+    \ cost implications.  \n**Recommendations:**  \n* **Every 10 minutes** — Best for active development,\
+    \ changes propagate quickly\n* **Every 30 minutes** — Good balance for most organizations\n* **Every\
+    \ hour** — Suitable for stable environments with infrequent changes\n* **Manual only** — For environments\
+    \ where you want explicit control over when changes propagate\n\n**Note:** Infrastructure database\
+    \ changes (new tags, views) are typically infrequent, so even hourly refresh is usually sufficient."
 - answer_title: infrastructure_replication_group
-  question_text: 'What name would you like to use for the infrastructure database
-    replication group?  '
+  question_text: 'What name would you like to use for the infrastructure database replication group?  '
   answer_type: text
   is_org_scope: true
-  guidance: "**What is this asking?** Choose a name for the REPLICATION GROUP object\
-    \ that will synchronize your infrastructure database to other accounts.  \n**Why\
-    \ does this matter?** This name will be used when creating secondary replication\
-    \ groups in target accounts. Choose something descriptive and aligned with your\
-    \ naming conventions.  \n**Recommendations:**  \n* Use lowercase with underscores\
-    \  \n* Include a clear identifier like infrastructure or governance  \n* Keep\
-    \ it concise but descriptive  \n* **Examples:**  \n* infrastructure_replication_group\
-    \  \n* governance_replication_group  \n* platform_replication_group  \n* **Default\
-    \ recommendation:** infrastructure_replication_group"
-- answer_title: grant_account_access_roles
-  question_text: Should the data product roles receive account-level access roles?
-  answer_type: multi-select
-  is_org_scope: false
-  options:
-  - text: Yes - Grant account access roles (tasks, masking, tagging)
-  - text: No - Skip account access roles
-  guidance: 'Account access roles provide special account-level privileges needed
-    for common data product operations.
-
-
-    **Select "Yes" if your data product needs to:**
-
-    - Execute Snowflake tasks (scheduled jobs)
-
-    - Apply dynamic data masking policies
-
-    - Apply row access policies
-
-    - Apply tags to objects
-
-    - Query Account Usage views
-
-
-    **Select "No" if:**
-
-    - This is a read-only data product
-
-    - Account access roles don''t exist in this account
-
-    - You''ll manually grant these privileges later
-
-
-    **Note:** Account access roles must exist in the account. They are typically created
-    in the Account Creation workflow with names like `_AR_EXEC_TASK`, `_AR_APPLY_DDM`,
-    etc. These will be granted to the WRITE role (Full structure) or ADMIN role (Simple/Standard
-    structure).'
-- answer_title: data_retention_days
-  question_text: How many days of Time Travel retention do you want for these databases?
-  answer_type: multi-select
-  is_org_scope: false
-  options:
-  - text: 0 (Transient - no Time Travel)
-  - text: 1 (Minimal retention)
-  - text: 7 (Standard - recommended)
-  - text: 14 (Extended retention)
-  - text: 30 (Long retention)
-  - text: 90 (Maximum - Enterprise Edition)
-  guidance: "Time Travel allows you to query historical data and recover from accidental\
-    \ changes.\n\n  **Recommendations by use case:**\n  - **Staging/Landing zones**:\
-    \ 0-1 days (data is reloadable from source)\n  - **Curated/Transformed data**:\
-    \ 7 days (standard protection)\n  - **Production/Consumption**: 7-30 days (business-critical\
-    \ data)\n  - **Compliance-sensitive**: 30-90 days (regulatory requirements)\n\n\
-    \  **Cost considerations:**\n  - Higher retention = more storage costs\n  - Transient\
-    \ databases (0-1 days) significantly reduce storage\n  - Balance recovery needs\
-    \ vs. cost\n\n  **Note:** You can set different retention per database or schema\
-    \ after initial creation.\n\n  **More Information:**\n  * [Time Travel](https://docs.snowflake.com/en/user-guide/data-time-travel)\
-    \ — How Time Travel works\n  * [Storage Costs](https://docs.snowflake.com/en/user-guide/cost-understanding-compute#storage-costs)\
-    \ — Cost implications"
-- answer_title: admin_role_granted_to
-  question_text: Which role should the ADMIN role be granted to?
-  answer_type: text
-  is_org_scope: false
-  guidance: 'Enter the name of the role that should be the parent of the data product
-    ADMIN role.
-
-
-    **Common options:**
-
-    - `SYSADMIN` — **Recommended.** Platform administrators can act as ADMIN when
-    needed.
-
-    - `SECURITYADMIN` — If you want security team oversight of data product access.
-
-    - Custom role name (e.g., `FINANCE_ADMIN`) — If you have a domain-level role to
-    contain all data products for a domain.
-
-
-    **Why does this matter?**
-
-    Role hierarchy determines who can assume data product administration. Granting
-    to SYSADMIN ensures platform administrators can always help troubleshoot.
-
-
-    **Recommendation:** Enter `SYSADMIN` unless you have a specific requirement for
-    a different parent role.
-
-
-    **More Information:**
-
-    * [System-Defined Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#system-defined-roles)
-    — Role hierarchy'
+  guidance: "**What is this asking?** Choose a name for the REPLICATION GROUP object that will synchronize\
+    \ your infrastructure database to other accounts.  \n**Why does this matter?** This name will be used\
+    \ when creating secondary replication groups in target accounts. Choose something descriptive and\
+    \ aligned with your naming conventions.  \n**Recommendations:**  \n* Use lowercase with underscores\
+    \  \n* Include a clear identifier like infrastructure or governance  \n* Keep it concise but descriptive\
+    \  \n* **Examples:**  \n* infrastructure_replication_group  \n* governance_replication_group  \n*\
+    \ platform_replication_group  \n* **Default recommendation:** infrastructure_replication_group"
 - answer_title: enable_org_account
   question_text: Do you want to create an Organization Account?
   answer_type: multi-select
@@ -232,68 +128,22 @@
   options:
   - text: 'Yes'
   - text: 'No'
-  guidance: "The Organization Account is a special account that provides centralized\
-    \ management capabilities for your Snowflake environment.  \n  \n  **⚠️ Strong\
-    \ Recommendation: Create an Organization Account**  \n  We strongly recommend\
-    \ creating an Organization Account, even if you have selected a Single Account\
-    \ strategy. Here's why:  \n  * **Future-proofing:** If there's any potential for\
-    \ adding accounts later, having the Organization Account already set up makes\
-    \ expansion seamless  \n  * **Centralized features:** Access to organization-level\
-    \ views, billing, and governance features  \n  * **Easier migration:** Moving\
-    \ to a multi-account strategy later is significantly easier with an existing Organization\
-    \ Account  \n  * **No downside:** The Organization Account has minimal overhead\
-    \ and doesn't impact your single-account operations  \n* **For Multi-Account Strategies:**\
-    \ An Organization Account is **required**. It provides:  \n  * Centralized view\
-    \ of all accounts  \n  * Unified billing and cost management  \n  * Ability to\
-    \ create and manage child accounts programmatically  \n  * Organization-level\
-    \ policies and governance  \n* **Requirements:**  \n  * Snowflake Enterprise Edition\
-    \ or higher  \n  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)\
-    \ — Overview and capabilities of organization accounts  \n  * [ORGADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#orgadmin-role)\
+  guidance: "The Organization Account is a special account that provides centralized management capabilities\
+    \ for your Snowflake environment.  \n  \n  **⚠️ Strong Recommendation: Create an Organization Account**\
+    \  \n  We strongly recommend creating an Organization Account, even if you have selected a Single\
+    \ Account strategy. Here's why:  \n  * **Future-proofing:** If there's any potential for adding accounts\
+    \ later, having the Organization Account already set up makes expansion seamless  \n  * **Centralized\
+    \ features:** Access to organization-level views, billing, and governance features  \n  * **Easier\
+    \ migration:** Moving to a multi-account strategy later is significantly easier with an existing Organization\
+    \ Account  \n  * **No downside:** The Organization Account has minimal overhead and doesn't impact\
+    \ your single-account operations  \n* **For Multi-Account Strategies:** An Organization Account is\
+    \ **required**. It provides:  \n  * Centralized view of all accounts  \n  * Unified billing and cost\
+    \ management  \n  * Ability to create and manage child accounts programmatically  \n  * Organization-level\
+    \ policies and governance  \n* **Requirements:**  \n  * Snowflake Enterprise Edition or higher  \n\
+    \  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts) — Overview\
+    \ and capabilities of organization accounts  \n  * [ORGADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#orgadmin-role)\
     \ — Permissions and responsibilities  \n  * [Snowflake Editions](https://docs.snowflake.com/en/user-guide/intro-editions)\
     \ – Snowflake Edition options "
-- answer_title: resource_monitor_emails
-  question_text: Who should receive resource monitor alerts?
-  answer_type: list
-  is_org_scope: false
-  guidance: 'Enter the email addresses of people who should be notified when thresholds
-    are triggered.
-
-
-    **Recommended recipients:**
-
-    - Data product owner
-
-    - FinOps or cloud cost team
-
-    - Engineering lead
-
-
-    **Why does this matter?**
-
-    The right notifications ensure:
-
-    - Timely response to cost alerts
-
-    - Accountability for spending
-
-    - No surprise bills
-
-
-    **Example:**
-
-    ```
-
-    data.team@company.com
-
-    finance@company.com
-
-    john.smith@company.com
-
-    ```
-
-
-    **Note:** Account administrators receive all notifications by default, regardless
-    of this setting.'
 - answer_title: resource_monitor_action
   question_text: What should happen when the credit limit is reached?
   answer_type: multi-select
@@ -305,14 +155,12 @@
   guidance: 'Choose the action when 100% of credits are consumed:
 
 
-    - **Notify Only**: Warehouses continue running. Use for non-critical data products
-    or when you''ll manually intervene.
+    - **Notify Only**: Warehouses continue running. Use for non-critical data products or when you''ll
+    manually intervene.
 
-    - **Suspend**: Warehouses stop after current queries complete. Recommended for
-    most data products.
+    - **Suspend**: Warehouses stop after current queries complete. Recommended for most data products.
 
-    - **Suspend Immediately**: Kills in-flight queries and stops warehouses. Use for
-    strict budget enforcement.
+    - **Suspend Immediately**: Kills in-flight queries and stops warehouses. Use for strict budget enforcement.
 
 
     **Why does this matter?**
@@ -327,8 +175,7 @@
   question_text: How many credits should be the monthly limit for this data product?
   answer_type: text
   is_org_scope: false
-  guidance: 'Enter the maximum monthly credit consumption allowed for this data product''s
-    warehouses.
+  guidance: 'Enter the maximum monthly credit consumption allowed for this data product''s warehouses.
 
 
     Examples:
@@ -366,8 +213,8 @@
 
     Start conservative — you can always increase the limit.'
 - answer_title: cost_center
-  question_text: What cost center code should be applied to this data product's resources?
-    (enter NONE if not applicable)
+  question_text: What cost center code should be applied to this data product's resources? (enter NONE
+    if not applicable)
   answer_type: text
   is_org_scope: false
   guidance: 'Enter the cost center or charge code for billing purposes.
@@ -394,139 +241,6 @@
 
 
     If your organization doesn''t use cost centers, enter `NONE`.'
-- answer_title: warehouse_access_pattern
-  question_text: How should roles access warehouses?
-  answer_type: multi-select
-  is_org_scope: false
-  options:
-  - text: Dedicated (each role uses specific warehouses)
-  - text: Shared (all roles use all warehouses)
-  guidance: "Choose how to assign warehouse access:\n\n- **Dedicated**: Each role\
-    \ gets access to warehouses suited for their workload:\n  - Readers → Query warehouses\n\
-    \  - Writers → Load/Transform warehouses\n  - More control over who uses what\n\
-    \  \n- **Shared**: All roles can use all warehouses:\n  - Simpler administration\n\
-    \  - Useful for small teams or single-purpose data products\n  - Less granular\
-    \ cost attribution\n\n**Why does this matter?**\nDedicated warehouses enable:\n\
-    - Precise cost tracking per workload type\n- Workload isolation (heavy ETL doesn't\
-    \ impact queries)\n- Right-sized compute for each use case"
-- answer_title: owner_users
-  question_text: Who should own this data product?
-  answer_type: list
-  is_org_scope: false
-  guidance: 'Enter the usernames of users who should own this data product. At least
-    one owner is required.
-
-
-    **What is a username?**
-
-    The Snowflake login name, not the display name. You can find usernames by running:
-
-    ```sql
-
-    SHOW USERS;
-
-    ```
-
-
-    **Who should be an owner?**
-
-    - Data steward or product owner
-
-    - Lead data engineer
-
-    - Service account for automation (if applicable)
-
-
-    **Recommendation:** Assign 1-2 owners maximum. Too many owners dilutes accountability.
-
-
-    **Examples:**
-
-    ```
-
-    john.smith
-
-    jane.doe
-
-    ```
-
-
-    **More Information:**
-
-    * [SHOW USERS](https://docs.snowflake.com/en/sql-reference/sql/show-users) — List
-    users in account'
-- answer_title: reader_zone_access
-  question_text: Which zone should the Reader role have access to?
-  answer_type: multi-select
-  is_org_scope: false
-  guidance: 'Select the zone that readers should have access to.
-
-
-    **Recommendation:** Select your consumption/final zone (the zone with analytics-ready
-    data).
-
-
-    **Best practices:**
-
-    - **Consumption/Gold zone**: Best practice — readers see only validated, documented
-    data
-
-    - **Curated/Silver zone**: Only if teams need access to intermediate transformations
-
-    - **Raw/Bronze zone**: Use cautiously — may contain sensitive or unvalidated content
-
-
-    **Why does this matter?**
-
-    Limiting reader access to the final zone:
-
-    - Protects sensitive source data in earlier zones
-
-    - Ensures users see validated, documented data
-
-    - Simplifies data governance
-
-
-    **Note:** This currently supports single-zone selection. If you need readers to
-    access multiple zones, grant additional privileges manually after running the
-    generated SQL.
-
-
-    **More Information:**
-
-    * [Data Governance Best Practices](https://docs.snowflake.com/en/user-guide/data-governance)
-    — Access patterns'
-- answer_title: role_structure
-  question_text: Which role structure do you want for this data product?
-  answer_type: multi-select
-  is_org_scope: false
-  options:
-  - text: Simple (Admin + Read only)
-  - text: Standard (Admin + Create + Read)
-  - text: Full (Admin + Create + Write + Read)
-  guidance: 'Choose based on your team''s needs:
-
-
-    - **Simple**: Best for small teams or single-purpose data products. The ADMIN
-    handles all modifications, READ users consume.
-
-    - **Standard**: Adds a CREATE role for delegated object creation and grant management.
-    Good for medium teams.
-
-    - **Full**: Includes a WRITE role for ETL/ELT processes that need to modify data
-    without full admin access.
-
-
-    **Why does this matter?**
-
-    More roles mean finer-grained control but also more management overhead. Start
-    with the simplest structure that meets your needs — you can always add roles later.
-
-
-    **More Information:**
-
-    * [Access Control Best Practices](https://docs.snowflake.com/en/user-guide/security-access-control-considerations)
-    — Role design patterns'
 - answer_title: warehouse_definitions
   question_text: Define the warehouses for your data product.
   answer_type: object-list
@@ -540,8 +254,7 @@
   - modifier
   guidance: '**What is this asking?**
 
-    Define each warehouse that will be created for your data product. For each warehouse,
-    specify:
+    Define each warehouse that will be created for your data product. For each warehouse, specify:
 
     - Name (used in object naming)
 
@@ -551,8 +264,7 @@
 
     - Auto-suspend timeout
 
-    - Modifier (optional - use when you need multiple warehouses of the same workload
-    type)
+    - Modifier (optional - use when you need multiple warehouses of the same workload type)
 
 
     **Why does this matter?**
@@ -621,9 +333,8 @@
     | `transform` | transform | Medium | 60 | `stream` |
 
 
-    The modifier is appended to the warehouse name to create unique identifiers when
-    you need multiple warehouses of the same workload type (e.g., `SALES_QUERY_BI_WH`
-    and `SALES_QUERY_POWERBI_WH`).
+    The modifier is appended to the warehouse name to create unique identifiers when you need multiple
+    warehouses of the same workload type (e.g., `SALES_QUERY_BI_WH` and `SALES_QUERY_POWERBI_WH`).
 
 
     **Sizing Guidelines:**
@@ -639,132 +350,31 @@
 
     - **Batch jobs** (ingest, transform): 60 seconds — save costs between runs
 
-    - **Interactive queries** (report, analytics): 300-600 seconds — balance UX and
-    cost
+    - **Interactive queries** (report, analytics): 300-600 seconds — balance UX and cost
 
     - **Continuous workloads**: Higher values to avoid resume latency
 
 
-    **Note:** All warehouses are created with multi-cluster scaling enabled (1-3 clusters).
-    Additional clusters only spin up when needed.
+    **Note:** All warehouses are created with multi-cluster scaling enabled (1-3 clusters). Additional
+    clusters only spin up when needed.
 
 
     **Recommendation:**
 
-    Start with 2-3 warehouses. You can always add more or resize as you learn your
-    workload patterns.
+    Start with 2-3 warehouses. You can always add more or resize as you learn your workload patterns.
 
 
     **More Information:**
 
     * [Warehouse Sizing](https://docs.snowflake.com/en/user-guide/warehouses-overview#warehouse-size)
     — Size comparison'
-- answer_title: schema_definitions
-  question_text: Define the schemas for your data product.
-  answer_type: object-list
-  is_org_scope: false
-  object_name: Schema Definition
-  keys:
-  - zone
-  - schema_name
-  - purpose
-  - data_classification
-  guidance: '
-
-    **What is this asking?**
-
-    Define each schema that will be created in your data product. For each schema,
-    specify:
-
-    - Which zone it belongs to
-
-    - The schema name
-
-    - Its purpose
-
-    - The data classification level
-
-
-    **Why does this matter?**
-
-    Schema definitions determine:
-
-    - Database structure and organization
-
-    - Access control granularity
-
-    - Data classification for masking policies
-
-
-    **Schema Naming Guidelines:**
-
-    - Use lowercase without underscores
-
-    - Be descriptive but concise
-
-    - Match your source system or subject area naming
-
-
-    **Example Schema Structure:**
-
-
-    **Raw Zone:**
-
-    | Schema | Purpose | Classification |
-
-    |--------|---------|----------------|
-
-    | `salesforce` | Salesforce CRM data | CONFIDENTIAL |
-
-    | `hubspot` | HubSpot marketing data | INTERNAL |
-
-    | `stripe` | Stripe payment data | RESTRICTED |
-
-
-    **Curated Zone:**
-
-    | Schema | Purpose | Classification |
-
-    |--------|---------|----------------|
-
-    | `customers` | Unified customer profiles | CONFIDENTIAL |
-
-    | `orders` | Order history and details | CONFIDENTIAL |
-
-    | `products` | Product catalog | INTERNAL |
-
-
-    **Consumption Zone:**
-
-    | Schema | Purpose | Classification |
-
-    |--------|---------|----------------|
-
-    | `reporting` | BI-ready fact and dimension tables | INTERNAL |
-
-    | `analytics` | Aggregations and metrics | INTERNAL |
-
-    | `mlfeatures` | Machine learning feature store | CONFIDENTIAL |
-
-
-    **Recommendation:**
-
-    Start simple — you can always add schemas later. Most data products have 2-4 schemas
-    per zone.
-
-
-    **More Information:**
-
-    * [Data Classification Best Practices](https://docs.snowflake.com/en/user-guide/governance-classify)
-    — Classification guidance'
 - answer_title: data_product_description
   question_text: Provide a brief description of this data product.
   answer_type: text
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Write a short description (1-2 sentences) explaining what this data product does
-    and who it serves.
+    Write a short description (1-2 sentences) explaining what this data product does and who it serves.
 
 
     **Why does this matter?**
@@ -780,8 +390,7 @@
 
     **Examples:**
 
-    - "Unified view of customer data from CRM, support, and transaction systems for
-    the analytics team."
+    - "Unified view of customer data from CRM, support, and transaction systems for the analytics team."
 
     - "Daily sales metrics and forecasts for regional sales managers."
 
@@ -790,8 +399,7 @@
 
     **Recommendation:**
 
-    Focus on the business value: What questions does this data product answer? Who
-    uses it?'
+    Focus on the business value: What questions does this data product answer? Who uses it?'
 - answer_title: data_product_environment
   question_text: Which environment is this data product being deployed to?
   answer_type: multi-select
@@ -803,17 +411,16 @@
 
     **Auto-Detection for Multi-Account Strategies:**
 
-    - **Environment-based accounts**: Your environment is determined by your target
-    account. Select the matching value.
+    - **Environment-based accounts**: Your environment is determined by your target account. Select the
+    matching value.
 
-    - **Domain + Environment accounts**: Your environment is derived from the second
-    part of your account name. Select the matching value.
+    - **Domain + Environment accounts**: Your environment is derived from the second part of your account
+    name. Select the matching value.
 
-    - **Domain-based accounts**: Environment is not determined by your account. Select
-    from the available options.
+    - **Domain-based accounts**: Environment is not determined by your account. Select from the available
+    options.
 
-    - **Single Account**: Environment is not determined by your account. Select from
-    the available options.
+    - **Single Account**: Environment is not determined by your account. Select from the available options.
 
 
     **Why does this matter?**
@@ -846,31 +453,29 @@
 
     **Recommendation:**
 
-    For environment-based and domain+environment strategies, select the environment
-    that matches your target account name.'
+    For environment-based and domain+environment strategies, select the environment that matches your
+    target account name.'
 - answer_title: data_product_domain
   question_text: Which domain does this data product belong to?
   answer_type: multi-select
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Select the business domain (team, department, or organizational unit) that owns
-    this data product.
+    Select the business domain (team, department, or organizational unit) that owns this data product.
 
 
     **Auto-Detection for Multi-Account Strategies:**
 
-    - **Domain-based accounts**: Your domain is determined by your target account.
+    - **Domain-based accounts**: Your domain is determined by your target account. Select the matching
+    value.
+
+    - **Domain + Environment accounts**: Your domain is derived from the first part of your account name.
     Select the matching value.
 
-    - **Domain + Environment accounts**: Your domain is derived from the first part
-    of your account name. Select the matching value.
+    - **Environment-based accounts**: Domain is not determined by your account. Select from the available
+    options.
 
-    - **Environment-based accounts**: Domain is not determined by your account. Select
-    from the available options.
-
-    - **Single Account**: Domain is not determined by your account. Select from the
-    available options.
+    - **Single Account**: Domain is not determined by your account. Select from the available options.
 
 
     **Why does this matter?**
@@ -897,28 +502,27 @@
 
     **Available Domains:**
 
-    Your organization defined these domains in Platform Foundation. If you need a
-    new domain, update Platform Foundation first.
+    Your organization defined these domains in Platform Foundation. If you need a new domain, update Platform
+    Foundation first.
 
 
     **If your domain isn''t listed:**
 
-    Work with your platform team to add the domain to Platform Foundation, then return
-    to this workflow.
+    Work with your platform team to add the domain to Platform Foundation, then return to this workflow.
 
 
     **Recommendation:**
 
-    For domain-based and domain+environment strategies, select the domain that matches
-    your target account name.'
+    For domain-based and domain+environment strategies, select the domain that matches your target account
+    name.'
 - answer_title: data_product_name
   question_text: What is the name of this data product?
   answer_type: text
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Provide a descriptive name for your data product. This name will be used in database
-    names, role names, and resource tags.
+    Provide a descriptive name for your data product. This name will be used in database names, role names,
+    and resource tags.
 
 
     **Why does this matter?**
@@ -973,61 +577,14 @@
 
     **Recommendation:**
 
-    Choose a name that business users would recognize. Ask: "If someone searched for
-    this data, what would they type?"
+    Choose a name that business users would recognize. Ask: "If someone searched for this data, what would
+    they type?"
 
 
     **More Information:**
 
-    * [Identifier Requirements](https://docs.snowflake.com/en/sql-reference/identifiers-syntax)
-    — Valid characters and length limits'
-- answer_title: target_account_access_confirmed
-  question_text: Have you confirmed you have SYSADMIN access to this account?
-  answer_type: multi-select
-  is_org_scope: false
-  options:
-  - text: Yes - I have SYSADMIN access
-  - text: No - I need to get access first
-  guidance: '**What is this asking?**
-
-    Confirm that you have the necessary permissions to create databases, schemas,
-    and warehouses in the target account.
-
-
-    **Why does this matter?**
-
-    Creating data product resources requires elevated privileges:
-
-    - **SYSADMIN**: Create databases, schemas, warehouses
-
-    - **SECURITYADMIN**: Create roles and grants
-
-    - **ACCOUNTADMIN**: Create resource monitors
-
-
-    If you don''t have access, coordinate with your platform team before proceeding.
-
-
-    **How to check your access:**
-
-    ```sql
-
-    -- Check your current roles
-
-    SHOW GRANTS TO USER <your_username>;
-
-
-    -- Check if you can use SYSADMIN
-
-    USE ROLE SYSADMIN;
-
-    ```
-
-
-    **If you select "No":**
-
-    Pause this workflow and work with your platform team to get the necessary access
-    before continuing.'
+    * [Identifier Requirements](https://docs.snowflake.com/en/sql-reference/identifiers-syntax) — Valid
+    characters and length limits'
 - answer_title: target_account_name
   question_text: Which account will this data product be deployed to?
   answer_type: text
@@ -1041,8 +598,8 @@
 
     **Why does this matter?**
 
-    This ensures all generated SQL is clearly documented with the target account,
-    preventing deployment errors and providing clear audit trails.
+    This ensures all generated SQL is clearly documented with the target account, preventing deployment
+    errors and providing clear audit trails.
 
 
     **How to find your account name:**
@@ -1085,8 +642,8 @@
 
     **More Information:**
 
-    * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
-    — Understanding account names'
+    * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) — Understanding
+    account names'
 - answer_title: account_blocked_network_rules
   question_text: Define any blocked network rules for this account.
   answer_type: object-list
@@ -1097,15 +654,13 @@
   - ip_addresses
   guidance: '**What is this asking?**
 
-    Define IP addresses that should be explicitly blocked, even if they fall within
-    an allowed range.
+    Define IP addresses that should be explicitly blocked, even if they fall within an allowed range.
 
 
     **Why does this matter?**
 
-    Block rules provide fine-grained control when you have broad allow rules. For
-    example, you might allow your entire corporate network but need to block a guest
-    WiFi subnet.
+    Block rules provide fine-grained control when you have broad allow rules. For example, you might allow
+    your entire corporate network but need to block a guest WiFi subnet.
 
 
     **When to use blocked rules:**
@@ -1144,22 +699,20 @@
 
     **Why does this matter?**
 
-    Network rules are your first line of defense, blocking access attempts from unauthorized
-    locations before authentication even begins. Overly permissive rules increase
-    attack surface; overly restrictive rules lock out legitimate users.
+    Network rules are your first line of defense, blocking access attempts from unauthorized locations
+    before authentication even begins. Overly permissive rules increase attack surface; overly restrictive
+    rules lock out legitimate users.
 
 
     **For Consistency with Organization Account:**
 
-    To maintain consistent network policies across accounts, review your Organization
-    Account''s network rules (`SHOW NETWORK RULES IN ACCOUNT`) and enter the same
-    values here.
+    To maintain consistent network policies across accounts, review your Organization Account''s network
+    rules (`SHOW NETWORK RULES IN ACCOUNT`) and enter the same values here.
 
 
     **Format for each rule:**
 
-    - **rule_name**: Descriptive name (e.g., `corporate_network`, `vpn_endpoints`,
-    `etl_servers`)
+    - **rule_name**: Descriptive name (e.g., `corporate_network`, `vpn_endpoints`, `etl_servers`)
 
     - **ip_addresses**: Comma-separated list of IPs or CIDR blocks
 
@@ -1197,8 +750,8 @@
 
     **Why does this matter?**
 
-    Budget alerts are only useful if the right people see them. The recipients should
-    have the authority and ability to take action when spending exceeds expectations.
+    Budget alerts are only useful if the right people see them. The recipients should have the authority
+    and ability to take action when spending exceeds expectations.
 
 
     **Recommendations:**
@@ -1233,15 +786,13 @@
   - text: '100'
   guidance: '**What is this asking?**
 
-    Choose when to receive the first budget alert (as a percentage of the monthly
-    limit).
+    Choose when to receive the first budget alert (as a percentage of the monthly limit).
 
 
     **Why does this matter?**
 
-    The threshold determines how early you receive warnings. Lower thresholds give
-    more lead time to take action; higher thresholds give less warning but reduce
-    noise.
+    The threshold determines how early you receive warnings. Lower thresholds give more lead time to take
+    action; higher thresholds give less warning but reduce noise.
 
 
     **Options explained:**
@@ -1257,8 +808,8 @@
 
     **How forecasting works:**
 
-    Snowflake predicts end-of-month spend based on current trajectory. If your 75%
-    threshold would be exceeded by month end, you''re alerted early.
+    Snowflake predicts end-of-month spend based on current trajectory. If your 75% threshold would be
+    exceeded by month end, you''re alerted early.
 
 
     **Example:**
@@ -1267,12 +818,10 @@
 
     - Alert when projected spend exceeds 3,750 credits
 
-    - If halfway through the month Snowflake forecasts 4,000 credits, you''re alerted
-    immediately
+    - If halfway through the month Snowflake forecasts 4,000 credits, you''re alerted immediately
 
 
-    **Recommendation:** Use 75% for most accounts to balance early warning with alert
-    fatigue.'
+    **Recommendation:** Use 75% for most accounts to balance early warning with alert fatigue.'
 - answer_title: account_budget_limit
   question_text: What is the monthly credit limit for this account?
   answer_type: text
@@ -1284,9 +833,9 @@
 
     **Why does this matter?**
 
-    A well-set budget provides meaningful alerts without being too restrictive. Setting
-    it too low causes alert fatigue; too high means late warnings. This is your primary
-    visibility into spending patterns for this account.
+    A well-set budget provides meaningful alerts without being too restrictive. Setting it too low causes
+    alert fatigue; too high means late warnings. This is your primary visibility into spending patterns
+    for this account.
 
 
     **How to estimate:**
@@ -1316,28 +865,25 @@
     **Format:** Enter a number (e.g., `5000` for 5,000 credits)
 
 
-    **Note:** This is a monitoring threshold. You can adjust it as you learn actual
-    consumption patterns.
+    **Note:** This is a monitoring threshold. You can adjust it as you learn actual consumption patterns.
 
 
     **More Information:**
 
-    * [Budgets Overview](https://docs.snowflake.com/en/user-guide/budgets) — Credit
-    monitoring and alerts'
+    * [Budgets Overview](https://docs.snowflake.com/en/user-guide/budgets) — Credit monitoring and alerts'
 - answer_title: account_mfa_support_contact
   question_text: Who should users contact for MFA assistance?
   answer_type: text
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Provide a contact (email, Slack channel, or help desk) where users can get help
-    with MFA issues.
+    Provide a contact (email, Slack channel, or help desk) where users can get help with MFA issues.
 
 
     **Why does this matter?**
 
-    MFA issues (lost device, locked out, enrollment problems) need quick resolution.
-    Having a clear support path prevents users from being stuck.
+    MFA issues (lost device, locked out, enrollment problems) need quick resolution. Having a clear support
+    path prevents users from being stuck.
 
 
     **Examples:**
@@ -1351,11 +897,10 @@
 
     **Recommendation:**
 
-    Use your organization''s standard IT support channel. If you have a dedicated
-    Snowflake support team, use their contact.'
+    Use your organization''s standard IT support channel. If you have a dedicated Snowflake support team,
+    use their contact.'
 - answer_title: account_breakglass_accounts
-  question_text: Configure break-glass emergency access account(s) for this Snowflake
-    account.
+  question_text: Configure break-glass emergency access account(s) for this Snowflake account.
   answer_type: object-list
   is_org_scope: false
   object_name: Break-glass User
@@ -1381,8 +926,8 @@
     - Critical business operations cannot wait for normal access restoration
 
 
-    Without break-glass access, an IdP outage or misconfiguration could leave you
-    locked out of the account entirely.
+    Without break-glass access, an IdP outage or misconfiguration could leave you locked out of the account
+    entirely.
 
 
     **Recommendations:**
@@ -1432,11 +977,10 @@
 
     **More Information:**
 
-    * [MFA Best Practices](https://docs.snowflake.com/en/user-guide/security-mfa)
-    — Emergency access recommendations
+    * [MFA Best Practices](https://docs.snowflake.com/en/user-guide/security-mfa) — Emergency access recommendations
 
-    * [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies)
-    — Exempting users from policies'
+    * [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies) — Exempting
+    users from policies'
 - answer_title: account_saml_issuer
   question_text: What is your Identity Provider's Issuer (Entity ID)?
   answer_type: text
@@ -1448,8 +992,8 @@
 
     **Why does this matter?**
 
-    The issuer must exactly match what your IdP sends in SAML assertions. A mismatch
-    causes authentication failures.
+    The issuer must exactly match what your IdP sends in SAML assertions. A mismatch causes authentication
+    failures.
 
 
     **How to find this:**
@@ -1477,9 +1021,8 @@
 
     **Why does this matter?**
 
-    Snowflake uses this certificate to verify that SAML assertions genuinely come
-    from your IdP. Without a valid certificate, SSO authentication will fail with
-    signature validation errors.
+    Snowflake uses this certificate to verify that SAML assertions genuinely come from your IdP. Without
+    a valid certificate, SSO authentication will fail with signature validation errors.
 
 
     **How to find this:**
@@ -1506,8 +1049,7 @@
     ```
 
 
-    **Tip:** If the certificate is downloaded as a file, open it in a text editor
-    and copy the contents.'
+    **Tip:** If the certificate is downloaded as a file, open it in a text editor and copy the contents.'
 - answer_title: account_saml_sso_url
   question_text: What is your Identity Provider's SSO URL?
   answer_type: text
@@ -1519,8 +1061,8 @@
 
     **Why does this matter?**
 
-    This URL is where users are sent to log in. An incorrect URL will break SSO completely,
-    preventing users from authenticating via your IdP.
+    This URL is where users are sent to log in. An incorrect URL will break SSO completely, preventing
+    users from authenticating via your IdP.
 
 
     **How to find this:**
@@ -1548,9 +1090,8 @@
 
     **Why does this matter?**
 
-    The integration name identifies the SAML connection in Snowflake. A descriptive
-    name helps with troubleshooting SSO issues and managing multiple integrations
-    if needed.
+    The integration name identifies the SAML connection in Snowflake. A descriptive name helps with troubleshooting
+    SSO issues and managing multiple integrations if needed.
 
 
     **Recommendations:**
@@ -1593,8 +1134,8 @@
 
     **Why does this matter?**
 
-    Administrator access is critical for account governance. Having the right people
-    with the right level of access ensures:
+    Administrator access is critical for account governance. Having the right people with the right level
+    of access ensures:
 
     - Proper security oversight
 
@@ -1609,14 +1150,12 @@
 
     Users are created automatically from your IdP. You only need to specify:
 
-    - **login_name**: The username as it appears in Snowflake (check `SHOW USERS;`
-    after SCIM sync)
+    - **login_name**: The username as it appears in Snowflake (check `SHOW USERS;` after SCIM sync)
 
     - **admin_role**: The administrative role to assign
 
 
-    Leave `email`, `first_name`, and `last_name` blank for SCIM users—these are managed
-    by your IdP.
+    Leave `email`, `first_name`, and `last_name` blank for SCIM users—these are managed by your IdP.
 
 
     **If using Manual User Management:**
@@ -1646,8 +1185,7 @@
 
     | `SYSADMIN` | Resource management | Platform engineers, DBAs |
 
-    | `USERADMIN` | User creation/modification | HR integrations (if not using SCIM)
-    |
+    | `USERADMIN` | User creation/modification | HR integrations (if not using SCIM) |
 
 
     **⚠️ Important:** Enter role names exactly as shown (uppercase).
@@ -1675,8 +1213,8 @@
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Enter the IP addresses from which your Identity Provider will make SCIM API calls
-    to Snowflake. This creates a network policy that restricts SCIM access.
+    Enter the IP addresses from which your Identity Provider will make SCIM API calls to Snowflake. This
+    creates a network policy that restricts SCIM access.
 
 
     **If using Organization Configuration:**
@@ -1709,14 +1247,14 @@
     ```
 
 
-    **Important:** If you don''t know your IdP''s IP ranges, you can skip the network
-    policy and add it later. However, this is a security best practice.
+    **Important:** If you don''t know your IdP''s IP ranges, you can skip the network policy and add it
+    later. However, this is a security best practice.
 
 
     **More Information:**
 
-    * [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies)
-    — IP-based access control'
+    * [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies) — IP-based access
+    control'
 - answer_title: account_scim_integration_name
   question_text: What name should be used for the SCIM integration in this account?
   answer_type: text
@@ -1728,9 +1266,8 @@
 
     **Why does this matter?**
 
-    The integration name identifies the SCIM connection in Snowflake. A consistent
-    naming convention makes it easier to manage integrations across multiple accounts
-    and troubleshoot provisioning issues.
+    The integration name identifies the SCIM connection in Snowflake. A consistent naming convention makes
+    it easier to manage integrations across multiple accounts and troubleshoot provisioning issues.
 
 
     **If using Organization Configuration:**
@@ -1758,8 +1295,7 @@
 
     **More Information:**
 
-    * [SCIM Integration](https://docs.snowflake.com/en/user-guide/scim) — SCIM provisioning
-    overview'
+    * [SCIM Integration](https://docs.snowflake.com/en/user-guide/scim) — SCIM provisioning overview'
 - answer_title: account_configure_saml
   question_text: Will you configure SAML/SSO for this account?
   answer_type: multi-select
@@ -1822,8 +1358,8 @@
 
     **More Information:**
 
-    * [SAML/SSO Overview](https://docs.snowflake.com/en/user-guide/admin-security-fed-auth)
-    — Federated authentication options'
+    * [SAML/SSO Overview](https://docs.snowflake.com/en/user-guide/admin-security-fed-auth) — Federated
+    authentication options'
 - answer_title: security_config_approach
   question_text: How would you like to configure security for this account?
   answer_type: multi-select
@@ -1833,15 +1369,15 @@
   - text: Configure Custom Settings
   guidance: '**What is this asking?**
 
-    Choose whether to replicate the Platform Foundation security settings or create
-    custom settings for this account.
+    Choose whether to replicate the Platform Foundation security settings or create custom settings for
+    this account.
 
 
     **Why does this matter?**
 
-    Consistent security settings across accounts simplify administration, reduce configuration
-    errors, and make security audits easier. Custom settings are needed when an account
-    has unique regulatory requirements or serves external users.
+    Consistent security settings across accounts simplify administration, reduce configuration errors,
+    and make security audits easier. Custom settings are needed when an account has unique regulatory
+    requirements or serves external users.
 
 
     **Options explained:**
@@ -1870,21 +1406,19 @@
 
     - Can have different authentication requirements
 
-    - Best for: Accounts with unique regulatory requirements, partner accounts, or
-    isolated environments
+    - Best for: Accounts with unique regulatory requirements, partner accounts, or isolated environments
 
 
     **Recommendation:**
 
-    Use organization configuration unless this account has specific requirements that
-    differ from the standard. Consistency simplifies administration, auditing, and
-    troubleshooting.
+    Use organization configuration unless this account has specific requirements that differ from the
+    standard. Consistency simplifies administration, auditing, and troubleshooting.
 
 
     **More Information:**
 
-    * [Security Best Practices](https://docs.snowflake.com/en/user-guide/security-best-practices)
-    — Snowflake security recommendations
+    * [Security Best Practices](https://docs.snowflake.com/en/user-guide/security-best-practices) — Snowflake
+    security recommendations
 
 
     **Note:** Even with organization configuration, this account will have its own:
@@ -1899,20 +1433,19 @@
 
     - Break-glass access'
 - answer_title: shared_database_name
-  question_text: What name should be used for the shared infrastructure database in
-    this account?
+  question_text: What name should be used for the shared infrastructure database in this account?
   answer_type: text
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Choose a name for the database that will be created from the infrastructure share.
-    This is a local reference to the shared governance objects.
+    Choose a name for the database that will be created from the infrastructure share. This is a local
+    reference to the shared governance objects.
 
 
     **Why does this matter?**
 
-    This database name will be used in SQL queries when referencing governance objects
-    like tags and cost reporting views.
+    This database name will be used in SQL queries when referencing governance objects like tags and cost
+    reporting views.
 
 
     **Recommendations:**
@@ -1936,8 +1469,7 @@
     **Default recommendation:** `{{ platform_database_name | lower }}_shared`
 
 
-    **Note:** This creates a read-only database. You cannot create objects in this
-    database.'
+    **Note:** This creates a read-only database. You cannot create objects in this database.'
 - answer_title: new_account_region
   question_text: What cloud region should host this account?
   answer_type: text
@@ -2008,8 +1540,8 @@
 
     **More Information:**
 
-    * [Supported Cloud Regions](https://docs.snowflake.com/en/user-guide/intro-regions)
-    — Full region list'
+    * [Supported Cloud Regions](https://docs.snowflake.com/en/user-guide/intro-regions) — Full region
+    list'
 - answer_title: new_account_edition
   question_text: What Snowflake edition will this account use?
   answer_type: multi-select
@@ -2087,8 +1619,7 @@
 
     **More Information:**
 
-    * [Snowflake Editions](https://docs.snowflake.com/en/user-guide/intro-editions)
-    — Full feature comparison'
+    * [Snowflake Editions](https://docs.snowflake.com/en/user-guide/intro-editions) — Full feature comparison'
 - answer_title: new_account_admin_email
   question_text: What email address should be used for the initial administrator?
   answer_type: text
@@ -2109,8 +1640,8 @@
     - Critical security alerts
 
 
-    If the email is unmonitored or inaccessible, you may lose access to password recovery
-    and important security notifications.
+    If the email is unmonitored or inaccessible, you may lose access to password recovery and important
+    security notifications.
 
 
     **Best Practices:**
@@ -2124,8 +1655,7 @@
 
     **More Information:**
 
-    * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user) —
-    User creation reference'
+    * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user) — User creation reference'
 - answer_title: new_account_admin_name
   question_text: What username should be used for the initial administrator?
   answer_type: text
@@ -2137,13 +1667,11 @@
 
     **Why does this matter?**
 
-    This is the bootstrap user who will configure the account after creation. Choosing
-    the right person and a proper username format ensures smooth handoff and follows
-    your organization''s identity standards.
+    This is the bootstrap user who will configure the account after creation. Choosing the right person
+    and a proper username format ensures smooth handoff and follows your organization''s identity standards.
 
 
-    **This is NOT a display name** — it''s the login identifier the administrator
-    will use to access Snowflake.
+    **This is NOT a display name** — it''s the login identifier the administrator will use to access Snowflake.
 
 
     **Recommendations:**
@@ -2177,16 +1705,15 @@
 
     **More Information:**
 
-    * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user) —
-    User creation reference'
+    * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user) — User creation reference'
 - answer_title: new_account_name
   question_text: What name should be used for this account?
   answer_type: text
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Confirm or customize the account name. Based on your Platform Foundation naming
-    conventions, a suggested name was generated in the previous step.
+    Confirm or customize the account name. Based on your Platform Foundation naming conventions, a suggested
+    name was generated in the previous step.
 
 
     **Naming Requirements:**
@@ -2222,16 +1749,16 @@
 
     **Best Practice:**
 
-    Use the suggested name from the previous step unless you have a specific reason
-    to customize it. Consistent naming makes governance and cost allocation easier.'
+    Use the suggested name from the previous step unless you have a specific reason to customize it. Consistent
+    naming makes governance and cost allocation easier.'
 - answer_title: account_environment
   question_text: Which environment will this account represent?
   answer_type: multi-select
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Select the SDLC environment this account will represent. This account will serve
-    all domains (Sales, Finance, HR, etc.) for this environment.
+    Select the SDLC environment this account will represent. This account will serve all domains (Sales,
+    Finance, HR, etc.) for this environment.
 
 
     **Why does this matter?**
@@ -2254,15 +1781,14 @@
 
     **Note on Domains:**
 
-    Since you''re using an environment-based strategy, domains will be organized **within**
-    this account at the database level. You''ll configure domains when creating data
-    products.
+    Since you''re using an environment-based strategy, domains will be organized **within** this account
+    at the database level. You''ll configure domains when creating data products.
 
 
     **More Information:**
 
-    * [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts)
-    — Account management overview'
+    * [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account
+    management overview'
 - answer_title: account_description
   question_text: Provide a brief description of this account's purpose.
   answer_type: text
@@ -2274,9 +1800,8 @@
 
     **Why does this matter?**
 
-    A clear description helps team members understand the account''s purpose at a
-    glance. It appears in account listings and documentation, making governance and
-    auditing easier.
+    A clear description helps team members understand the account''s purpose at a glance. It appears in
+    account listings and documentation, making governance and auditing easier.
 
 
     **Examples:**
@@ -2292,8 +1817,8 @@
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Select the business domain this account will represent. This account will serve
-    all environments (Dev, Test, Prod) for this domain.
+    Select the business domain this account will represent. This account will serve all environments (Dev,
+    Test, Prod) for this domain.
 
 
     **Why does this matter?**
@@ -2307,15 +1832,14 @@
 
     **Note on Environments:**
 
-    Since you''re using a domain-based strategy, environments (Dev, Test, Prod) will
-    be organized **within** this account at the database level. You''ll configure
-    environments when creating data products.
+    Since you''re using a domain-based strategy, environments (Dev, Test, Prod) will be organized **within**
+    this account at the database level. You''ll configure environments when creating data products.
 
 
     **More Information:**
 
-    * [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts)
-    — Account management overview'
+    * [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account
+    management overview'
 - answer_title: require_cost_tags
   question_text: Should these tags be required on new resources?
   answer_type: multi-select
@@ -2326,8 +1850,7 @@
   - text: No (optional)
   guidance: '**What is this asking?**
 
-    Decide whether tagging should be a governance requirement when new resources are
-    created.
+    Decide whether tagging should be a governance requirement when new resources are created.
 
 
     **Why does this matter?**
@@ -2337,17 +1860,16 @@
 
     **How enforcement works:**
 
-    Snowflake doesn''t automatically prevent creating resources without tags. Enforcement
-    is achieved through:
+    Snowflake doesn''t automatically prevent creating resources without tags. Enforcement is achieved
+    through:
 
-    - **Monitoring**: This step creates an `untagged_warehouses` view to identify
-    resources missing required tags
+    - **Monitoring**: This step creates an `untagged_warehouses` view to identify resources missing required
+    tags
 
-    - **Governance processes**: Document tagging requirements in your provisioning
-    procedures
+    - **Governance processes**: Document tagging requirements in your provisioning procedures
 
-    - **Role-based access**: Limit who can create warehouses/databases and train those
-    teams on tagging requirements
+    - **Role-based access**: Limit who can create warehouses/databases and train those teams on tagging
+    requirements
 
     - **Regular audits**: Periodically review the `untagged_warehouses` view and remediate
 
@@ -2384,9 +1906,8 @@
 
     **Recommendation:**
 
-    Use "Yes (production only)" to ensure production cost visibility while allowing
-    development flexibility. Regardless of choice, regularly review the `untagged_warehouses`
-    view to maintain cost visibility.'
+    Use "Yes (production only)" to ensure production cost visibility while allowing development flexibility.
+    Regardless of choice, regularly review the `untagged_warehouses` view to maintain cost visibility.'
 - answer_title: additional_tag_dimensions
   question_text: Which additional tag dimensions will you use?
   answer_type: multi-select
@@ -2395,21 +1916,18 @@
   - text: All (Cost Center, Owner, Project, Application)
   - text: Essential (Cost Center, Owner)
   - text: Minimal (Owner only)
-  guidance: "**What is this asking?** Select which additional tags to create beyond\
-    \ the core platform tags created in the previous step (DOMAIN, ENVIRONMENT, DATAPRODUCT,\
-    \ WORKLOAD, ZONE, and DATA_CLASSIFICATION).  \n  \n  * **Why does this matter?**\
-    \ Different organizations need different levels of cost tracking granularity.\
-    \  \n  \n  **Options explained:**  \n  **All (Cost Center, Owner, Project, Application):**\
-    \  \n  * cost\\_center \\- Accounting cost center code  \n  * owner \\- Team or\
-    \ individual responsible  \n  * project \\- Specific project or initiative  \n\
-    \  * application \\- Application or system name  \n  * Best for: Large organizations\
-    \ with complex cost allocation  \n* **Essential (Cost Center, Owner):**  \n  *\
-    \ cost\\_center \\- For chargeback to accounting  \n  * owner \\- For accountability\
-    \  \n  * Best for: Most organizations with standard chargeback requirements  \n\
-    * **Minimal (Owner only):**  \n  * owner \\- Track who's responsible for resources\
-    \  \n  * Best for: Small organizations or those just getting started  \n\n* **Recommendation:**\
-    \ Start with Essential (Cost Center, Owner). Add more as your FinOps practices\
-    \ mature."
+  guidance: "**What is this asking?** Select which additional tags to create beyond the core platform\
+    \ tags created in the previous step (DOMAIN, ENVIRONMENT, DATAPRODUCT, WORKLOAD, ZONE, and DATA_CLASSIFICATION).\
+    \  \n  \n  * **Why does this matter?** Different organizations need different levels of cost tracking\
+    \ granularity.  \n  \n  **Options explained:**  \n  **All (Cost Center, Owner, Project, Application):**\
+    \  \n  * cost\\_center \\- Accounting cost center code  \n  * owner \\- Team or individual responsible\
+    \  \n  * project \\- Specific project or initiative  \n  * application \\- Application or system name\
+    \  \n  * Best for: Large organizations with complex cost allocation  \n* **Essential (Cost Center,\
+    \ Owner):**  \n  * cost\\_center \\- For chargeback to accounting  \n  * owner \\- For accountability\
+    \  \n  * Best for: Most organizations with standard chargeback requirements  \n* **Minimal (Owner\
+    \ only):**  \n  * owner \\- Track who's responsible for resources  \n  * Best for: Small organizations\
+    \ or those just getting started  \n\n* **Recommendation:** Start with Essential (Cost Center, Owner).\
+    \ Add more as your FinOps practices mature."
 - answer_title: account_resource_monitor_reset_frequency
   question_text: How often should the resource monitor reset?
   answer_type: multi-select
@@ -2530,14 +2048,14 @@
   - text: '110'
   guidance: '**What is this asking?**
 
-    Select the percentage of your budget limit at which Snowflake will send notifications
-    when *projected* spending exceeds this threshold.
+    Select the percentage of your budget limit at which Snowflake will send notifications when *projected*
+    spending exceeds this threshold.
 
 
     **Why does this matter?**
 
-    The threshold determines how early you receive warnings. Lower thresholds give
-    more lead time but may create noise; higher thresholds give less warning.
+    The threshold determines how early you receive warnings. Lower thresholds give more lead time but
+    may create noise; higher thresholds give less warning.
 
 
     **How it works:**
@@ -2546,8 +2064,7 @@
 
     - When projected spending exceeds (budget × threshold%), an alert is sent
 
-    - Example: 5,000 credit budget with 75% threshold → alert when projected spending
-    > 3,750 credits
+    - Example: 5,000 credit budget with 75% threshold → alert when projected spending > 3,750 credits
 
 
     **Options explained:**
@@ -2568,27 +2085,24 @@
     | **110%** | Alert after projected overage (Snowflake default) |
 
 
-    **For multiple thresholds:** Snowflake''s native budget supports one threshold.
-    For multiple alert levels, use Resource Monitors (Configure Resource Monitors
-    step) or custom budget actions.
+    **For multiple thresholds:** Snowflake''s native budget supports one threshold. For multiple alert
+    levels, use Resource Monitors (Configure Resource Monitors step) or custom budget actions.
 
 
-    **Recommendation:** Select `75` for balanced early warning that gives you time
-    to take action.'
+    **Recommendation:** Select `75` for balanced early warning that gives you time to take action.'
 - answer_title: mfa_support_contact
   question_text: Who should users contact for MFA enrollment help?
   answer_type: text
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Provide a contact (email, Slack channel, help desk) for users who need assistance
-    with MFA enrollment.
+    Provide a contact (email, Slack channel, help desk) for users who need assistance with MFA enrollment.
 
 
     **Why does this matter?**
 
-    Users may encounter issues during MFA enrollment. Having a clear support path
-    prevents frustration and access issues.
+    Users may encounter issues during MFA enrollment. Having a clear support path prevents frustration
+    and access issues.
 
 
     **Recommendations:**
@@ -2627,23 +2141,22 @@
   - text: User's Choice
   guidance: '**What is this asking?**
 
-    Select your organization''s recommended MFA method for documentation and user
-    guidance.
+    Select your organization''s recommended MFA method for documentation and user guidance.
 
 
     **Why does this matter?**
 
-    Consistent MFA methods simplify support and user training. However, allowing choice
-    provides flexibility for user preferences.
+    Consistent MFA methods simplify support and user training. However, allowing choice provides flexibility
+    for user preferences.
 
 
     **Options explained:**
 
-    - **TOTP (Authenticator Apps)**: Use apps like Duo Mobile, Google Authenticator,
-    Microsoft Authenticator. Works on any smartphone.
+    - **TOTP (Authenticator Apps)**: Use apps like Duo Mobile, Google Authenticator, Microsoft Authenticator.
+    Works on any smartphone.
 
-    - **Passkey (Security Keys/Biometrics)**: Use hardware keys (YubiKey) or platform
-    biometrics (fingerprint, Face ID). Most secure but requires compatible hardware.
+    - **Passkey (Security Keys/Biometrics)**: Use hardware keys (YubiKey) or platform biometrics (fingerprint,
+    Face ID). Most secure but requires compatible hardware.
 
     - **User''s Choice**: Users can select their preferred method. Most flexible.
 
@@ -2676,27 +2189,26 @@
 
     **Why does this matter?**
 
-    Users need time to download authenticator apps and enroll in MFA. Too short a
-    timeline may lock users out; too long reduces security.
+    Users need time to download authenticator apps and enroll in MFA. Too short a timeline may lock users
+    out; too long reduces security.
 
 
     **Options explained:**
 
-    - **Immediately**: Users must enroll in MFA on next login. Best for security but
-    may cause access issues.
+    - **Immediately**: Users must enroll in MFA on next login. Best for security but may cause access
+    issues.
 
     - **7 Days**: One week grace period. Recommended for most organizations.
 
     - **14 Days**: Two weeks grace period. Good for distributed teams.
 
-    - **30 Days**: One month grace period. Use only if you have complex user communication
-    requirements.
+    - **30 Days**: One month grace period. Use only if you have complex user communication requirements.
 
 
     **Recommendation:**
 
-    **7 Days** provides a good balance of security and user experience. Send communications
-    to users immediately after running this step.
+    **7 Days** provides a good balance of security and user experience. Send communications to users immediately
+    after running this step.
 
 
     **More Information:**
@@ -2711,14 +2223,12 @@
   - text: No - Apply only to specific users
   guidance: '**What is this asking?**
 
-    Decide whether to enforce the human user authentication policy for all users by
-    default.
+    Decide whether to enforce the human user authentication policy for all users by default.
 
 
     **Why does this matter?**
 
-    - **Yes**: All users must comply with the policy unless they have a specific override
-    (like break-glass)
+    - **Yes**: All users must comply with the policy unless they have a specific override (like break-glass)
 
     - **No**: Policies only apply to users you explicitly assign them to
 
@@ -2745,8 +2255,7 @@
   - text: Either TOTP or Passkey
   guidance: '**What is this asking?**
 
-    Select the multi-factor authentication method(s) to require when users authenticate
-    with passwords.
+    Select the multi-factor authentication method(s) to require when users authenticate with passwords.
 
 
     **Why does this matter?**
@@ -2756,11 +2265,11 @@
 
     **Options explained:**
 
-    - **TOTP (Authenticator Apps)**: Time-based codes from apps like Google Authenticator,
-    Microsoft Authenticator, Duo. Widely supported.
+    - **TOTP (Authenticator Apps)**: Time-based codes from apps like Google Authenticator, Microsoft Authenticator,
+    Duo. Widely supported.
 
-    - **Passkey (FIDO2/WebAuthn)**: Hardware keys or biometric authentication. Most
-    secure but requires compatible devices.
+    - **Passkey (FIDO2/WebAuthn)**: Hardware keys or biometric authentication. Most secure but requires
+    compatible devices.
 
     - **Either TOTP or Passkey**: Users can choose. Recommended for flexibility.
 
@@ -2789,28 +2298,23 @@
 
     **Why does this matter?**
 
-    Service accounts should not use password authentication, which is less secure
-    and harder to rotate.
+    Service accounts should not use password authentication, which is less secure and harder to rotate.
 
 
     **Options explained:**
 
-    - **OAuth Only**: Services must use OAuth tokens. Best for cloud applications
-    with OAuth support.
+    - **OAuth Only**: Services must use OAuth tokens. Best for cloud applications with OAuth support.
 
-    - **Key Pair Only**: Services must use RSA key pairs. Best for on-premise or custom
-    applications.
+    - **Key Pair Only**: Services must use RSA key pairs. Best for on-premise or custom applications.
 
     - **OAuth or Key Pair**: Either method allowed. Recommended for flexibility.
 
-    - **OAuth, Key Pair, or PAT**: Adds Personal Access Tokens. PATs are easier to
-    manage but less secure.
+    - **OAuth, Key Pair, or PAT**: Adds Personal Access Tokens. PATs are easier to manage but less secure.
 
 
     **Recommendation:**
 
-    **OAuth or Key Pair** provides security while accommodating different integration
-    patterns.
+    **OAuth or Key Pair** provides security while accommodating different integration patterns.
 
 
     **More Information:**
@@ -2819,8 +2323,7 @@
 
     * [OAuth](https://docs.snowflake.com/en/user-guide/oauth)'
 - answer_title: human_auth_methods
-  question_text: What authentication methods should be allowed for human users in
-    this account?
+  question_text: What authentication methods should be allowed for human users in this account?
   answer_type: multi-select
   is_org_scope: false
   options:
@@ -2837,15 +2340,14 @@
   - text: Password with MFA Only
   guidance: '**What is this asking?**
 
-    Choose how human users (interactive users) should authenticate to this account.
-    The value from Platform Foundation is pre-populated—accept it for consistency
-    or change it if this account has different requirements.
+    Choose how human users (interactive users) should authenticate to this account. The value from Platform
+    Foundation is pre-populated—accept it for consistency or change it if this account has different requirements.
 
 
     **Why does this matter?**
 
-    Authentication policies are the gateway to your data. The right balance between
-    security and usability ensures:
+    Authentication policies are the gateway to your data. The right balance between security and usability
+    ensures:
 
     - Protection against unauthorized access
 
@@ -2858,9 +2360,8 @@
 
     **Inherited Value:**
 
-    This answer is pre-populated from your Platform Foundation configuration. Most
-    organizations keep authentication consistent across accounts, but you may want
-    different settings for:
+    This answer is pre-populated from your Platform Foundation configuration. Most organizations keep
+    authentication consistent across accounts, but you may want different settings for:
 
     - Development accounts (less strict for agility)
 
@@ -2903,14 +2404,14 @@
 
     **Recommendation:**
 
-    Accept the Platform Foundation value unless this account has specific requirements
-    that differ from your standard.
+    Accept the Platform Foundation value unless this account has specific requirements that differ from
+    your standard.
 
 
     **More Information:**
 
-    * [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies)
-    — Policy configuration guide'
+    * [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies) — Policy
+    configuration guide'
 - answer_title: breakglass_accounts
   question_text: Configure the break-glass emergency access account(s)
   answer_type: object-list
@@ -2922,8 +2423,8 @@
   - allowed_ips
   guidance: '**What is this asking?**
 
-    Define one or more break-glass emergency access accounts. Each account can bypass
-    SSO and authenticate with a password when your Identity Provider is unavailable.
+    Define one or more break-glass emergency access accounts. Each account can bypass SSO and authenticate
+    with a password when your Identity Provider is unavailable.
 
 
     **How Many Accounts?**
@@ -2971,11 +2472,9 @@
 
     |----------|-------|-------------|
 
-    | `BREAKGLASS_ADMIN_01` | `platform-team@company.com` | `10.0.0.1, 192.168.1.0/24`
-    |
+    | `BREAKGLASS_ADMIN_01` | `platform-team@company.com` | `10.0.0.1, 192.168.1.0/24` |
 
-    | `BREAKGLASS_ADMIN_02` | `security-team@company.com` | `10.0.0.2, 192.168.1.0/24`
-    |
+    | `BREAKGLASS_ADMIN_02` | `security-team@company.com` | `10.0.0.2, 192.168.1.0/24` |
 
 
     **Security Notes:**
@@ -3027,14 +2526,13 @@
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Provide the Issuer (also called Entity ID) from your Identity Provider. This uniquely
-    identifies your IdP.
+    Provide the Issuer (also called Entity ID) from your Identity Provider. This uniquely identifies your
+    IdP.
 
 
     **Why does this matter?**
 
-    The Issuer is used to verify that SAML assertions are coming from the expected
-    Identity Provider.
+    The Issuer is used to verify that SAML assertions are coming from the expected Identity Provider.
 
 
     **How to find this:**
@@ -3060,14 +2558,14 @@
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Provide the X.509 certificate from your Identity Provider. This certificate is
-    used to verify SAML assertions.
+    Provide the X.509 certificate from your Identity Provider. This certificate is used to verify SAML
+    assertions.
 
 
     **Why does this matter?**
 
-    Snowflake uses this certificate to verify that SAML assertions actually came from
-    your IdP and haven''t been tampered with.
+    Snowflake uses this certificate to verify that SAML assertions actually came from your IdP and haven''t
+    been tampered with.
 
 
     **How to find this:**
@@ -3076,8 +2574,7 @@
 
     - Open the certificate file in a text editor
 
-    - Copy the entire contents including `-----BEGIN CERTIFICATE-----` and `-----END
-    CERTIFICATE-----`
+    - Copy the entire contents including `-----BEGIN CERTIFICATE-----` and `-----END CERTIFICATE-----`
 
 
     **Format:**
@@ -3087,8 +2584,8 @@
 
     **Security Note:**
 
-    The certificate is a public key and is safe to include in configuration. Do not
-    confuse this with a private key.
+    The certificate is a public key and is safe to include in configuration. Do not confuse this with
+    a private key.
 
 
     **More Information:**
@@ -3100,23 +2597,20 @@
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Provide the SSO URL from your Identity Provider. This is where Snowflake will
-    redirect users for authentication.
+    Provide the SSO URL from your Identity Provider. This is where Snowflake will redirect users for authentication.
 
 
     **Why does this matter?**
 
-    This URL is required for SP-initiated SSO, where users start at Snowflake and
-    are redirected to the IdP.
+    This URL is required for SP-initiated SSO, where users start at Snowflake and are redirected to the
+    IdP.
 
 
     **How to find this:**
 
-    - **Okta**: Found in the SAML application settings under "Identity Provider Single
-    Sign-On URL"
+    - **Okta**: Found in the SAML application settings under "Identity Provider Single Sign-On URL"
 
-    - **Azure AD**: Found in the Enterprise Application SAML configuration under "Login
-    URL"
+    - **Azure AD**: Found in the Enterprise Application SAML configuration under "Login URL"
 
     - **Ping**: Found in the application connection settings
 
@@ -3140,8 +2634,8 @@
 
     **Why does this matter?**
 
-    The integration name is used to reference the SAML configuration and appears in
-    the login URL for IdP-initiated SSO.
+    The integration name is used to reference the SAML configuration and appears in the login URL for
+    IdP-initiated SSO.
 
 
     **Format:**
@@ -3155,8 +2649,7 @@
 
     **Recommendation:**
 
-    Use a format like `<IDP>_SSO` or `<IDP>_SAML` where `<IDP>` is your Identity Provider
-    name.
+    Use a format like `<IDP>_SSO` or `<IDP>_SAML` where `<IDP>` is your Identity Provider name.
 
 
     **More Information:**
@@ -3171,14 +2664,14 @@
   - text: No - Configure later or use password authentication
   guidance: '**What is this asking?**
 
-    Decide whether to configure SAML-based Single Sign-On (SSO) as part of this setup,
-    or defer it for later.
+    Decide whether to configure SAML-based Single Sign-On (SSO) as part of this setup, or defer it for
+    later.
 
 
     **Why does this matter?**
 
-    SAML/SSO allows users to authenticate to Snowflake using your Identity Provider,
-    providing a seamless login experience and centralized authentication control.
+    SAML/SSO allows users to authenticate to Snowflake using your Identity Provider, providing a seamless
+    login experience and centralized authentication control.
 
 
     **Options explained:**
@@ -3211,20 +2704,20 @@
     - You''re doing a proof-of-concept
 
 
-    **Note:** Even without SAML, password + MFA provides strong authentication. SAML
-    adds convenience and centralized control, not necessarily more security.
+    **Note:** Even without SAML, password + MFA provides strong authentication. SAML adds convenience
+    and centralized control, not necessarily more security.
 
 
     **Recommendation:**
 
-    If you selected a SCIM provider and your IdP is ready, configure SAML now for
-    a complete SSO experience. Otherwise, defer and configure later.
+    If you selected a SCIM provider and your IdP is ready, configure SAML now for a complete SSO experience.
+    Otherwise, defer and configure later.
 
 
     **More Information:**
 
-    * [SAML/SSO Configuration](https://docs.snowflake.com/en/user-guide/admin-security-fed-auth)
-    — Federated authentication setup'
+    * [SAML/SSO Configuration](https://docs.snowflake.com/en/user-guide/admin-security-fed-auth) — Federated
+    authentication setup'
 - answer_title: scim_admin_users
   question_text: Who should be granted administrative roles?
   answer_type: object-list
@@ -3235,25 +2728,21 @@
   - admin_role
   guidance: '**What is this asking?**
 
-    Define which SCIM-provisioned users should receive administrative roles. For each
-    administrator, provide their login name and the role to grant.
+    Define which SCIM-provisioned users should receive administrative roles. For each administrator, provide
+    their login name and the role to grant.
 
 
     **Login Name Format**
 
 
-    The login name must match exactly how the user was provisioned via SCIM from your
-    Identity Provider:
+    The login name must match exactly how the user was provisioned via SCIM from your Identity Provider:
 
-    - **Most common:** Email address (e.g., `john.smith@company.com`) - default for
-    Okta, Azure AD
+    - **Most common:** Email address (e.g., `john.smith@company.com`) - default for Okta, Azure AD
 
-    - **Alternative:** Username format (e.g., `john.smith`) - if your IdP is configured
-    differently
+    - **Alternative:** Username format (e.g., `john.smith`) - if your IdP is configured differently
 
 
-    **Tip:** Run `SHOW USERS;` in Snowflake to see the exact `LOGIN_NAME` format your
-    IdP uses.
+    **Tip:** Run `SHOW USERS;` in Snowflake to see the exact `LOGIN_NAME` format your IdP uses.
 
 
     **Administrative Role (admin_role field)**
@@ -3275,8 +2764,8 @@
     | `USERADMIN` | Manage users and custom roles | 2-5 |
 
 
-    **⚠️ Important:** The `admin_role` field must be entered exactly as shown above
-    (case-insensitive, but use uppercase for consistency).
+    **⚠️ Important:** The `admin_role` field must be entered exactly as shown above (case-insensitive,
+    but use uppercase for consistency).
 
 
     **Example Entries:**
@@ -3301,14 +2790,13 @@
 
     - Use individual accounts, not shared/generic accounts
 
-    - ACCOUNTADMIN users will also be granted SECURITYADMIN and SYSADMIN for role
-    hierarchy
+    - ACCOUNTADMIN users will also be granted SECURITYADMIN and SYSADMIN for role hierarchy
 
 
     **SCIM Provisioning Reminder:**
 
-    Users must first be provisioned through SCIM before roles can be granted. Run
-    the SQL **after** users appear in `SHOW USERS;`.
+    Users must first be provisioned through SCIM before roles can be granted. Run the SQL **after** users
+    appear in `SHOW USERS;`.
 
 
     **More Information:**
@@ -3329,8 +2817,8 @@
   - admin_role
   guidance: '**What is this asking?**
 
-    Define the administrators who will manage your Snowflake account. For each administrator,
-    provide their details and specify their administrative role.
+    Define the administrators who will manage your Snowflake account. For each administrator, provide
+    their details and specify their administrative role.
 
 
     **Administrative Role (admin_role field)**
@@ -3352,8 +2840,8 @@
     | `USERADMIN` | Manage users and custom roles | 2-5 |
 
 
-    **⚠️ Important:** The `admin_role` field must be entered exactly as shown above
-    (case-insensitive, but use uppercase for consistency).
+    **⚠️ Important:** The `admin_role` field must be entered exactly as shown above (case-insensitive,
+    but use uppercase for consistency).
 
 
     **Example Entries:**
@@ -3363,8 +2851,7 @@
 
     |----------|-------|------------|-----------|------------|
 
-    | `john.smith` | `john.smith@company.com` | `John` | `Smith` | `ACCOUNTADMIN`
-    |
+    | `john.smith` | `john.smith@company.com` | `John` | `Smith` | `ACCOUNTADMIN` |
 
     | `jane.doe` | `jane.doe@company.com` | `Jane` | `Doe` | `ACCOUNTADMIN` |
 
@@ -3388,8 +2875,7 @@
 
     - Users will receive an initial password that must be changed on first login
 
-    - Consider enabling MFA after initial setup (Enable Multi-Factor Authentication
-    step)
+    - Consider enabling MFA after initial setup (Enable Multi-Factor Authentication step)
 
 
     **More Information:**
@@ -3406,17 +2892,17 @@
   - text: No - Apply only to specific users
   guidance: '**What is this asking?**
 
-    Decide whether to apply the network policy to all users in the account by default,
-    or only to specific users.
+    Decide whether to apply the network policy to all users in the account by default, or only to specific
+    users.
 
 
     **Why does this matter?**
 
-    - **Yes (Account-level)**: All users must connect from allowed networks. More
-    secure but requires complete IP list upfront.
+    - **Yes (Account-level)**: All users must connect from allowed networks. More secure but requires
+    complete IP list upfront.
 
-    - **No (User-level only)**: Network policy only applies to users you explicitly
-    assign it to. More flexible during rollout.
+    - **No (User-level only)**: Network policy only applies to users you explicitly assign it to. More
+    flexible during rollout.
 
 
     **Recommendation:**
@@ -3430,8 +2916,7 @@
 
     **Caution:**
 
-    If you enable account-level policy without including all necessary IPs, you could
-    lock yourself out!
+    If you enable account-level policy without including all necessary IPs, you could lock yourself out!
 
 
     **More Information:**
@@ -3447,20 +2932,19 @@
   - cidr_blocks
   guidance: '**What is this asking?**
 
-    Optionally create network rules for IP addresses that should be explicitly blocked
-    from accessing Snowflake.
+    Optionally create network rules for IP addresses that should be explicitly blocked from accessing
+    Snowflake.
 
 
     **Why does this matter?**
 
-    Block rules take precedence over allow rules. This is useful for blocking specific
-    IPs within an otherwise allowed range.
+    Block rules take precedence over allow rules. This is useful for blocking specific IPs within an otherwise
+    allowed range.
 
 
     **Fields:**
 
-    - **rule_name**: A descriptive name for the block rule (e.g., `blocked_regions`,
-    `former_vendor`)
+    - **rule_name**: A descriptive name for the block rule (e.g., `blocked_regions`, `former_vendor`)
 
     - **cidr_blocks**: Comma-separated list of IP addresses or CIDR ranges to block
 
@@ -3471,16 +2955,13 @@
 
     |-----------|-------------|---------|
 
-    | `blocked_countries` | `185.0.0.0/8, 91.0.0.0/8` | Block traffic from specific
-    regions |
+    | `blocked_countries` | `185.0.0.0/8, 91.0.0.0/8` | Block traffic from specific regions |
 
-    | `former_vendor` | `203.0.113.100, 203.0.113.101` | Block former vendor''s static
-    IPs |
+    | `former_vendor` | `203.0.113.100, 203.0.113.101` | Block former vendor''s static IPs |
 
     | `known_malicious` | `192.0.2.0/24` | Known malicious IP range |
 
-    | `excluded_subnet` | `10.0.5.0/24` | Exclude specific subnet from broader allow
-    |
+    | `excluded_subnet` | `10.0.5.0/24` | Exclude specific subnet from broader allow |
 
 
     **Use cases:**
@@ -3494,8 +2975,8 @@
     - Geographic restrictions (blocking entire country IP ranges)
 
 
-    **Leave empty** if you don''t need to explicitly block any IPs. Most organizations
-    only use allow rules.
+    **Leave empty** if you don''t need to explicitly block any IPs. Most organizations only use allow
+    rules.
 
 
     **More Information:**
@@ -3511,23 +2992,21 @@
   - cidr_blocks
   guidance: '**What is this asking?**
 
-    Create one or more network rules, each with a descriptive name and a list of IP
-    addresses or CIDR ranges that should be allowed to connect to Snowflake.
+    Create one or more network rules, each with a descriptive name and a list of IP addresses or CIDR
+    ranges that should be allowed to connect to Snowflake.
 
 
     **Why does this matter?**
 
-    Network rules define which IP addresses can access your Snowflake account. Grouping
-    related IPs into named rules makes management and auditing easier.
+    Network rules define which IP addresses can access your Snowflake account. Grouping related IPs into
+    named rules makes management and auditing easier.
 
 
     **Fields:**
 
-    - **rule_name**: A descriptive name for the rule (e.g., `corporate_vpn`, `fivetran`,
-    `tableau_cloud`)
+    - **rule_name**: A descriptive name for the rule (e.g., `corporate_vpn`, `fivetran`, `tableau_cloud`)
 
-    - **cidr_blocks**: Comma-separated list of IP addresses or CIDR ranges (e.g.,
-    `192.168.1.0/24, 10.0.0.1`)
+    - **cidr_blocks**: Comma-separated list of IP addresses or CIDR ranges (e.g., `192.168.1.0/24, 10.0.0.1`)
 
 
     **Common rule examples:**
@@ -3536,8 +3015,7 @@
 
     |-----------|-------------|---------|
 
-    | `corporate_vpn` | `203.0.113.0/24, 198.51.100.50` | Corporate VPN and office
-    IPs |
+    | `corporate_vpn` | `203.0.113.0/24, 198.51.100.50` | Corporate VPN and office IPs |
 
     | `fivetran` | `52.0.2.4, 34.75.100.0/24` | Fivetran ETL service |
 
@@ -3575,14 +3053,13 @@
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Provide the IP addresses or CIDR blocks that your Identity Provider uses for SCIM
-    provisioning requests.
+    Provide the IP addresses or CIDR blocks that your Identity Provider uses for SCIM provisioning requests.
 
 
     **Why does this matter?**
 
-    A network policy restricts SCIM API access to only your IdP''s servers. This prevents
-    unauthorized systems from creating or modifying users in Snowflake.
+    A network policy restricts SCIM API access to only your IdP''s servers. This prevents unauthorized
+    systems from creating or modifying users in Snowflake.
 
 
     **How to find your IdP''s IP addresses:**
@@ -3622,8 +3099,8 @@
 
     **More Information:**
 
-    * [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies)
-    — Overview of IP-based access control'
+    * [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies) — Overview of IP-based
+    access control'
 - answer_title: scim_provisioner_role
   question_text: Which role should own the SCIM integration and provisioned users?
   answer_type: multi-select
@@ -3634,15 +3111,14 @@
   - text: GENERIC_SCIM_PROVISIONER
   guidance: '**What is this asking?**
 
-    Select the role that will own the SCIM integration and be granted ownership of
-    users provisioned through SCIM.
+    Select the role that will own the SCIM integration and be granted ownership of users provisioned through
+    SCIM.
 
 
     **Why does this matter?**
 
-    Snowflake recommends using a dedicated role for SCIM provisioning rather than
-    using ACCOUNTADMIN directly. This provides better security isolation and clearer
-    audit trails.
+    Snowflake recommends using a dedicated role for SCIM provisioning rather than using ACCOUNTADMIN directly.
+    This provides better security isolation and clearer audit trails.
 
 
     **Options explained:**
@@ -3652,19 +3128,17 @@
 
     |------|----------|
 
-    | **OKTA_PROVISIONER** | Using Okta as your IdP (follows Snowflake documentation)
-    |
+    | **OKTA_PROVISIONER** | Using Okta as your IdP (follows Snowflake documentation) |
 
-    | **AAD_PROVISIONER** | Using Microsoft Entra ID / Azure AD (follows Snowflake
-    documentation) |
+    | **AAD_PROVISIONER** | Using Microsoft Entra ID / Azure AD (follows Snowflake documentation) |
 
     | **GENERIC_SCIM_PROVISIONER** | Using any other SCIM 2.0 compatible IdP |
 
 
     **Recommendation:**
 
-    Use the IdP-specific role name if available, as this follows Snowflake''s documentation
-    patterns and makes the configuration clearer.
+    Use the IdP-specific role name if available, as this follows Snowflake''s documentation patterns and
+    makes the configuration clearer.
 
 
     **More Information:**
@@ -3682,8 +3156,8 @@
 
     **Why does this matter?**
 
-    The integration name appears in audit logs and when managing the integration.
-    A descriptive name helps identify which IdP the integration connects to.
+    The integration name appears in audit logs and when managing the integration. A descriptive name helps
+    identify which IdP the integration connects to.
 
 
     **Format:**
@@ -3704,8 +3178,7 @@
 
     **Recommendation:**
 
-    Use a format like `<IDP>_SCIM_INTEGRATION` where `<IDP>` is your Identity Provider
-    name.
+    Use a format like `<IDP>_SCIM_INTEGRATION` where `<IDP>` is your Identity Provider name.
 
 
     **More Information:**
@@ -3716,24 +3189,20 @@
   question_text: What cloud region should host the Organization Account?
   answer_type: text
   is_org_scope: false
-  guidance: "  Select the Snowflake Region ID where your Organization Account will\
-    \ be created.  \n  \n  **How to find available regions:**  \n  ```sql  \n  --\
-    \ List all available regions for your organization  \n  SHOW REGIONS;  \n  ```\
-    \  \n  \n  **Key Considerations:**  \n  * **Regulated Regions:** If your organization\
-    \ has accounts in a U.S. SnowGov Region, Snowflake recommends creating the Organization\
-    \ Account in that regulated region  \n  * **Administrator Location:** Choose a\
-    \ region close to your platform administrators for lower latency  \n  * **Primary\
-    \ Account Location:** Consider using the same region as your primary data account(s)\
-    \  \n  * **Data Residency:** While the Organization Account shouldn't contain\
-    \ business data, some organizations prefer to keep all accounts in the same geographic\
-    \ region  \n  \n  **Common Region IDs:**  \n  * AWS US West 2 (Oregon): `AWS_US_WEST_2`\
-    \  \n  * AWS US East 1 (N. Virginia): `AWS_US_EAST_1`  \n  * Azure East US 2:\
-    \ `AZURE_EASTUS2`  \n  * GCP US Central 1: `GCP_US_CENTRAL1`  \n  \n  **Note:**\
-    \ If you omit REGION, the organization account is created in the same region as\
-    \ the account running the command.  \n  \n  **More Information:**  \n  * [CREATE\
+  guidance: "  Select the Snowflake Region ID where your Organization Account will be created.  \n  \n\
+    \  **How to find available regions:**  \n  ```sql  \n  -- List all available regions for your organization\
+    \  \n  SHOW REGIONS;  \n  ```  \n  \n  **Key Considerations:**  \n  * **Regulated Regions:** If your\
+    \ organization has accounts in a U.S. SnowGov Region, Snowflake recommends creating the Organization\
+    \ Account in that regulated region  \n  * **Administrator Location:** Choose a region close to your\
+    \ platform administrators for lower latency  \n  * **Primary Account Location:** Consider using the\
+    \ same region as your primary data account(s)  \n  * **Data Residency:** While the Organization Account\
+    \ shouldn't contain business data, some organizations prefer to keep all accounts in the same geographic\
+    \ region  \n  \n  **Common Region IDs:**  \n  * AWS US West 2 (Oregon): `AWS_US_WEST_2`  \n  * AWS\
+    \ US East 1 (N. Virginia): `AWS_US_EAST_1`  \n  * Azure East US 2: `AZURE_EASTUS2`  \n  * GCP US Central\
+    \ 1: `GCP_US_CENTRAL1`  \n  \n  **Note:** If you omit REGION, the organization account is created\
+    \ in the same region as the account running the command.  \n  \n  **More Information:**  \n  * [CREATE\
     \ ORGANIZATION ACCOUNT](https://docs.snowflake.com/en/sql-reference/sql/create-organization-account)\
-    \  \n  * [Supported Cloud Regions](https://docs.snowflake.com/en/user-guide/intro-regions)\
-    \  "
+    \  \n  * [Supported Cloud Regions](https://docs.snowflake.com/en/user-guide/intro-regions)  "
 - answer_title: org_account_edition
   question_text: What Snowflake edition will you use for the Organization Account?
   answer_type: multi-select
@@ -3741,179 +3210,152 @@
   options:
   - text: ENTERPRISE
   - text: BUSINESS_CRITICAL
-  guidance: "The Organization Account requires **Enterprise Edition or higher**. Standard\
-    \ Edition does not support Organization Account functionality.  \n\n**Enterprise\
-    \ Edition** (Recommended):  \n* Full organization management capabilities  \n\
-    * Multi-cluster warehouses for concurrency scaling  \n* Column-level security\
-    \ and up to 90-day Time Travel  \n* Failover/Failback for business continuity\
-    \  \n* Best for: Most organizations  \n\n**Business Critical Edition:**  \n* Everything\
-    \ in Enterprise, plus:  \n* HIPAA and PCI DSS compliance support  \n* Customer-managed\
-    \ encryption keys (Tri-Secret Secure)  \n* Private connectivity (AWS PrivateLink,\
-    \ Azure Private Link, GCP Private Service Connect)  \n* Best for: Highly regulated\
-    \ industries or when the Organization Account needs to meet strict compliance\
-    \ requirements  \n\n**Recommendation:** Enterprise Edition is typically sufficient\
-    \ for the Organization Account since it primarily serves administrative purposes\
-    \ rather than hosting sensitive business data.  \n\n**More Information:**  \n\
-    * [Snowflake Editions](https://docs.snowflake.com/en/user-guide/intro-editions)\
+  guidance: "The Organization Account requires **Enterprise Edition or higher**. Standard Edition does\
+    \ not support Organization Account functionality.  \n\n**Enterprise Edition** (Recommended):  \n*\
+    \ Full organization management capabilities  \n* Multi-cluster warehouses for concurrency scaling\
+    \  \n* Column-level security and up to 90-day Time Travel  \n* Failover/Failback for business continuity\
+    \  \n* Best for: Most organizations  \n\n**Business Critical Edition:**  \n* Everything in Enterprise,\
+    \ plus:  \n* HIPAA and PCI DSS compliance support  \n* Customer-managed encryption keys (Tri-Secret\
+    \ Secure)  \n* Private connectivity (AWS PrivateLink, Azure Private Link, GCP Private Service Connect)\
+    \  \n* Best for: Highly regulated industries or when the Organization Account needs to meet strict\
+    \ compliance requirements  \n\n**Recommendation:** Enterprise Edition is typically sufficient for\
+    \ the Organization Account since it primarily serves administrative purposes rather than hosting sensitive\
+    \ business data.  \n\n**More Information:**  \n* [Snowflake Editions](https://docs.snowflake.com/en/user-guide/intro-editions)\
     \  "
 - answer_title: org_admin_name
   question_text: What username should be used for the initial administrator?
   answer_type: text
   is_org_scope: false
-  guidance: "The initial administrator is the first user created in the Organization\
-    \ Account with ACCOUNTADMIN privileges. This is the **username** (login name),\
-    \ not the person's full name.  \n \n  **Recommendations:**  \n  * Use a standard\
-    \ username format (e.g., jsmith, john.smith, or email address)  \n  * Choose a\
-    \ trusted member of your platform or security team  \n  * Use lowercase for consistency\
-    \  \n  * Avoid special characters other than ., \\_, or \\-  \n* **Examples:**\
-    \  \n  * platform\\_admin  \n  * john.smith  \n  * jsmith@company.com  \n* **Security\
-    \ Notes:**  \n  * Password will be set to require change on first login (MUST\\\
-    _CHANGE\\_PASSWORD \\= TRUE)  \n  * [MFA](https://docs.snowflake.com/en/user-guide/security-mfa)\
-    \ will be required\n  * RSA public key authentication can be configured after\
-    \ account creation  \n  * Additional ACCOUNTADMIN users should be added for redundancy\
-    \  \n* **More Information:**  \n  * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)\
-    \  \n  * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)\n\
+  guidance: "The initial administrator is the first user created in the Organization Account with ACCOUNTADMIN\
+    \ privileges. This is the **username** (login name), not the person's full name.  \n \n  **Recommendations:**\
+    \  \n  * Use a standard username format (e.g., jsmith, john.smith, or email address)  \n  * Choose\
+    \ a trusted member of your platform or security team  \n  * Use lowercase for consistency  \n  * Avoid\
+    \ special characters other than ., \\_, or \\-  \n* **Examples:**  \n  * platform\\_admin  \n  * john.smith\
+    \  \n  * jsmith@company.com  \n* **Security Notes:**  \n  * Password will be set to require change\
+    \ on first login (MUST\\_CHANGE\\_PASSWORD \\= TRUE)  \n  * [MFA](https://docs.snowflake.com/en/user-guide/security-mfa)\
+    \ will be required\n  * RSA public key authentication can be configured after account creation  \n\
+    \  * Additional ACCOUNTADMIN users should be added for redundancy  \n* **More Information:**  \n \
+    \ * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)  \n  * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)\n\
     \  * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#accountadmin-role)\
     \ \n  * [MFA](https://docs.snowflake.com/en/user-guide/security-mfa)"
 - answer_title: org_admin_email
   question_text: What email address should be used for the Organization Account administrator?
   answer_type: text
   is_org_scope: false
-  guidance: "* **Guidance:**  \n  This email address will be associated with the initial\
-    \ ACCOUNTADMIN user and used for:  \n  * Account activation and password reset\
-    \ notifications  \n  * Critical security alerts and notifications  \n  * Snowflake\
-    \ support communications  \n* **Best Practices:**  \n  * Use a monitored email\
-    \ address (not a personal email that may become inactive)  \n  * Consider using\
-    \ a shared mailbox or distribution list for continuity (e.g., snowflake-admin@yourcompany.com)\
-    \  \n  * Ensure the email belongs to or is accessible by the named administrator\
-    \  \n* **Note:** This can be changed after account creation, but it's important\
-    \ to set correctly from the start.  \n  **More Information:**  \n  * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)\n\
+  guidance: "* **Guidance:**  \n  This email address will be associated with the initial ACCOUNTADMIN\
+    \ user and used for:  \n  * Account activation and password reset notifications  \n  * Critical security\
+    \ alerts and notifications  \n  * Snowflake support communications  \n* **Best Practices:**  \n  *\
+    \ Use a monitored email address (not a personal email that may become inactive)  \n  * Consider using\
+    \ a shared mailbox or distribution list for continuity (e.g., snowflake-admin@yourcompany.com)  \n\
+    \  * Ensure the email belongs to or is accessible by the named administrator  \n* **Note:** This can\
+    \ be changed after account creation, but it's important to set correctly from the start.  \n  **More\
+    \ Information:**  \n  * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)\n\
     \  * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)\n\
     \  * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#accountadmin-role) "
 - answer_title: object_component_order
-  question_text: What core component ordering will be used for account-level object
-    names?
+  question_text: What core component ordering will be used for account-level object names?
   answer_type: multi-select
   is_org_scope: true
   options:
   - text: <domain>_<env>_<dataproduct>
   - text: <domain>_<dataproduct>_<env>
   - text: <env>_<domain>_<dataproduct>
-  guidance: "**Why Order Matters:**  \nSnowflake displays objects alphabetically.\
-    \ The component order determines how objects cluster together in Snowsight, BI\
-    \ tools, and queries.  \n\n**Option 1: `<domain>_<env>_<dataproduct>`**  \n* Objects\
-    \ cluster by **domain first**, then by environment  \n* All Finance objects together,\
-    \ all Marketing objects together  \n* Example: `FIN_PROD_ANALYTICS`, `FIN_DEV_ANALYTICS`,\
-    \ `MKT_PROD_CAMPAIGNS`  \n* Best for: Organizations where domain ownership is\
-    \ primary  \n\n**Option 2: `<domain>_<dataproduct>_<env>`**  \n* Objects cluster\
-    \ by **domain first**, then by data product  \n* All Finance Analytics together\
-    \ across environments  \n* Example: `FIN_ANALYTICS_PROD`, `FIN_ANALYTICS_DEV`,\
-    \ `MKT_CAMPAIGNS_PROD`  \n* Best for: Data product-centric organizations  \n\n\
-    **Option 3: `<env>_<domain>_<dataproduct>`**  \n* Objects cluster by **environment\
-    \ first**  \n* All Production objects together, all Development objects together\
-    \  \n* Example: `PROD_FIN_ANALYTICS`, `PROD_MKT_CAMPAIGNS`, `DEV_FIN_ANALYTICS`\
-    \  \n* Best for: Operations teams focused on environment-based management  \n\n\
-    **Recommendation:** Most organizations prefer `<domain>_<env>_<dataproduct>` or\
-    \ `<domain>_<dataproduct>_<env>` for domain-centric clustering.  \n\n**More Information:**\
-    \  \n* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)\
+  guidance: "**Why Order Matters:**  \nSnowflake displays objects alphabetically. The component order\
+    \ determines how objects cluster together in Snowsight, BI tools, and queries.  \n\n**Option 1: `<domain>_<env>_<dataproduct>`**\
+    \  \n* Objects cluster by **domain first**, then by environment  \n* All Finance objects together,\
+    \ all Marketing objects together  \n* Example: `FIN_PROD_ANALYTICS`, `FIN_DEV_ANALYTICS`, `MKT_PROD_CAMPAIGNS`\
+    \  \n* Best for: Organizations where domain ownership is primary  \n\n**Option 2: `<domain>_<dataproduct>_<env>`**\
+    \  \n* Objects cluster by **domain first**, then by data product  \n* All Finance Analytics together\
+    \ across environments  \n* Example: `FIN_ANALYTICS_PROD`, `FIN_ANALYTICS_DEV`, `MKT_CAMPAIGNS_PROD`\
+    \  \n* Best for: Data product-centric organizations  \n\n**Option 3: `<env>_<domain>_<dataproduct>`**\
+    \  \n* Objects cluster by **environment first**  \n* All Production objects together, all Development\
+    \ objects together  \n* Example: `PROD_FIN_ANALYTICS`, `PROD_MKT_CAMPAIGNS`, `DEV_FIN_ANALYTICS` \
+    \ \n* Best for: Operations teams focused on environment-based management  \n\n**Recommendation:**\
+    \ Most organizations prefer `<domain>_<env>_<dataproduct>` or `<domain>_<dataproduct>_<env>` for domain-centric\
+    \ clustering.  \n\n**More Information:**  \n* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)\
     \  "
 - answer_title: governance_name
   question_text: What do you want to name the governance schema?
   answer_type: text
   is_org_scope: true
-  guidance: "**What is the Governance Schema?**  \n  The Governance schema is created\
-    \ within the Infrastructure Database and contains objects related to security,\
-    \ compliance, and platform governance. This includes platform and FinOps tags,\
-    \ network rules, audit views, and administrative procedures.  \n\n  **Recommended\
-    \ Name:** GOVERNANCE  \n\n  This is a straightforward, self-descriptive name that\
-    \ clearly communicates the schema's purpose. Alternative options include:  \n\
-    \  * ADMIN — Administration  \n  * SECURITY — Security-focused objects  \n  *\
-    \ PLATFORM — Platform-level objects  \n\n**Schema Configuration:**  \n  This schema\
-    \ will be created with **Managed Access** enabled, which means:  \n  * Only the\
-    \ schema owner (typically [SYSADMIN](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)\
-    \ - aka System Administrator) can grant privileges on objects  \n  * Prevents\
-    \ \"shadow\" security configurations where object creators grant their own access\
-    \  \n  * Provides centralized control over who can access governance objects \
-    \ \n\n**Best Practice:** Use a simple, single-word name that represents the functional\
-    \ purpose.  \n  \n**More Information:**  \n  * [CREATE SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/create-schema)\
+  guidance: "**What is the Governance Schema?**  \n  The Governance schema is created within the Infrastructure\
+    \ Database and contains objects related to security, compliance, and platform governance. This includes\
+    \ platform and FinOps tags, network rules, audit views, and administrative procedures.  \n\n  **Recommended\
+    \ Name:** GOVERNANCE  \n\n  This is a straightforward, self-descriptive name that clearly communicates\
+    \ the schema's purpose. Alternative options include:  \n  * ADMIN — Administration  \n  * SECURITY\
+    \ — Security-focused objects  \n  * PLATFORM — Platform-level objects  \n\n**Schema Configuration:**\
+    \  \n  This schema will be created with **Managed Access** enabled, which means:  \n  * Only the schema\
+    \ owner (typically [SYSADMIN](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)\
+    \ - aka System Administrator) can grant privileges on objects  \n  * Prevents \"shadow\" security\
+    \ configurations where object creators grant their own access  \n  * Provides centralized control\
+    \ over who can access governance objects  \n\n**Best Practice:** Use a simple, single-word name that\
+    \ represents the functional purpose.  \n  \n**More Information:**  \n  * [CREATE SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/create-schema)\
     \  \n  * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)\
     \  \n  * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)"
 - answer_title: platform_database_name
   question_text: What do you want to name the platform database?
   answer_type: text
   is_org_scope: true
-  guidance: "**What is the Platform/Infrastructure Database?**  \n  The Infrastructure\
-    \ Database is a centralized \"hub\" database that houses platform-wide objects\
-    \ including tags, network rules, governance policies, and shared procedures. It\
-    \ is owned by the central platform team and shared across all accounts in multi-account\
-    \ deployments.  \n  **Recommended Naming Approach:**  \n  Use a name that clearly\
-    \ identifies this as a platform-owned, infrastructure-focused database. The format\
-    \ should be: \\<domain\\>\\_\\<dataproduct\\>  \n  * **Domain:** Use plat (short\
-    \ for \"platform\") or your platform team's acronym (e.g., cdp, snow, data)  \n\
-    \  * **Data Product:** Use infra or another term indicating infrastructure purpose\
-    \  \n* **Example:** PLAT\\_INFRA — clearly indicates Platform team ownership and\
-    \ Infrastructure purpose  \n  **Alternative Examples:**  \n  * CDP\\_INFRA — Cloud\
-    \ Data Platform Infrastructure  \n  * SNOW\\_ADMIN — Snowflake Administration\
-    \  \n  * DATA\\_PLATFORM — Data Platform database  \n* **Important:** Choose carefully\\\
-    ! This name will eventually be referenced by dozens to hundreds of objects, policies,\
-    \ and procedures. Changing it later can be complex and risky.  \n  **More Information:**\
-    \  \n  * [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)\
-    \  \n  * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)"
+  guidance: "**What is the Platform/Infrastructure Database?**  \n  The Infrastructure Database is a centralized\
+    \ \"hub\" database that houses platform-wide objects including tags, network rules, governance policies,\
+    \ and shared procedures. It is owned by the central platform team and shared across all accounts in\
+    \ multi-account deployments.  \n  **Recommended Naming Approach:**  \n  Use a name that clearly identifies\
+    \ this as a platform-owned, infrastructure-focused database. The format should be: \\<domain\\>\\\
+    _\\<dataproduct\\>  \n  * **Domain:** Use plat (short for \"platform\") or your platform team's acronym\
+    \ (e.g., cdp, snow, data)  \n  * **Data Product:** Use infra or another term indicating infrastructure\
+    \ purpose  \n* **Example:** PLAT\\_INFRA — clearly indicates Platform team ownership and Infrastructure\
+    \ purpose  \n  **Alternative Examples:**  \n  * CDP\\_INFRA — Cloud Data Platform Infrastructure \
+    \ \n  * SNOW\\_ADMIN — Snowflake Administration  \n  * DATA\\_PLATFORM — Data Platform database  \n\
+    * **Important:** Choose carefully\\! This name will eventually be referenced by dozens to hundreds\
+    \ of objects, policies, and procedures. Changing it later can be complex and risky.  \n  **More Information:**\
+    \  \n  * [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)  \n  *\
+    \ [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)"
 - answer_title: account_name_prefix
   question_text: What prefix (if any) should be added to all account names?
   answer_type: text
   is_org_scope: false
-  guidance: "An account name prefix is an optional string added to the beginning of\
-    \ every account name for consistency and organization identification.  \n\n**When\
-    \ to use a prefix:**  \n* If your organization name is system-generated (e.g.,\
-    \ `XY12345`) and you want your company name visible in account names  \n* If you\
-    \ want to enforce consistent naming across all accounts  \n* If you have multiple\
-    \ organizations or business units sharing Snowflake and need differentiation \
-    \ \n\n**Example with prefix:**  \n* Prefix: `acme`  \n* Account names become:\
-    \ `acme_prod`, `acme_dev`, `acme_finance`  \n* URL: `https://XY12345-acme_prod.snowflakecomputing.com`\
-    \  \n\n**Example without prefix:**  \n* Account names: `prod`, `dev`, `finance`\
-    \  \n* URL: `https://ACME-prod.snowflakecomputing.com`  \n\n**Recommendations:**\
-    \  \n* If you have a **custom organization name** (like `ACME`), a prefix is typically\
-    \ unnecessary since your identity is already in the URL  \n* If you have a **system-generated\
-    \ name**, consider using an abbreviated company name as a prefix  \n* Keep prefixes\
-    \ short (3-8 characters) with no underscores  \n\n**Enter `NONE` if you do not\
-    \ want to use an account name prefix.**  \n\n**More Information:**  \n* [Account\
-    \ Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)"
+  guidance: "An account name prefix is an optional string added to the beginning of every account name\
+    \ for consistency and organization identification.  \n\n**When to use a prefix:**  \n* If your organization\
+    \ name is system-generated (e.g., `XY12345`) and you want your company name visible in account names\
+    \  \n* If you want to enforce consistent naming across all accounts  \n* If you have multiple organizations\
+    \ or business units sharing Snowflake and need differentiation  \n\n**Example with prefix:**  \n*\
+    \ Prefix: `acme`  \n* Account names become: `acme_prod`, `acme_dev`, `acme_finance`  \n* URL: `https://XY12345-acme_prod.snowflakecomputing.com`\
+    \  \n\n**Example without prefix:**  \n* Account names: `prod`, `dev`, `finance`  \n* URL: `https://ACME-prod.snowflakecomputing.com`\
+    \  \n\n**Recommendations:**  \n* If you have a **custom organization name** (like `ACME`), a prefix\
+    \ is typically unnecessary since your identity is already in the URL  \n* If you have a **system-generated\
+    \ name**, consider using an abbreviated company name as a prefix  \n* Keep prefixes short (3-8 characters)\
+    \ with no underscores  \n\n**Enter `NONE` if you do not want to use an account name prefix.**  \n\n\
+    **More Information:**  \n* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)"
 - answer_title: snowflake_org_name
   question_text: What is your Snowflake organization name?
   answer_type: text
   is_org_scope: true
-  guidance: "Your Snowflake organization name is the first part of your account URL\
-    \ and connection identifiers. This is a required component of all Account Identifiers.\
-    \  \n  **How to find your organization name:**  \n  Look at your current Snowflake\
-    \ URL. The organization name is the portion before the dash:  \n  * https://\\\
-    *\\*ACME\\*\\*-prod.snowflakecomputing.com → Organization name is ACME  \n  *\
-    \ https://\\*\\*XY12345\\*\\*-prod.snowflakecomputing.com → Organization name\
-    \ is XY12345  \n* **Types of Organization Names:**  \n  * **Custom Name:** A human-readable\
-    \ name like ACME or INITECH that was requested from Snowflake. These provide better\
-    \ branding and more readable URLs.  \n  * **System-Generated:** An auto-assigned\
-    \ alphanumeric code like XY12345 or AB98765, created automatically during self-service\
-    \ sign up. Companies typically keep this name if transparency of your organization\
-    \ name in the URL is unnecessary or undesirable.   \n* **To request a custom name:**\
-    \ If you have a system-generated name and want to change it, [contact Snowflake\
-    \ Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge)\
-    \ or your account team. Custom names must be globally unique, start with a letter,\
-    \ and contain only letters and numbers.  \n  **More Information:**  \n  * [Account\
-    \ Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) "
+  guidance: "Your Snowflake organization name is the first part of your account URL and connection identifiers.\
+    \ This is a required component of all Account Identifiers.  \n  **How to find your organization name:**\
+    \  \n  Look at your current Snowflake URL. The organization name is the portion before the dash: \
+    \ \n  * https://\\*\\*ACME\\*\\*-prod.snowflakecomputing.com → Organization name is ACME  \n  * https://\\\
+    *\\*XY12345\\*\\*-prod.snowflakecomputing.com → Organization name is XY12345  \n* **Types of Organization\
+    \ Names:**  \n  * **Custom Name:** A human-readable name like ACME or INITECH that was requested from\
+    \ Snowflake. These provide better branding and more readable URLs.  \n  * **System-Generated:** An\
+    \ auto-assigned alphanumeric code like XY12345 or AB98765, created automatically during self-service\
+    \ sign up. Companies typically keep this name if transparency of your organization name in the URL\
+    \ is unnecessary or undesirable.   \n* **To request a custom name:** If you have a system-generated\
+    \ name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge)\
+    \ or your account team. Custom names must be globally unique, start with a letter, and contain only\
+    \ letters and numbers.  \n  **More Information:**  \n  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) "
 - answer_title: account_resource_monitor_limit
   question_text: What is the monthly credit limit for the resource monitor?
   answer_type: text
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Set the maximum number of credits the account can consume before the configured
-    action (at 100%) is taken.
+    Set the maximum number of credits the account can consume before the configured action (at 100%) is
+    taken.
 
 
     **Why does this matter?**
 
-    This is your hard limit. The resource monitor will automatically set up tiered
-    alerts:
+    This is your hard limit. The resource monitor will automatically set up tiered alerts:
 
     - At 75% of this limit: First notification
 
@@ -3948,13 +3390,11 @@
 
     **Relationship to Budgets:**
 
-    If you set a budget of 1,000 credits with a 75% threshold, you''ll receive budget
-    forecasting alerts *before* the resource monitor''s 75% actual usage alert—giving
-    you even earlier warning.
+    If you set a budget of 1,000 credits with a 75% threshold, you''ll receive budget forecasting alerts
+    *before* the resource monitor''s 75% actual usage alert—giving you even earlier warning.
 
 
-    **Warning:** When the limit is reached and suspension is configured, ALL warehouses
-    will be affected.'
+    **Warning:** When the limit is reached and suspension is configured, ALL warehouses will be affected.'
 - answer_title: enable_resource_monitors
   question_text: Do you want to configure resource monitors?
   answer_type: multi-select
@@ -3964,15 +3404,13 @@
   - text: 'No'
   guidance: '**What is this asking?**
 
-    Decide whether to implement an account-level resource monitor for active cost
-    control.
+    Decide whether to implement an account-level resource monitor for active cost control.
 
 
     **Why does this matter?**
 
-    Resource monitors provide hard credit limits that can automatically suspend warehouses
-    when reached. This prevents runaway costs from misconfigured warehouses or inefficient
-    queries.
+    Resource monitors provide hard credit limits that can automatically suspend warehouses when reached.
+    This prevents runaway costs from misconfigured warehouses or inefficient queries.
 
 
     **Options explained:**
@@ -3998,14 +3436,13 @@
     - Not recommended for production environments
 
 
-    **Note:** This creates an account-level monitor only. Warehouse-specific monitors
-    will be configured in the Data Product workflow.
+    **Note:** This creates an account-level monitor only. Warehouse-specific monitors will be configured
+    in the Data Product workflow.
 
 
     **Recommendation:**
 
-    Always use an account resource monitor in production environments to prevent unexpected
-    costs.
+    Always use an account resource monitor in production environments to prevent unexpected costs.
 
 
     **More Information:**
@@ -4051,8 +3488,7 @@
 
     **Recommendation:**
 
-    Start with 6.5 hours (default). Switch to 1 hour only during critical cost monitoring
-    periods.'
+    Start with 6.5 hours (default). Switch to 1 hour only during critical cost monitoring periods.'
 - answer_title: budget_alert_emails
   question_text: What email address(es) should receive budget alerts?
   answer_type: list
@@ -4064,8 +3500,7 @@
 
     **Why does this matter?**
 
-    Budget alerts need to reach people who can investigate and take action on spending
-    issues.
+    Budget alerts need to reach people who can investigate and take action on spending issues.
 
 
     **Best practices:**
@@ -4086,23 +3521,23 @@
 
     **Alternative notification methods:**
 
-    This step configures email notifications, which is the simplest approach. If you
-    need webhook notifications (Slack/Teams) or cloud service queues (SNS/Event Grid),
-    see the "Upgrading to Webhook Notifications" section in the generated documentation.'
+    This step configures email notifications, which is the simplest approach. If you need webhook notifications
+    (Slack/Teams) or cloud service queues (SNS/Event Grid), see the "Upgrading to Webhook Notifications"
+    section in the generated documentation.'
 - answer_title: account_monthly_budget
   question_text: What is your monthly account budget (in credits)?
   answer_type: text
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Set the total monthly credit budget for your Snowflake account. This is the spending
-    limit used to calculate when alerts are triggered.
+    Set the total monthly credit budget for your Snowflake account. This is the spending limit used to
+    calculate when alerts are triggered.
 
 
     **Why does this matter?**
 
-    A well-set budget provides meaningful alerts without being too restrictive. Setting
-    it too low causes alert fatigue; too high means late warnings.
+    A well-set budget provides meaningful alerts without being too restrictive. Setting it too low causes
+    alert fatigue; too high means late warnings.
 
 
     **How to determine your budget:**
@@ -4122,9 +3557,8 @@
     **Note:** 1 credit ≈ $2-4 depending on your Snowflake edition and region.
 
 
-    **Important:** This is for alerting purposes only. Snowflake will not automatically
-    stop services when the budget is exceeded. Use Resource Monitors (Configure Resource
-    Monitors step) for hard limits.'
+    **Important:** This is for alerting purposes only. Snowflake will not automatically stop services
+    when the budget is exceeded. Use Resource Monitors (Configure Resource Monitors step) for hard limits.'
 - answer_title: enable_budgets
   question_text: Do you want to set up spending budgets?
   answer_type: multi-select
@@ -4134,15 +3568,13 @@
   - text: 'No'
   guidance: '**What is this asking?**
 
-    Decide whether to use Snowflake''s native budget feature for automated spending
-    monitoring and alerts.
+    Decide whether to use Snowflake''s native budget feature for automated spending monitoring and alerts.
 
 
     **Why does this matter?**
 
-    Budgets provide proactive cost awareness by sending alerts when spending is projected
-    to exceed your defined limits. This helps prevent unexpected costs and enables
-    better financial planning.
+    Budgets provide proactive cost awareness by sending alerts when spending is projected to exceed your
+    defined limits. This helps prevent unexpected costs and enables better financial planning.
 
 
     **Options explained:**
@@ -4172,8 +3604,8 @@
 
     **Recommendation:**
 
-    Use Snowflake''s native budgets for automated monitoring and alerts. They''re
-    easy to set up and provide valuable early warning of cost overruns.
+    Use Snowflake''s native budgets for automated monitoring and alerts. They''re easy to set up and provide
+    valuable early warning of cost overruns.
 
 
     **More Information:**
@@ -4186,24 +3618,20 @@
   options:
   - text: 'Yes'
   - text: 'No'
-  guidance: "**What is this asking?** Decide whether you want to configure additional\
-    \ cost allocation tags beyond the core platform tags.  \n\n  **Why does this matter?**\
-    \ Additional cost tags enable more granular cost tracking and can integrate with\
-    \ your organization's accounting systems.  \n\n  **Tags you already have for platform\
-    \ management:**  \n  * domain \\- Business unit or department  \n  * environment\
-    \ \\- SDLC stage (dev, test, prod)  \n  * dataproduct \\- Data product identifier\
-    \  \n  * workload \\- Workload type  \n  * zone \\- Data zone  \n  * data\\_classification\
-    \ \\- Data sensitivity level  \n\n* **Additional tags below would be configured\
-    \ in next step:**  \n  * cost\\_center \\- Accounting cost center code  \n  *\
-    \ owner \\- Team or individual responsible  \n  * project \\- Specific project\
-    \ or initiative  \n  * application \\- Application or system name  \n\n* **Options\
-    \ explained:**  \n  **Yes (Recommended):**  \n  * Proceed to the next step to\
-    \ create additional FinOps and cost allocation tags\n* **No:**  \n  * Use only\
-    \ the core platform tags (Domain, Environment, etc.) from previous steps for FinOps\
-    \  \n  * Can add more tags later if needed  \n\n* **Recommendation:** Select Yes\
-    \ to proceed to the next step where you can add at least cost\\_center and owner\
-    \ tags for better financial accountability.  \n\n**More Information:**  \n  *\
-    \ [Attributing Costs using Tags](https://docs.snowflake.com/en/user-guide/cost-attributing)"
+  guidance: "**What is this asking?** Decide whether you want to configure additional cost allocation\
+    \ tags beyond the core platform tags.  \n\n  **Why does this matter?** Additional cost tags enable\
+    \ more granular cost tracking and can integrate with your organization's accounting systems.  \n\n\
+    \  **Tags you already have for platform management:**  \n  * domain \\- Business unit or department\
+    \  \n  * environment \\- SDLC stage (dev, test, prod)  \n  * dataproduct \\- Data product identifier\
+    \  \n  * workload \\- Workload type  \n  * zone \\- Data zone  \n  * data\\_classification \\- Data\
+    \ sensitivity level  \n\n* **Additional tags below would be configured in next step:**  \n  * cost\\\
+    _center \\- Accounting cost center code  \n  * owner \\- Team or individual responsible  \n  * project\
+    \ \\- Specific project or initiative  \n  * application \\- Application or system name  \n\n* **Options\
+    \ explained:**  \n  **Yes (Recommended):**  \n  * Proceed to the next step to create additional FinOps\
+    \ and cost allocation tags\n* **No:**  \n  * Use only the core platform tags (Domain, Environment,\
+    \ etc.) from previous steps for FinOps  \n  * Can add more tags later if needed  \n\n* **Recommendation:**\
+    \ Select Yes to proceed to the next step where you can add at least cost\\_center and owner tags for\
+    \ better financial accountability.  \n\n**More Information:**  \n  * [Attributing Costs using Tags](https://docs.snowflake.com/en/user-guide/cost-attributing)"
 - answer_title: identity_provider
   question_text: Which Identity Provider will you use for SCIM integration?
   answer_type: multi-select
@@ -4215,35 +3643,31 @@
   - text: None - Manual User Management
   guidance: '**What is this asking?**
 
-    Select the Identity Provider (IdP) that your organization uses to manage user
-    identities. This IdP will be the source of truth for user provisioning to Snowflake.
+    Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP
+    will be the source of truth for user provisioning to Snowflake.
 
 
     **Why does this matter?**
 
-    Different IdPs have different configuration steps and capabilities. Snowflake
-    provides specific documentation for major IdPs like Okta and Azure AD, while other
-    SCIM 2.0 compatible providers use a generic configuration.
+    Different IdPs have different configuration steps and capabilities. Snowflake provides specific documentation
+    for major IdPs like Okta and Azure AD, while other SCIM 2.0 compatible providers use a generic configuration.
 
 
     **Options explained:**
 
     - **Okta**: Enterprise IdP with native Snowflake SCIM integration
 
-    - **Microsoft Entra ID (Azure AD)**: Microsoft''s cloud identity service with
-    gallery app for Snowflake
+    - **Microsoft Entra ID (Azure AD)**: Microsoft''s cloud identity service with gallery app for Snowflake
 
     - **Other SCIM 2.0 Compatible IdP**: Any IdP that supports SCIM 2.0 protocol
 
-    - **None - Manual User Management**: Skip SCIM and manage users manually (not
-    recommended)
+    - **None - Manual User Management**: Skip SCIM and manage users manually (not recommended)
 
 
     **Recommendation:**
 
-    If your organization has an enterprise IdP, we strongly recommend configuring
-    SCIM integration. The initial setup effort is minimal compared to the ongoing
-    benefits of automated provisioning.
+    If your organization has an enterprise IdP, we strongly recommend configuring SCIM integration. The
+    initial setup effort is minimal compared to the ongoing benefits of automated provisioning.
 
 
     **More Information:**
@@ -4260,31 +3684,26 @@
   - text: Multi-Account (Environment-based)
   - text: Multi-Account (Domain-based)
   - text: Multi-Account (Domain + Environment)
-  guidance: "Choose the account strategy that best fits your organization. Your choice\
-    \ determines how domain (business unit/entity) and environment are organized:\
-    \  \n  **Single Account:**  \n  * Best for: Small to medium organizations, centralized\
-    \ teams, simpler governance  \n  * Naming: Domain \\+ Environment \\+ Data Product\
-    \ at database level  \n  * Pros: Lower operational overhead, easier cross-database\
-    \ queries, centralized management  \n  * Cons: Less isolation, shared resource\
-    \ limits, single security boundary  \n  * Recommendation: Consider setting up\
-    \ an organization account even for single-account deployments to enable future\
-    \ growth  \n* **Multi-Account (Environment-based):**  \n  * Best for: Organizations\
-    \ requiring strong environment isolation (dev/test/prod)  \n  * Naming: Environment\
-    \ at account level, Domain \\+ Data Product at database level  \n  * Pros: Complete\
-    \ environment isolation, independent security controls, separate billing  \n \
-    \ * Cons: More complex data sharing, higher operational overhead  \n  * Requirement:\
-    \ Organization account required  \n* **Multi-Account (Domain-based):**  \n  *\
-    \ Best for: Large enterprises with autonomous business units/domains  \n  * Naming:\
-    \ Domain at account level, Environment \\+ Data Product at database level  \n\
-    \  * Pros: Clear cost allocation per domain, independent governance, domain autonomy\
-    \  \n  * Cons: Higher complexity, requires data sharing for cross-domain analytics\
-    \  \n  * Requirement: Organization account required  \n* **Multi-Account (Domain\
-    \ \\+ Environment):**  \n  * Best for: Large organizations needing both domain\
-    \ and environment isolation  \n  * Naming: Domain \\+ Environment at account level,\
-    \ Data Product at database level  \n  * Pros: Maximum isolation, clear ownership\
-    \ and environment separation  \n  * Cons: Highest complexity and operational overhead,\
-    \ most accounts to manage  \n  * Requirement: Organization account required  \n\
-    * **More Information:**  \n  * [Organizations](https://docs.snowflake.com/en/user-guide/organizations)\
+  guidance: "Choose the account strategy that best fits your organization. Your choice determines how\
+    \ domain (business unit/entity) and environment are organized:  \n  **Single Account:**  \n  * Best\
+    \ for: Small to medium organizations, centralized teams, simpler governance  \n  * Naming: Domain\
+    \ \\+ Environment \\+ Data Product at database level  \n  * Pros: Lower operational overhead, easier\
+    \ cross-database queries, centralized management  \n  * Cons: Less isolation, shared resource limits,\
+    \ single security boundary  \n  * Recommendation: Consider setting up an organization account even\
+    \ for single-account deployments to enable future growth  \n* **Multi-Account (Environment-based):**\
+    \  \n  * Best for: Organizations requiring strong environment isolation (dev/test/prod)  \n  * Naming:\
+    \ Environment at account level, Domain \\+ Data Product at database level  \n  * Pros: Complete environment\
+    \ isolation, independent security controls, separate billing  \n  * Cons: More complex data sharing,\
+    \ higher operational overhead  \n  * Requirement: Organization account required  \n* **Multi-Account\
+    \ (Domain-based):**  \n  * Best for: Large enterprises with autonomous business units/domains  \n\
+    \  * Naming: Domain at account level, Environment \\+ Data Product at database level  \n  * Pros:\
+    \ Clear cost allocation per domain, independent governance, domain autonomy  \n  * Cons: Higher complexity,\
+    \ requires data sharing for cross-domain analytics  \n  * Requirement: Organization account required\
+    \  \n* **Multi-Account (Domain \\+ Environment):**  \n  * Best for: Large organizations needing both\
+    \ domain and environment isolation  \n  * Naming: Domain \\+ Environment at account level, Data Product\
+    \ at database level  \n  * Pros: Maximum isolation, clear ownership and environment separation  \n\
+    \  * Cons: Highest complexity and operational overhead, most accounts to manage  \n  * Requirement:\
+    \ Organization account required  \n* **More Information:**  \n  * [Organizations](https://docs.snowflake.com/en/user-guide/organizations)\
     \  \n  * [Managing Multiple Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts)\
     \  "
 - answer_title: zone_list
@@ -4293,8 +3712,8 @@
   is_org_scope: false
   guidance: '**What is this asking?**
 
-    Define the data zones for your data product. Each zone will become a database
-    (or database prefix, depending on your naming convention).
+    Define the data zones for your data product. Each zone will become a database (or database prefix,
+    depending on your naming convention).
 
 
     **Why does this matter?**
@@ -4371,67 +3790,315 @@
 
     **Recommendation:**
 
-    Start with the standard three-zone pattern unless you have specific requirements
-    for more or fewer zones.
+    Start with the standard three-zone pattern unless you have specific requirements for more or fewer
+    zones.
 
 
     **More Information:**
 
-    * [Data Zones Best Practices](https://docs.snowflake.com/en/user-guide/databases-best-practices)
-    — Database organization'
+    * [Data Zones Best Practices](https://docs.snowflake.com/en/user-guide/databases-best-practices) —
+    Database organization'
 - answer_title: environment_list
   question_text: What abbreviations will you use for environments?
   answer_type: list
   is_org_scope: false
-  guidance: "**What is an Environment?**  \nAn environment represents a stage in the\
-    \ Software Development Lifecycle (SDLC). Environments isolate data and applications\
-    \ based on their maturity and stability.  \n\n**How Environments Are Used:** \
-    \ \nDepending on your account strategy, environments appear at either the account\
-    \ level or database level:  \n* Multi-Account (Environment-based): Each environment\
-    \ gets its own Snowflake account  \n* Single Account: Environments appear as suffixes\
-    \ in database/warehouse/role names  \n\n**Common Environment Abbreviations:**\
-    \  \n* `dev` — Development: Where developers build and test code  \n* `test` or\
-    \ `qa` — Testing/QA: For quality assurance and integration testing  \n* `stg`\
-    \ or `stage` — Staging: Pre-production environment mirroring production  \n* `prod`\
-    \ — Production: Live environment serving end users  \n* `sbx` — Sandbox: Isolated\
-    \ environments for experimentation  \n* `uat` — User Acceptance Testing: For business\
-    \ user validation  \n* `dr` — Disaster Recovery: Failover environment for business\
-    \ continuity  \n\n**Best Practices:**  \n* Use short abbreviations (3-4 characters)\
-    \ for consistency  \n* Keep abbreviations intuitive and recognizable  \n* Include\
-    \ all environments you'll need—adding later requires renaming objects  \n\n**More\
-    \ Information:**  \n* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)\
-    \  "
+  guidance: "**What is an Environment?**  \nAn environment represents a stage in the Software Development\
+    \ Lifecycle (SDLC). Environments isolate data and applications based on their maturity and stability.\
+    \  \n\n**How Environments Are Used:**  \nDepending on your account strategy, environments appear at\
+    \ either the account level or database level:  \n* Multi-Account (Environment-based): Each environment\
+    \ gets its own Snowflake account  \n* Single Account: Environments appear as suffixes in database/warehouse/role\
+    \ names  \n\n**Common Environment Abbreviations:**  \n* `dev` — Development: Where developers build\
+    \ and test code  \n* `test` or `qa` — Testing/QA: For quality assurance and integration testing  \n\
+    * `stg` or `stage` — Staging: Pre-production environment mirroring production  \n* `prod` — Production:\
+    \ Live environment serving end users  \n* `sbx` — Sandbox: Isolated environments for experimentation\
+    \  \n* `uat` — User Acceptance Testing: For business user validation  \n* `dr` — Disaster Recovery:\
+    \ Failover environment for business continuity  \n\n**Best Practices:**  \n* Use short abbreviations\
+    \ (3-4 characters) for consistency  \n* Keep abbreviations intuitive and recognizable  \n* Include\
+    \ all environments you'll need—adding later requires renaming objects  \n\n**More Information:** \
+    \ \n* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  "
 - answer_title: domain_list
   question_text: What are your domain abbreviations?
   answer_type: list
   is_org_scope: false
-  guidance: "**What is a Domain?**  \nA domain represents a logical grouping of business\
-    \ functions, data, or ownership. Domains define boundaries for governance, cost\
-    \ allocation, and data stewardship.  \n\n**How Domains Are Used:**  \nDepending\
-    \ on your account strategy, domains appear at either the account level or database\
-    \ level:  \n* Multi-Account (Domain-based): Each domain gets its own Snowflake\
-    \ account  \n* Single Account: Domains appear as prefixes in database/warehouse/role\
-    \ names  \n\n**Examples by Type:**  \n* **Business Units:** `fin` (Finance), `mkt`\
-    \ (Marketing), `ops` (Operations), `hr` (Human Resources)  \n* **Entities:** `retail`,\
-    \ `wholesale`, `mfg` (Manufacturing)  \n* **Departments:** `sales`, `sc` (Supply\
-    \ Chain), `custsvc` (Customer Service)  \n* **Technical Teams:** `data`, `plat`\
-    \ (Platform), `eng` (Engineering)  \n\n**Best Practices:**  \n* Use short abbreviations\
-    \ (3-8 characters) for readability  \n* Avoid underscores within domain names—use\
-    \ concatenated abbreviations  \n* Choose intuitive names that are self-descriptive\
-    \ to users  \n* Consider future growth—add domains you may need later  \n\n**More\
-    \ Information:**  \n* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)\
+  guidance: "**What is a Domain?**  \nA domain represents a logical grouping of business functions, data,\
+    \ or ownership. Domains define boundaries for governance, cost allocation, and data stewardship. \
+    \ \n\n**How Domains Are Used:**  \nDepending on your account strategy, domains appear at either the\
+    \ account level or database level:  \n* Multi-Account (Domain-based): Each domain gets its own Snowflake\
+    \ account  \n* Single Account: Domains appear as prefixes in database/warehouse/role names  \n\n**Examples\
+    \ by Type:**  \n* **Business Units:** `fin` (Finance), `mkt` (Marketing), `ops` (Operations), `hr`\
+    \ (Human Resources)  \n* **Entities:** `retail`, `wholesale`, `mfg` (Manufacturing)  \n* **Departments:**\
+    \ `sales`, `sc` (Supply Chain), `custsvc` (Customer Service)  \n* **Technical Teams:** `data`, `plat`\
+    \ (Platform), `eng` (Engineering)  \n\n**Best Practices:**  \n* Use short abbreviations (3-8 characters)\
+    \ for readability  \n* Avoid underscores within domain names—use concatenated abbreviations  \n* Choose\
+    \ intuitive names that are self-descriptive to users  \n* Consider future growth—add domains you may\
+    \ need later  \n\n**More Information:**  \n* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)\
     \  "
 - answer_title: org_account_name
   question_text: What do you want to name your organization account?
   answer_type: text
   is_org_scope: false
-  guidance: "**Recommended Name:** ORG  \n  Since there can be only one Organization\
-    \ Account per organization, the name should clearly indicate this special purpose.\
-    \ We recommend simply naming it ORG.  \n  \n  **Example URLs with Organization\
-    \ Account name ORG:**  \n  * With Custom Org Name: [https://ACME-ORG.snowflakecomputing.com](https://ACME-ORG.snowflakecomputing.com)\
-    \  \n    * Org Name \\= ACME  \n    * Org Account Name \\= Org  \n  * System-generated\
-    \ Org Name: [https://XY12345-ORG.snowflakecomputing.com](https://XY12345-ORG.snowflakecomputing.com)\
-    \  \n    * Org Name \\= XY12345  \n    * Org Account Name \\= Org  \n* **Requirements:**\
-    \  \n  * Snowflake Enterprise Edition or higher  \n  * ORGADMIN role granted in\
-    \ the existing account  \n* **More Information:**  \n  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)\
-    \  \n  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)"
+  guidance: "**Recommended Name:** ORG  \n  Since there can be only one Organization Account per organization,\
+    \ the name should clearly indicate this special purpose. We recommend simply naming it ORG.  \n  \n\
+    \  **Example URLs with Organization Account name ORG:**  \n  * With Custom Org Name: [https://ACME-ORG.snowflakecomputing.com](https://ACME-ORG.snowflakecomputing.com)\
+    \  \n    * Org Name \\= ACME  \n    * Org Account Name \\= Org  \n  * System-generated Org Name: [https://XY12345-ORG.snowflakecomputing.com](https://XY12345-ORG.snowflakecomputing.com)\
+    \  \n    * Org Name \\= XY12345  \n    * Org Account Name \\= Org  \n* **Requirements:**  \n  * Snowflake\
+    \ Enterprise Edition or higher  \n  * ORGADMIN role granted in the existing account  \n* **More Information:**\
+    \  \n  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts) \
+    \ \n  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)"
+- answer_title: data_zones
+  question_text: Define the data zones for your data product.
+  answer_type: object-list
+  is_org_scope: false
+  object_name: Data Zone
+  keys:
+  - name
+  - description
+  - time_travel_days
+  guidance: "**What is this asking?**\nDefine each data zone (logical layer) for your data product. Zones\
+    \ represent \nstages in your data pipeline.\n\n**Common Zone Patterns:**\n\n**Three-Zone (Medallion):**\n\
+    | Zone | Purpose | Time Travel |\n|------|---------|-------------|\n| RAW | Landing zone for source\
+    \ data | 1 day |\n| CURATED | Cleansed and validated data | 7 days |\n| CONSUMPTION | Business-ready\
+    \ analytics | 7 days |\n\n**Four-Zone:**\n| Zone | Purpose | Time Travel |\n|------|---------|-------------|\n\
+    | LANDING | Raw ingestion | 1 day |\n| BRONZE | Light transformation | 1 day |\n| SILVER | Business\
+    \ logic applied | 7 days |\n| GOLD | Aggregated/consumption | 7 days |\n\n**Why does this matter?**\n\
+    - Each zone becomes a separate database\n- Zone structure affects data lineage and access patterns\n\
+    - Time travel settings impact storage costs\n\n**Recommendation:** Start with 3 zones. You can add\
+    \ more later.\n"
+- answer_title: default_time_travel_days
+  question_text: What is the default time travel retention for databases?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+  - text: 1 day (minimal)
+  - text: 7 days (standard)
+  - text: 14 days (extended)
+  - text: 30 days (long retention)
+  - text: 90 days (maximum)
+  guidance: '**What is this asking?**
+
+    Choose the default Time Travel retention period for data product databases.
+
+
+    **Recommendations by zone type:**
+
+    - **Landing/Raw zones**: 1 day (data is reloadable from source)
+
+    - **Curated/Transformed**: 7 days (standard protection)
+
+    - **Consumption/Production**: 7-30 days (business-critical)
+
+
+    **Cost considerations:**
+
+    - Higher retention = more storage costs
+
+    - Time Travel storage is charged at standard rates
+
+
+    **More Information:**
+
+    * [Time Travel](https://docs.snowflake.com/en/user-guide/data-time-travel)
+
+    '
+- answer_title: schema_configuration
+  question_text: Define the schemas for each zone in your data product.
+  answer_type: object-list
+  is_org_scope: false
+  object_name: Schema Configuration
+  keys:
+  - zone
+  - schema_name
+  - purpose
+  guidance: "**What is this asking?**\nDefine schemas within each zone. Schemas organize tables by source\
+    \ system \nor subject area.\n\n**Example Configuration:**\n\n**RAW Zone:**\n| Schema | Purpose |\n\
+    |--------|---------|\n| SALESFORCE | Salesforce CRM data |\n| SAP | SAP ERP data |\n| STRIPE | Payment\
+    \ processing data |\n\n**CURATED Zone:**\n| Schema | Purpose |\n|--------|---------|\n| CUSTOMERS\
+    \ | Unified customer data |\n| ORDERS | Order history |\n| PRODUCTS | Product catalog |\n\n**CONSUMPTION\
+    \ Zone:**\n| Schema | Purpose |\n|--------|---------|\n| REPORTING | BI-ready tables |\n| ANALYTICS\
+    \ | Aggregations and metrics |\n\n**Best Practices:**\n- Use consistent naming across zones\n- Group\
+    \ by source system in RAW, by subject in CURATED\n- Keep schema count manageable (2-5 per zone)\n"
+- answer_title: warehouse_configuration
+  question_text: Define the warehouses for your data product.
+  answer_type: object-list
+  is_org_scope: false
+  object_name: Warehouse Configuration
+  keys:
+  - name
+  - size
+  - min_cluster_count
+  - max_cluster_count
+  - auto_suspend_seconds
+  guidance: '**What is this asking?**
+
+    Define compute warehouses for your data product workloads.
+
+
+    **Common Patterns:**
+
+
+    **Simple (1 warehouse):**
+
+    | Name | Size | Min/Max Clusters | Auto-Suspend |
+
+    |------|------|------------------|--------------|
+
+    | GENERAL | Small | 1/1 | 300 |
+
+
+    **Standard (2-3 warehouses):**
+
+    | Name | Size | Min/Max Clusters | Auto-Suspend |
+
+    |------|------|------------------|--------------|
+
+    | ETL | Medium | 1/3 | 60 |
+
+    | QUERY | Small | 1/2 | 300 |
+
+
+    **Advanced (workload isolation):**
+
+    | Name | Size | Min/Max Clusters | Auto-Suspend |
+
+    |------|------|------------------|--------------|
+
+    | INGEST | Large | 1/3 | 60 |
+
+    | TRANSFORM | Medium | 1/3 | 120 |
+
+    | INTERACTIVE | Small | 1/2 | 300 |
+
+    | REPORTING | Medium | 1/4 | 300 |
+
+
+    **Sizing Guidelines:**
+
+    - X-Small/Small: Development, light queries
+
+    - Medium: Standard production workloads
+
+    - Large+: Heavy ETL, complex analytics
+
+
+    **Auto-Suspend Guidelines:**
+
+    - Batch workloads: 60 seconds
+
+    - Interactive: 300-600 seconds
+
+    '
+- answer_title: custom_read_roles
+  question_text: Define custom read roles for fine-grained access control.
+  answer_type: object-list
+  is_org_scope: false
+  object_name: Custom Read Role
+  keys:
+  - name
+  - description
+  - schema_access
+  guidance: "**What is this asking?**\nDefine custom roles for external partners, specific teams, or applications\
+    \ \nthat need limited read access to specific schemas.\n\n**When to use custom roles:**\n- External\
+    \ partners needing subset of data\n- BI tools requiring dedicated roles\n- Compliance-driven access\
+    \ separation\n\n**Example Configuration:**\n| Role Name | Description | Schema Access |\n|-----------|-------------|---------------|\n\
+    | PARTNER_ACME | Acme Corp data access | CONSUMPTION.PARTNER_DATA |\n| BI_TEAM | Tableau/PowerBI access\
+    \ | CONSUMPTION.REPORTING |\n| ML_TEAM | ML feature access | CURATED.FEATURES |\n\n**Schema Access\
+    \ Format:**\nUse `ZONE.SCHEMA` format, comma-separated for multiple schemas.\n\n**Note:** These roles\
+    \ receive READ access only. For write access, use \nthe standard functional roles (WRITE, CREATE).\n"
+- answer_title: resource_monitor_credits
+  question_text: How many credits should be the limit for the resource monitor?
+  answer_type: text
+  is_org_scope: false
+  guidance: '**What is this asking?**
+
+    Set the maximum credit consumption for this data product''s warehouses.
+
+
+    **How to estimate:**
+
+    - X-Small warehouse ≈ 1 credit/hour
+
+    - Small warehouse ≈ 2 credits/hour
+
+    - Medium warehouse ≈ 4 credits/hour
+
+    - Large warehouse ≈ 8 credits/hour
+
+
+    **Example calculations:**
+
+    - Light usage (8hrs/day, Small): 8 × 2 × 22 = 352 credits/month
+
+    - Medium usage (12hrs/day, Medium): 12 × 4 × 22 = 1,056 credits/month
+
+    - Heavy usage (24/7, Large): 24 × 8 × 30 = 5,760 credits/month
+
+
+    **Recommendation:** Start conservative. You can increase limits later.
+
+
+    **Examples:**
+
+    - `500` — Small data product
+
+    - `1000` — Medium workload
+
+    - `5000` — Heavy ETL and analytics
+
+    '
+- answer_title: resource_monitor_frequency
+  question_text: How often should the resource monitor credit quota reset?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+  - text: Daily
+  - text: Weekly
+  - text: Monthly
+  - text: Quarterly
+  - text: Yearly
+  - text: Never (lifetime limit)
+  guidance: '**What is this asking?**
+
+    Choose how often the credit quota resets.
+
+
+    **Recommendations:**
+
+    - **Daily**: Tight cost control, experimental workloads
+
+    - **Weekly**: Development environments
+
+    - **Monthly**: Most production data products (recommended)
+
+    - **Quarterly/Yearly**: Stable, predictable workloads
+
+    - **Never**: Hard lifetime cap
+
+
+    **Why does this matter?**
+
+    - Too frequent resets may interrupt legitimate work
+
+    - Too infrequent may allow cost overruns before detection
+
+
+    **Recommendation:** Monthly for most use cases.
+
+    '
+- answer_title: notification_email
+  question_text: What email address should receive cost and alert notifications?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**What is this asking?**\nEnter the email address for resource monitor alerts and notifications.\n\
+    \n**Recommended recipients:**\n- Team distribution list (preferred)\n- Data product owner\n- FinOps\
+    \ team\n\n**Examples:**\n- `data-team@company.com`\n- `finops@company.com`\n- `john.smith@company.com`\n\
+    \n**Note:** Use a distribution list rather than individual email to ensure \ncoverage during absences.\n"
+- answer_title: scim_prefix
+  question_text: What prefix is used for your SCIM provisioner role?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**What is this asking?**\nIf using SCIM for identity management, enter the prefix used for\
+    \ the \nSCIM provisioner role.\n\n**Common SCIM prefixes:**\n- `AAD` — Microsoft Entra ID (Azure AD)\n\
+    - `OKTA` — Okta\n- `PING` — PingIdentity\n\n**How this is used:**\nThe SCIM provisioner role is typically\
+    \ named `<PREFIX>_PROVISIONER`.\nFor example: `AAD_PROVISIONER`, `OKTA_PROVISIONER`\n\n**Enter `NONE`\
+    \ if:**\n- Not using SCIM integration\n- Managing users manually\n- Using a different identity provisioning\
+    \ approach\n\n**More Information:**\n* [SCIM Provisioning](https://docs.snowflake.com/en/user-guide/scim)\n"

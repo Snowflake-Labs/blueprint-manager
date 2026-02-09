@@ -1,0 +1,178 @@
+-- ============================================================================
+-- TRANSFER OWNERSHIP & WIRE HIERARCHY
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: SECURITYADMIN (to manage role grants)
+-- ============================================================================
+
+-- Derive the data product prefix for object names
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+USE ROLE SECURITYADMIN;
+
+-- ============================================================================
+-- ESTABLISH CORE ROLE HIERARCHY
+-- ============================================================================
+-- READ ← WRITE ← CREATE ← ADMIN
+--                         ↓
+--                       RBAC
+
+-- Wire the core role hierarchy
+GRANT ROLE {{ prefix }}_READ TO ROLE {{ prefix }}_WRITE;
+GRANT ROLE {{ prefix }}_WRITE TO ROLE {{ prefix }}_CREATE;
+GRANT ROLE {{ prefix }}_CREATE TO ROLE {{ prefix }}_ADMIN;
+
+-- RBAC role can manage other roles
+GRANT ROLE {{ prefix }}_READ TO ROLE {{ prefix }}_RBAC;
+GRANT ROLE {{ prefix }}_WRITE TO ROLE {{ prefix }}_RBAC;
+GRANT ROLE {{ prefix }}_CREATE TO ROLE {{ prefix }}_RBAC;
+GRANT ROLE {{ prefix }}_RBAC TO ROLE {{ prefix }}_ADMIN;
+
+-- ============================================================================
+-- GRANT DATABASE ROLES TO ACCOUNT ROLES
+-- ============================================================================
+{% for config in schema_configuration %}
+{%- set zone = config.zone | upper %}
+{%- set db_name = prefix ~ '_' ~ zone %}
+
+-- {{ zone }} Zone Database Roles
+GRANT DATABASE ROLE {{ db_name }}.DB_R TO ROLE {{ prefix }}_READ;
+GRANT DATABASE ROLE {{ db_name }}.DB_W TO ROLE {{ prefix }}_WRITE;
+GRANT DATABASE ROLE {{ db_name }}.DB_C TO ROLE {{ prefix }}_CREATE;
+
+{% endfor %}
+
+-- ============================================================================
+-- CREATE ACCOUNT ACCESS ROLES
+-- ============================================================================
+-- These roles grant specific account-level privileges for advanced operations
+
+-- Execute Task privilege (required for task execution)
+CREATE ROLE IF NOT EXISTS {{ prefix }}_AR_EXEC_TASK
+  COMMENT = 'Execute task privilege for {{ data_product_name }}';
+GRANT EXECUTE TASK ON ACCOUNT TO ROLE {{ prefix }}_AR_EXEC_TASK;
+GRANT OWNERSHIP ON ROLE {{ prefix }}_AR_EXEC_TASK TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
+
+-- View Account Usage privilege
+CREATE ROLE IF NOT EXISTS {{ prefix }}_AR_VIEW_AUSG
+  COMMENT = 'View account usage privilege for {{ data_product_name }}';
+GRANT IMPORTED PRIVILEGES ON DATABASE SNOWFLAKE TO ROLE {{ prefix }}_AR_VIEW_AUSG;
+GRANT OWNERSHIP ON ROLE {{ prefix }}_AR_VIEW_AUSG TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
+
+-- Apply Data Masking Policy privilege
+CREATE ROLE IF NOT EXISTS {{ prefix }}_AR_APPLY_DDM
+  COMMENT = 'Apply masking policy privilege for {{ data_product_name }}';
+GRANT APPLY MASKING POLICY ON ACCOUNT TO ROLE {{ prefix }}_AR_APPLY_DDM;
+GRANT OWNERSHIP ON ROLE {{ prefix }}_AR_APPLY_DDM TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
+
+-- Apply Row Access Policy privilege
+CREATE ROLE IF NOT EXISTS {{ prefix }}_AR_APPLY_RAP
+  COMMENT = 'Apply row access policy privilege for {{ data_product_name }}';
+GRANT APPLY ROW ACCESS POLICY ON ACCOUNT TO ROLE {{ prefix }}_AR_APPLY_RAP;
+GRANT OWNERSHIP ON ROLE {{ prefix }}_AR_APPLY_RAP TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
+
+-- Apply Tag privilege
+CREATE ROLE IF NOT EXISTS {{ prefix }}_AR_APPLY_TAG
+  COMMENT = 'Apply tag privilege for {{ data_product_name }}';
+GRANT APPLY TAG ON ACCOUNT TO ROLE {{ prefix }}_AR_APPLY_TAG;
+GRANT OWNERSHIP ON ROLE {{ prefix }}_AR_APPLY_TAG TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
+
+-- Grant account access roles to ADMIN
+GRANT ROLE {{ prefix }}_AR_EXEC_TASK TO ROLE {{ prefix }}_ADMIN;
+GRANT ROLE {{ prefix }}_AR_VIEW_AUSG TO ROLE {{ prefix }}_ADMIN;
+GRANT ROLE {{ prefix }}_AR_APPLY_DDM TO ROLE {{ prefix }}_ADMIN;
+GRANT ROLE {{ prefix }}_AR_APPLY_RAP TO ROLE {{ prefix }}_ADMIN;
+GRANT ROLE {{ prefix }}_AR_APPLY_TAG TO ROLE {{ prefix }}_ADMIN;
+
+-- ============================================================================
+-- CONNECT TO SCIM PROVISIONER (if configured)
+-- ============================================================================
+{%- if scim_prefix %}
+
+-- Grant ADMIN role to SCIM provisioner for user assignment
+GRANT ROLE {{ prefix }}_ADMIN TO ROLE {{ scim_prefix }}_PROVISIONER;
+
+-- The SCIM provisioner can then assign users to the data product roles
+{%- endif %}
+
+-- ============================================================================
+-- CONNECT TO SYSADMIN (if required)
+-- ============================================================================
+
+-- Optional: Grant ADMIN role to SYSADMIN for centralized administration
+-- Uncomment if you want SYSADMIN to manage this data product
+-- GRANT ROLE {{ prefix }}_ADMIN TO ROLE SYSADMIN;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Show role hierarchy
+SHOW GRANTS TO ROLE {{ prefix }}_READ;
+SHOW GRANTS TO ROLE {{ prefix }}_WRITE;
+SHOW GRANTS TO ROLE {{ prefix }}_CREATE;
+SHOW GRANTS TO ROLE {{ prefix }}_ADMIN;
+SHOW GRANTS TO ROLE {{ prefix }}_RBAC;
+
+-- Show account access roles
+SHOW GRANTS TO ROLE {{ prefix }}_AR_EXEC_TASK;
+SHOW GRANTS TO ROLE {{ prefix }}_AR_VIEW_AUSG;
+SHOW GRANTS TO ROLE {{ prefix }}_AR_APPLY_DDM;
+SHOW GRANTS TO ROLE {{ prefix }}_AR_APPLY_RAP;
+SHOW GRANTS TO ROLE {{ prefix }}_AR_APPLY_TAG;
+
+/*
+ROLE HIERARCHY WIRED
+====================
+
+Core Role Hierarchy:
+  {{ prefix }}_READ
+      ↑
+  {{ prefix }}_WRITE
+      ↑
+  {{ prefix }}_CREATE
+      ↑
+  {{ prefix }}_ADMIN
+      ↑
+{%- if scim_prefix %}
+  {{ scim_prefix }}_PROVISIONER
+{%- endif %}
+
+RBAC Role:
+  {{ prefix }}_RBAC → Can grant READ, WRITE, CREATE
+      ↑
+  {{ prefix }}_ADMIN
+
+Database Role Connections:
+{%- for config in schema_configuration %}
+{%- set zone = config.zone | upper %}
+{%- set db_name = prefix ~ '_' ~ zone %}
+  - {{ db_name }}.DB_R → {{ prefix }}_READ
+  - {{ db_name }}.DB_W → {{ prefix }}_WRITE
+  - {{ db_name }}.DB_C → {{ prefix }}_CREATE
+{%- endfor %}
+
+Account Access Roles:
+  - {{ prefix }}_AR_EXEC_TASK → ADMIN
+  - {{ prefix }}_AR_VIEW_AUSG → ADMIN
+  - {{ prefix }}_AR_APPLY_DDM → ADMIN
+  - {{ prefix }}_AR_APPLY_RAP → ADMIN
+  - {{ prefix }}_AR_APPLY_TAG → ADMIN
+
+NEXT STEPS:
+- Task 4: Custom Role Configuration (optional)
+- Task 5: Resource Management (optional)
+*/

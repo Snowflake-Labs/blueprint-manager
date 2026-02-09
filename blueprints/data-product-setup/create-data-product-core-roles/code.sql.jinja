@@ -1,0 +1,173 @@
+-- ============================================================================
+-- CREATE DATA PRODUCT CORE ROLES
+-- ============================================================================
+-- Data Product: {{ data_product_name }}
+-- Domain: {{ data_product_domain }}
+-- Environment: {{ data_product_environment }}
+-- SCIM Prefix: {{ scim_prefix }}
+{%- if account_strategy != 'Single Account' %}
+-- Target Account: {{ target_account_name | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
+-- REQUIRED ROLE: USERADMIN
+-- ============================================================================
+
+-- Derive the role owner based on SCIM configuration
+{%- if scim_prefix | upper != 'NONE' %}
+{%- set owner_role = scim_prefix | upper ~ '_PROVISIONER' %}
+{%- else %}
+{%- set owner_role = 'USERADMIN' %}
+{%- endif %}
+
+-- Derive the data product prefix for object names
+{%- if account_strategy == 'Single Account' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
+{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
+{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
+{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
+{%- set prefix = data_product_name | upper %}
+{%- endif %}
+
+-- Get the domain tag reference
+{%- set dp_domain_tag = platform_database_name | upper ~ '.' ~ governance_name | upper ~ '.DOMAIN' %}
+
+USE ROLE USERADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE CORE ACCOUNT ROLES
+-- ============================================================================
+-- These roles provide the functional hierarchy for the data product.
+-- Role naming follows the pattern: <prefix>_<function>
+
+-- ADMIN Role - Full administrative control
+-- Owns all infrastructure: databases, schemas, warehouses
+CREATE ROLE IF NOT EXISTS {{ prefix }}_ADMIN
+  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}')
+  COMMENT = 'Admin role for {{ data_product_name }} data product - owns infrastructure';
+
+-- CREATE Role - Object creation and delegated administration
+-- Can create objects and manage grants within the data product
+CREATE ROLE IF NOT EXISTS {{ prefix }}_CREATE
+  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}')
+  COMMENT = 'Create role for {{ data_product_name }} data product - creates objects';
+
+-- WRITE Role - Data modification privileges
+-- Can execute DML (INSERT, UPDATE, DELETE) on all objects
+CREATE ROLE IF NOT EXISTS {{ prefix }}_WRITE
+  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}')
+  COMMENT = 'Write role for {{ data_product_name }} data product - modifies data';
+
+-- RBAC Role - Access role ownership
+-- Owns database access roles for delegated governance
+CREATE ROLE IF NOT EXISTS {{ prefix }}_RBAC
+  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}')
+  COMMENT = 'RBAC role for {{ data_product_name }} data product - owns access roles';
+
+-- READ Role - Read-only access
+-- Can query all data in the data product
+CREATE ROLE IF NOT EXISTS {{ prefix }}_READ
+  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}')
+  COMMENT = 'Read role for {{ data_product_name }} data product - read-only access';
+
+-- ============================================================================
+-- STEP 2: TRANSFER OWNERSHIP TO SCIM/USERADMIN
+-- ============================================================================
+-- Ownership transfer enables identity provider management (SCIM) or 
+-- standard Snowflake administration (USERADMIN)
+
+GRANT OWNERSHIP ON ROLE {{ prefix }}_ADMIN  TO ROLE {{ owner_role }} COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON ROLE {{ prefix }}_CREATE TO ROLE {{ owner_role }} COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON ROLE {{ prefix }}_WRITE  TO ROLE {{ owner_role }} COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON ROLE {{ prefix }}_RBAC   TO ROLE {{ owner_role }} COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON ROLE {{ prefix }}_READ   TO ROLE {{ owner_role }} COPY CURRENT GRANTS;
+
+-- ============================================================================
+-- STEP 3: ESTABLISH ROLE HIERARCHY
+-- ============================================================================
+-- CREATE and RBAC roles roll up to ADMIN
+-- ADMIN rolls up to SYSADMIN for central administration
+
+-- CREATE role inherits to ADMIN
+GRANT ROLE {{ prefix }}_CREATE TO ROLE {{ prefix }}_ADMIN;
+
+-- RBAC role inherits to ADMIN
+GRANT ROLE {{ prefix }}_RBAC TO ROLE {{ prefix }}_ADMIN;
+
+-- ADMIN role inherits to SYSADMIN (central administration)
+GRANT ROLE {{ prefix }}_ADMIN TO ROLE SYSADMIN;
+
+-- ============================================================================
+-- STEP 4: GRANT ACCOUNT ACCESS ROLES TO CREATE ROLE
+-- ============================================================================
+-- These roles provide account-level privileges needed for data product operations.
+-- Note: These roles must exist in the account (created in Account Creation workflow)
+
+-- Grant account access roles to CREATE role
+-- If roles don't exist, these statements will fail - that's expected if 
+-- account access roles weren't created in this account
+
+GRANT ROLE _AR_EXEC_TASK TO ROLE {{ prefix }}_CREATE;
+GRANT ROLE _AR_VIEW_AUSG TO ROLE {{ prefix }}_CREATE;
+GRANT ROLE _AR_APPLY_DDM TO ROLE {{ prefix }}_CREATE;
+GRANT ROLE _AR_APPLY_RAP TO ROLE {{ prefix }}_CREATE;
+GRANT ROLE _AR_APPLY_TAG TO ROLE {{ prefix }}_CREATE;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Show created roles
+SHOW ROLES LIKE '%{{ prefix }}%';
+
+-- Verify role hierarchy
+SELECT 
+  grantee_name AS child_role,
+  role AS parent_role,
+  granted_by
+FROM TABLE(INFORMATION_SCHEMA.ROLE_GRANTS())
+WHERE role LIKE '%{{ prefix }}%'
+   OR grantee_name LIKE '%{{ prefix }}%'
+ORDER BY parent_role, child_role;
+
+/*
+CORE ROLES CREATED
+==================
+
+Roles created for {{ data_product_name }} data product:
+
+1. {{ prefix }}_ADMIN
+   - Purpose: Owns infrastructure (databases, schemas, warehouses)
+   - Inherits: CREATE, RBAC roles
+   - Granted to: SYSADMIN
+
+2. {{ prefix }}_CREATE
+   - Purpose: Creates objects, manages grants
+   - Receives: _AR_EXEC_TASK, _AR_VIEW_AUSG, _AR_APPLY_DDM, _AR_APPLY_RAP, _AR_APPLY_TAG
+   - Granted to: ADMIN
+
+3. {{ prefix }}_WRITE
+   - Purpose: Modifies data (DML operations)
+   - Granted to: (connected in later steps via database roles)
+
+4. {{ prefix }}_RBAC
+   - Purpose: Owns database access roles
+   - Granted to: ADMIN
+
+5. {{ prefix }}_READ
+   - Purpose: Read-only access
+   - Granted to: (connected in later steps via database roles)
+
+Role Owner: {{ owner_role }}
+{%- if scim_prefix | upper != 'NONE' %}
+SCIM Management: Enabled ({{ scim_prefix | upper }})
+{%- else %}
+SCIM Management: Disabled (manual assignment)
+{%- endif %}
+
+NEXT STEPS:
+- Step 2.2: Create Databases (with DB_R, DB_W, DB_C database roles)
+- Step 2.3: Create Schemas (with SC_R, SC_W, SC_C database roles)
+*/
