@@ -213,6 +213,13 @@ def check_template_renderable(template_path, answers, jinja_env, base_dir):
             def __ne__(self, other):
                 return other is not None
 
+            def __hash__(self):
+                # Explicitly make NullTracker unhashable (consistent with __eq__ override)
+                raise TypeError(f"unhashable type: 'NullTracker'")
+
+            # Note: {% if var is none %} won't work correctly because NullTracker is not
+            # actually None. Templates should use {% if var == None %} or other patterns.
+
         # Build render context: wrap null values with NullTracker
         render_context = {}
         null_var_names = set()
