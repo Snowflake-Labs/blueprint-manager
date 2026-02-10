@@ -227,11 +227,9 @@ def check_template_renderable(template_path, answers, jinja_env, base_dir):
 
         # Build render context: wrap null values with NullTracker
         render_context = {}
-        null_var_names = set()
         for key, value in answers.items():
             if value is None:
                 render_context[key] = NullTracker(key)
-                null_var_names.add(key)
             else:
                 render_context[key] = value
 
@@ -265,9 +263,10 @@ def check_template_renderable(template_path, answers, jinja_env, base_dir):
 
         return False, sorted(missing_vars), sorted(null_vars)
 
-    except TemplateError:
+    except TemplateError as e:
         # Other template errors (syntax, etc.) - can't render
-        return False, [], []
+        # Return the error message so users can diagnose issues
+        return False, [f"Template error: {str(e)}"], []
 
 
 def render_step_code(step_path, lang, answers, jinja_env, base_dir):

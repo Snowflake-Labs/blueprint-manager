@@ -7,6 +7,7 @@ Templates should only be skipped when a null/missing variable would actually
 be needed during rendering, taking into account conditional logic.
 """
 
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -33,6 +34,10 @@ class TestConditionalVariableHandling(TestCase):
             undefined=StrictUndefined,
             keep_trailing_newline=True,
         )
+
+    def tearDown(self):
+        """Clean up temporary directories."""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def create_template(self, name, content):
         """Create a test template file."""
@@ -266,6 +271,10 @@ class TestMultipleConditionalPatterns(TestCase):
             keep_trailing_newline=True,
         )
 
+    def tearDown(self):
+        """Clean up temporary directories."""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
     def create_template(self, name, content):
         """Create a test template file."""
         template_path = self.base_dir / name
@@ -354,6 +363,10 @@ class TestNullTrackerEdgeCases(TestCase):
             undefined=StrictUndefined,
             keep_trailing_newline=True,
         )
+
+    def tearDown(self):
+        """Clean up temporary directories."""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def create_template(self, name, content):
         """Create a test template file."""
