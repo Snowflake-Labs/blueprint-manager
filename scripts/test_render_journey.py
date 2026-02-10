@@ -490,5 +490,140 @@ class TestNullTrackerEdgeCases(TestCase):
         )
 
 
+class TestNullTrackerComparisonOperators(TestCase):
+    """Test that comparison operators raise UndefinedError for null variables.
+    
+    These tests ensure that using comparison operators (<, >, <=, >=) with null
+    variables raises UndefinedError instead of TypeError, allowing the exception
+    to be properly caught and handled by check_template_renderable().
+    """
+
+    def setUp(self):
+        """Create a temporary directory structure for test templates."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.base_dir = Path(self.temp_dir)
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(self.base_dir),
+            undefined=StrictUndefined,
+            keep_trailing_newline=True,
+        )
+
+    def tearDown(self):
+        """Clean up temporary directories."""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def create_template(self, name, content):
+        """Create a test template file."""
+        template_path = self.base_dir / name
+        template_path.parent.mkdir(parents=True, exist_ok=True)
+        template_path.write_text(content)
+        return template_path
+
+    def test_greater_than_comparison_with_null(self):
+        """{% if var > 0 %} with null var should report as null, not crash."""
+        template = self.create_template(
+            "gt_template.jinja",
+            """
+{% if count > 0 %}
+  Count is positive: {{ count }}
+{% else %}
+  Count is zero or negative
+{% endif %}
+""",
+        )
+        answers = {"count": None}
+        can_render, missing_vars, null_vars = check_template_renderable(
+            template, answers, self.jinja_env, self.base_dir
+        )
+        self.assertFalse(can_render, "Template should NOT render when comparing null var with >")
+        self.assertIn("count", null_vars)
+
+    def test_less_than_comparison_with_null(self):
+        """{% if var < 100 %} with null var should report as null, not crash."""
+        template = self.create_template(
+            "lt_template.jinja",
+            """
+{% if limit < 100 %}
+  Under limit
+{% else %}
+  At or over limit
+{% endif %}
+""",
+        )
+        answers = {"limit": None}
+        can_render, missing_vars, null_vars = check_template_renderable(
+            template, answers, self.jinja_env, self.base_dir
+        )
+        self.assertFalse(can_render, "Template should NOT render when comparing null var with <")
+        self.assertIn("limit", null_vars)
+
+    def test_greater_equal_comparison_with_null(self):
+        """{% if var >= 10 %} with null var should report as null, not crash."""
+        template = self.create_template(
+            "ge_template.jinja",
+            """
+{% if threshold >= 10 %}
+  High threshold
+{% else %}
+  Low threshold
+{% endif %}
+""",
+        )
+        answers = {"threshold": None}
+        can_render, missing_vars, null_vars = check_template_renderable(
+            template, answers, self.jinja_env, self.base_dir
+        )
+        self.assertFalse(can_render, "Template should NOT render when comparing null var with >=")
+        self.assertIn("threshold", null_vars)
+
+    def test_less_equal_comparison_with_null(self):
+        """{% if var <= 5 %} with null var should report as null, not crash."""
+        template = self.create_template(
+            "le_template.jinja",
+            """
+{% if max_retries <= 5 %}
+  Few retries allowed
+{% else %}
+  Many retries allowed
+{% endif %}
+""",
+        )
+        answers = {"max_retries": None}
+        can_render, missing_vars, null_vars = check_template_renderable(
+            template, answers, self.jinja_env, self.base_dir
+        )
+        self.assertFalse(can_render, "Template should NOT render when comparing null var with <=")
+        self.assertIn("max_retries", null_vars)
+
+    def test_comparison_in_inactive_branch_does_not_crash(self):
+        """Comparison with null var in inactive branch should not cause issues."""
+        template = self.create_template(
+            "inactive_comparison_template.jinja",
+            """
+{% if enable_limits %}
+  {% if limit > 100 %}
+    High limit: {{ limit }}
+  {% else %}
+    Normal limit
+  {% endif %}
+{% else %}
+  Limits disabled
+{% endif %}
+""",
+        )
+        answers = {
+            "enable_limits": False,
+            "limit": None,  # In inactive branch, should not cause problems
+        }
+        can_render, missing_vars, null_vars = check_template_renderable(
+            template, answers, self.jinja_env, self.base_dir
+        )
+        self.assertTrue(
+            can_render,
+            f"Template should render when comparison with null is in inactive branch. "
+            f"Missing: {missing_vars}, Null: {null_vars}",
+        )
+
+
 if __name__ == "__main__":
     main()

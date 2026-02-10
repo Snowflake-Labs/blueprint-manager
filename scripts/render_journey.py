@@ -218,6 +218,18 @@ def check_template_renderable(template_path, answers, jinja_env, base_dir):
             def __ne__(self, other):
                 return other is not None
 
+            def __lt__(self, other):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
+            def __gt__(self, other):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
+            def __le__(self, other):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
+            def __ge__(self, other):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
             def __hash__(self):
                 # Explicitly make NullTracker unhashable (consistent with __eq__ override)
                 raise TypeError(f"unhashable type: 'NullTracker'")
