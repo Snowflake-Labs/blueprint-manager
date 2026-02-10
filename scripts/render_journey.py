@@ -156,44 +156,129 @@ def find_template_set_variables(template_source, jinja_env):
         return set()
 
 
-def check_template_renderable(template_path, answers, jinja_env):
+def check_template_renderable(template_path, answers, jinja_env, base_dir):
     """
-    Pre-check if a template can be rendered with the given answers.
-    Uses Jinja2's AST parser to find all referenced variables, then checks
-    if they exist in answers and have non-None values where needed.
+    Check if a template can be rendered with the given answers by attempting
+    to render it and catching any UndefinedError exceptions.
+
+    This approach correctly handles conditional logic - variables that are only
+    used inside conditional blocks that won't execute (based on current answer
+    values) won't cause the template to be skipped.
+
+    Note: Due to the runtime rendering approach, only the first missing/null
+    variable encountered will be reported. If multiple variables are missing
+    in the active code path, users may need to fix them one at a time.
+    This is a tradeoff for correctly handling conditional logic.
 
     Returns tuple: (can_render, missing_vars, null_vars)
     - can_render: True if template can be safely rendered
-    - missing_vars: list of variables not in answers
-    - null_vars: list of variables that are None in answers
+    - missing_vars: list of variables that are actually needed but not in answers
+    - null_vars: list of variables that are actually needed but are None in answers
     """
-    with open(template_path, "r", encoding="utf-8") as f:
-        template_source = f.read()
+    from jinja2 import UndefinedError
 
-    # Use Jinja2's AST to find all undeclared variables
-    referenced_vars = find_template_variables(template_source, jinja_env)
+    try:
+        # Load and attempt to render the template
+        template = jinja_env.get_template(str(template_path.relative_to(base_dir)))
 
-    # Find variables set internally within the template ({% set %})
-    set_vars = find_template_set_variables(template_source, jinja_env)
+        # Create a context that tracks which null variables are actually accessed
+        # We need to distinguish between missing vars and null vars
+        class NullTracker:
+            """Marker class to track null values that are actually accessed."""
 
-    # Only check external variables (exclude internally-set variables)
-    external_vars = referenced_vars - set_vars
+            def __init__(self, var_name):
+                self.var_name = var_name
 
-    # Separate into missing (not in answers) and null (in answers but None)
-    missing_vars = []
-    null_vars = []
+            def __str__(self):
+                raise UndefinedError(f"'{self.var_name}' is null")
 
-    for var in external_vars:
-        if var not in answers:
-            missing_vars.append(var)
-        elif answers[var] is None:
-            null_vars.append(var)
+            def __repr__(self):
+                raise UndefinedError(f"'{self.var_name}' is null")
 
-    missing_vars = sorted(missing_vars)
-    null_vars = sorted(null_vars)
+            def __bool__(self):
+                raise UndefinedError(f"'{self.var_name}' is null")
 
-    can_render = len(missing_vars) == 0 and len(null_vars) == 0
-    return can_render, missing_vars, null_vars
+            def __iter__(self):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
+            def __len__(self):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
+            def __getattr__(self, name):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
+            def __getitem__(self, key):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
+            # Allow equality comparisons for conditional checks like {% if var == "value" %}
+            def __eq__(self, other):
+                # If comparing None/null with something, return appropriate result
+                return other is None
+
+            def __ne__(self, other):
+                return other is not None
+
+            def __lt__(self, other):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
+            def __gt__(self, other):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
+            def __le__(self, other):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
+            def __ge__(self, other):
+                raise UndefinedError(f"'{self.var_name}' is null")
+
+            def __hash__(self):
+                # Explicitly make NullTracker unhashable (consistent with __eq__ override)
+                raise TypeError(f"unhashable type: 'NullTracker'")
+
+            # Note: {% if var is none %} won't work correctly because NullTracker is not
+            # actually None. Templates should use {% if var == None %} or other patterns.
+
+        # Build render context: wrap null values with NullTracker
+        render_context = {}
+        for key, value in answers.items():
+            if value is None:
+                render_context[key] = NullTracker(key)
+            else:
+                render_context[key] = value
+
+        # Attempt to render
+        template.render(**render_context)
+
+        # If we get here, template rendered successfully
+        return True, [], []
+
+    except UndefinedError as e:
+        # Extract variable name from error message
+        error_msg = str(e)
+        missing_vars = []
+        null_vars = []
+
+        # Parse the error message to identify the variable
+        # Jinja2 UndefinedError messages typically look like:
+        # "'variable_name' is undefined" or "'variable_name' is null" (our custom)
+        import re
+
+        match = re.search(r"'([^']+)'", error_msg)
+        if match:
+            var_name = match.group(1)
+            if "is null" in error_msg:
+                null_vars.append(var_name)
+            else:
+                missing_vars.append(var_name)
+        else:
+            # Fallback: couldn't parse, include raw error
+            missing_vars.append(error_msg)
+
+        return False, sorted(missing_vars), sorted(null_vars)
+
+    except TemplateError as e:
+        # Other template errors (syntax, etc.) - can't render
+        # Return the error message so users can diagnose issues
+        return False, [f"Template error: {str(e)}"], []
 
 
 def render_step_code(step_path, lang, answers, jinja_env, base_dir):
@@ -210,9 +295,10 @@ def render_step_code(step_path, lang, answers, jinja_env, base_dir):
     if not code_file.exists():
         return None, step_id, []
 
-    # Pre-check if template can be rendered using Jinja2's AST parser
+    # Check if template can be rendered by attempting actual rendering
+    # This correctly handles conditional logic - variables only used in inactive branches won't cause skips
     can_render, missing_vars, null_vars = check_template_renderable(
-        code_file, answers, jinja_env
+        code_file, answers, jinja_env, base_dir
     )
     if not can_render:
         all_issues = missing_vars + null_vars
@@ -253,9 +339,10 @@ def render_step_guidance(step_path, answers, jinja_env, base_dir):
     if not dynamic_file.exists():
         return None, step_id, []
 
-    # Pre-check if template can be rendered using Jinja2's AST parser
+    # Check if template can be rendered by attempting actual rendering
+    # This correctly handles conditional logic - variables only used in inactive branches won't cause skips
     can_render, missing_vars, null_vars = check_template_renderable(
-        dynamic_file, answers, jinja_env
+        dynamic_file, answers, jinja_env, base_dir
     )
     if not can_render:
         all_issues = missing_vars + null_vars
