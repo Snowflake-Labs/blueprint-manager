@@ -165,6 +165,11 @@ def check_template_renderable(template_path, answers, jinja_env, base_dir):
     used inside conditional blocks that won't execute (based on current answer
     values) won't cause the template to be skipped.
 
+    Note: Due to the runtime rendering approach, only the first missing/null
+    variable encountered will be reported. If multiple variables are missing
+    in the active code path, users may need to fix them one at a time.
+    This is a tradeoff for correctly handling conditional logic.
+
     Returns tuple: (can_render, missing_vars, null_vars)
     - can_render: True if template can be safely rendered
     - missing_vars: list of variables that are actually needed but not in answers
