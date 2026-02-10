@@ -5,7 +5,7 @@ Show detailed information about a specific blueprint, including its task/step tr
 ## Usage
 
 ```
-blueprints describe <blueprint-name>
+/blueprints:describe <blueprint-name>
 ```
 
 ## Arguments

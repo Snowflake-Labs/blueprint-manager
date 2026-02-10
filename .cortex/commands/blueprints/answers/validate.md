@@ -5,7 +5,7 @@ Check an answer file for missing or invalid values without needing to specify a 
 ## Usage
 
 ```
-blueprints answers validate <file> [--blueprint <name>]
+/blueprints:answers:validate <file> [--blueprint <name>]
 ```
 
 ## Arguments

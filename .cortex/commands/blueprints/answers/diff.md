@@ -5,7 +5,7 @@ Compare two answer files to show differences.
 ## Usage
 
 ```
-blueprints answers diff <file1> <file2>
+/blueprints:answers:diff <file1> <file2>
 ```
 
 ## Arguments

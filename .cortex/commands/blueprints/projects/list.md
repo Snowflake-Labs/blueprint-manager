@@ -47,7 +47,7 @@ If no projects exist:
 ```
 No projects found.
 
-Create a new project with: blueprints projects create <name>
+Create a new project with: /blueprints:projects:create <name>
 ```
 
 Now execute this by scanning the projects directory and presenting the information.

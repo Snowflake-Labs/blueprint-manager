@@ -2,6 +2,12 @@
 
 List all available blueprints with their metadata.
 
+## Usage
+
+```
+/blueprints:list
+```
+
 ## Instructions
 
 Read all blueprint meta.yaml files from the `blueprints/` directory and display them in a formatted table.

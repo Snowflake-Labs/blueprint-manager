@@ -5,7 +5,7 @@ Show detailed status of a project, including answer files, outputs, and history.
 ## Usage
 
 ```
-blueprints projects describe <name>
+/blueprints:projects:describe <name>
 ```
 
 ## Arguments

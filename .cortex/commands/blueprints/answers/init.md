@@ -5,7 +5,7 @@ Generate a skeleton answer file with all questions for a blueprint.
 ## Usage
 
 ```
-blueprints answers init <blueprint-name> [options]
+/blueprints:answers:init <blueprint-name> [options]
 ```
 
 ## Arguments

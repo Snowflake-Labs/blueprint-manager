@@ -5,7 +5,7 @@ Create a new project directory structure for organizing blueprint work.
 ## Usage
 
 ```
-blueprints projects create <name>
+/blueprints:projects:create <name>
 ```
 
 ## Arguments
@@ -49,15 +49,15 @@ Project structure:
       └── documentation/
 
 Next steps:
-1. Initialize answers: blueprints answers init <blueprint-name> --project my-project
-2. Build interactively: blueprints build <blueprint-name> --project my-project
+1. Initialize answers: /blueprints:answers:init <blueprint-name> --project my-project
+2. Build interactively: /blueprints:build <blueprint-name> --project my-project
 ```
 
 ### Project Already Exists
 ```
 Error: Project 'my-project' already exists.
 
-Use 'blueprints projects describe my-project' to view its contents.
+Use '/blueprints:projects:describe my-project' to view its contents.
 ```
 
 ### Invalid Name

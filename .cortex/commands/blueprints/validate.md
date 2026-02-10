@@ -5,7 +5,7 @@ Check an answer file for completeness against blueprint requirements.
 ## Usage
 
 ```
-blueprints validate <answer-file> --blueprint <blueprint-name>
+/blueprints:validate <answer-file> --blueprint <blueprint-name>
 ```
 
 ## Arguments

@@ -5,7 +5,7 @@ Start the interactive blueprint building process. This command wraps the `bluepr
 ## Usage
 
 ```
-blueprints build <blueprint-name> [--project <project-name>]
+/blueprints:build <blueprint-name> [--project <project-name>]
 ```
 
 ## Arguments
@@ -34,10 +34,10 @@ $blueprint-builder Help me build the {{blueprint-name}} blueprint{{#if project}}
 
 ```bash
 # Start building the platform foundation blueprint
-blueprints build platform-foundation-setup
+/blueprints:build platform-foundation-setup
 
 # Build with a specific project
-blueprints build data-product-setup --project acme-corp
+/blueprints:build data-product-setup --project acme-corp
 ```
 
 ## Error Handling
@@ -51,7 +51,7 @@ Available blueprints:
 - data-product-setup  
 - platform-foundation-setup
 
-Run 'blueprints list' to see all available blueprints.
+Run '/blueprints:list' to see all available blueprints.
 ```
 
 ## Notes
@@ -59,4 +59,4 @@ Run 'blueprints list' to see all available blueprints.
 - The build process is interactive and will ask questions to gather requirements
 - You can provide a description of your organization/requirements upfront for auto-filling
 - Progress is saved and can be resumed later
-- Use `blueprints validate` to check answer completeness at any time
+- Use `/blueprints:validate` to check answer completeness at any time
