@@ -42,8 +42,12 @@ Each database will have three database roles for access control:
 | `DB_W` | Write access to all schemas | INSERT, UPDATE, DELETE |
 | `DB_C` | Create access to all schemas | CREATE objects |
 
-**Role Hierarchy:** `DB_R` ← `DB_W` ← `DB_C`
+**Note:** Database roles aggregate schema-level roles but do not have their own inheritance chain. Role inheritance is established at the schema level, then schema roles are granted to database roles:
 
-This means:
-- `DB_C` inherits all privileges from `DB_W` and `DB_R`
-- `DB_W` inherits all privileges from `DB_R`
+```
+Database Level:     DB_C           DB_W            DB_R
+                      ↑               ↑               ↑
+Schema Level:    SC_C_<schema> ← SC_W_<schema> ← SC_R_<schema>
+```
+
+This means CREATE inherits WRITE inherits READ at the schema level, then each schema role rolls up to its corresponding database role.

@@ -44,9 +44,9 @@ All schemas are created with `WITH MANAGED ACCESS`:
 
 **Role Hierarchy:**
 ```
-SC_R_<schema> ← SC_W_<schema> ← SC_C_<schema>
-     ↓               ↓               ↓
-   DB_R            DB_W            DB_C
+Database Level:     DB_C           DB_W            DB_R
+                      ↑               ↑               ↑
+Schema Level:    SC_C_<schema> ← SC_W_<schema> ← SC_R_<schema>
 ```
 
 **More Information:**

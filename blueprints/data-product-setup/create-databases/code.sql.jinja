@@ -75,17 +75,15 @@ CREATE DATABASE ROLE IF NOT EXISTS DB_W
 CREATE DATABASE ROLE IF NOT EXISTS DB_C
   COMMENT = 'Database create access for {{ db_name }}';
 
--- Step 4: Establish database role hierarchy
--- DB_R ← DB_W ← DB_C (Create inherits Write inherits Read)
-GRANT DATABASE ROLE DB_R TO DATABASE ROLE DB_W;
-GRANT DATABASE ROLE DB_W TO DATABASE ROLE DB_C;
-
--- Step 5: Transfer database role ownership to RBAC role
+-- Step 4: Transfer database role ownership to RBAC role
+-- Note: Database role hierarchy (DB_C ← DB_W ← DB_R) is NOT established here.
+-- Inheritance is handled at the schema level (SC_C ← SC_W ← SC_R), which then
+-- rolls up to the database roles, avoiding redundant privilege chains.
 GRANT OWNERSHIP ON DATABASE ROLE DB_R TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
 GRANT OWNERSHIP ON DATABASE ROLE DB_W TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
 GRANT OWNERSHIP ON DATABASE ROLE DB_C TO ROLE {{ prefix }}_RBAC COPY CURRENT GRANTS;
 
--- Step 6: Grant database roles to account roles
+-- Step 5: Grant database roles to account roles
 -- This connects account-level roles to database-level access
 GRANT DATABASE ROLE DB_R TO ROLE {{ prefix }}_READ;
 GRANT DATABASE ROLE DB_W TO ROLE {{ prefix }}_WRITE;

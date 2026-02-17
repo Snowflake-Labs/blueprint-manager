@@ -36,11 +36,7 @@ Database roles are portable access patterns that exist within a database:
 | `DB_W` | Write all data | Inherits all SC_W_* schema roles |
 | `DB_C` | Create all objects | Inherits all SC_C_* schema roles |
 
-**Role Hierarchy:**
-```
-DB_R ← DB_W ← DB_C
-```
-(DB_C inherits from DB_W, which inherits from DB_R)
+**Note:** Role inheritance (C ← W ← R) is established at the schema level, not the database level. Database roles aggregate schema roles but do not have their own inheritance chain.
 
 **Account Role Mapping:**
 ```

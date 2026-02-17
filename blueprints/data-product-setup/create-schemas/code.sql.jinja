@@ -160,7 +160,7 @@ GRANT CREATE ROW ACCESS POLICY ON SCHEMA {{ schema_name }} TO DATABASE ROLE SC_C
 -- ============================================================================
 -- ESTABLISH SCHEMA ROLE HIERARCHY
 -- ============================================================================
--- SC_R ← SC_W ← SC_C
+-- SC_C ← SC_W ← SC_R (CREATE inherits WRITE inherits READ)
 
 GRANT DATABASE ROLE SC_R_{{ schema_name }} TO DATABASE ROLE SC_W_{{ schema_name }};
 GRANT DATABASE ROLE SC_W_{{ schema_name }} TO DATABASE ROLE SC_C_{{ schema_name }};
