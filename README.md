@@ -7,7 +7,7 @@ This repository contains infrastructure-as-code templates and blueprints for set
 - `definitions/` - Question definitions for configuration
 - `blueprints/` - Available blueprint configurations
 - `scripts/` - Utility scripts for rendering templates
-- `answers/` - Answer files for blueprints
+- `projects/` - Project workspaces for organizing answers and outputs
 - `output/` - Generated infrastructure code and documentation
 
 ## Setting Up Your Blueprint using Snowflake Cortex (Recommended)
@@ -23,9 +23,7 @@ In order to get the guided Cortex Code experience you will first need to setup t
 1. **Clone the repository:**
 
 ```bash
-
 git clone https://github.com/Snowflake-Labs/blueprint-manager.git
-
 cd blueprint-manager
 ```
 
@@ -38,7 +36,7 @@ cortex
 3. **Launch the Blueprint Builder:**
 
 ```bash
-/create-blueprint
+/blueprints:build platform-foundation-setup
 ```
 
 ### How it works:
@@ -60,6 +58,77 @@ cortex
 - Clear explanation of each configuration decision
 - Validation and guidance throughout the process
 
+## Cortex Code Commands
+
+The following commands are available when using Cortex Code in this repository:
+
+### Core Commands
+
+| Command | Description |
+|---------|-------------|
+| `/blueprints:list` | List available blueprints with metadata |
+| `/blueprints:describe <name>` | Show blueprint details including task/step tree |
+| `/blueprints:build <name>` | Start the interactive blueprint building process |
+| `/blueprints:validate <file> --blueprint <name>` | Check answer file completeness |
+| `/blueprints:render <file> --blueprint <name>` | Generate SQL/Terraform/Documentation from answers |
+
+### Project Management
+
+| Command | Description |
+|---------|-------------|
+| `/blueprints:projects:list` | List existing projects |
+| `/blueprints:projects:create <name>` | Create a new project directory structure |
+| `/blueprints:projects:describe <name>` | Show project status (answers, outputs, history) |
+
+### Answer File Operations
+
+| Command | Description |
+|---------|-------------|
+| `/blueprints:answers:init <name>` | Generate a skeleton answer file with all questions |
+| `/blueprints:answers:validate <file>` | Check for missing/invalid values |
+| `/blueprints:answers:diff <file1> <file2>` | Compare two answer files |
+
+### Example Workflow
+
+```bash
+# 1. List available blueprints
+/blueprints:list
+
+# 2. Create a project for your work
+/blueprints:projects:create my-company
+
+# 3. Start building interactively
+/blueprints:build platform-foundation-setup --project my-company
+
+# 4. Or generate a skeleton and fill manually
+/blueprints:answers:init platform-foundation-setup --project my-company
+
+# 5. Validate your answers
+/blueprints:validate answers.yaml --blueprint platform-foundation-setup
+
+# 6. Generate SQL output
+/blueprints:render answers.yaml --blueprint platform-foundation-setup --project my-company
+```
+
+## Skills
+
+This repository includes two Cortex Code skills that are automatically activated:
+
+### Blueprint Builder
+
+Guides users through constructing answer files interactively. Triggered when you:
+- Ask to set up or configure a blueprint
+- Want to create your Snowflake environment
+- Need help with blueprint configuration
+
+### Snowflake Best Practices
+
+Provides curated guidance from Snowflake SMEs. Triggered when you ask about:
+- Best practices or recommendations
+- Account strategy, RBAC, security patterns
+- Cost management and resource monitoring
+- Naming conventions and architecture decisions
+
 ## Manual Configuration (Alternative)
 
 If you prefer to manage files directly without the guided experience:
@@ -72,13 +141,19 @@ ls blueprints/
 
 Review the blueprint's `meta.yaml` and step `overview.md` files to understand what will be configured.
 
-### 2. Create an answer file
+### 2. Create a project and answer file
 
-Copy an existing sample or create a new YAML file in `answers/<blueprint_id>/`:
+Create a project directory and copy an existing sample:
 
 ```bash
-mkdir -p answers/<blueprint_id>
-cp answers/<blueprint_id>/sample.yaml answers/<blueprint_id>/my_answers.yaml
+# Create project structure
+mkdir -p projects/my-project/answers/<blueprint_id>
+mkdir -p projects/my-project/output/iac/sql
+mkdir -p projects/my-project/output/documentation
+
+# Copy sample answers
+cp projects/sample-project/answers/<blueprint_id>/sample_answers.yaml \
+   projects/my-project/answers/<blueprint_id>/my_answers.yaml
 ```
 
 Edit the answer file to provide values for each question. See `definitions/questions.yaml` for question details and valid options.
@@ -87,20 +162,20 @@ Edit the answer file to provide values for each question. See `definitions/quest
 
 ```bash
 python scripts/render_journey.py \
-  answers/<blueprint_id>/my_answers.yaml \
+  projects/my-project/answers/<blueprint_id>/my_answers.yaml \
   --blueprint <blueprint_id> \
+  --project my-project \
   --lang sql
 ```
 
 **Options:**
 - `--lang sql` or `--lang terraform` — choose output language
-- `--output-dir <path>` — custom output directory (default: `output/iac`)
-- `--guidance-dir <path>` — custom documentation directory (default: `output/documentation`)
+- `--project <name>` — project name for organizing outputs
 - `--skip-guidance` — skip generating documentation
 
 **Output:**
-- SQL/Terraform files in `output/iac/<lang>/`
-- Documentation in `output/documentation/`
+- SQL/Terraform files in `projects/<project>/output/iac/sql/`
+- Documentation in `projects/<project>/output/documentation/`
 
 ### 4. Execute the generated code
 
