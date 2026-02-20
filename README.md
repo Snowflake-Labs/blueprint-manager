@@ -143,20 +143,16 @@ Review the blueprint's `meta.yaml` and step `overview.md` files to understand wh
 
 ### 2. Create a project and answer file
 
-Create a project directory and copy an existing sample:
+Create a project directory structure:
 
 ```bash
 # Create project structure
 mkdir -p projects/my-project/answers/<blueprint_id>
 mkdir -p projects/my-project/output/iac/sql
 mkdir -p projects/my-project/output/documentation
-
-# Copy sample answers
-cp projects/sample-project/answers/<blueprint_id>/sample_answers.yaml \
-   projects/my-project/answers/<blueprint_id>/my_answers.yaml
 ```
 
-Edit the answer file to provide values for each question. See `definitions/questions.yaml` for question details and valid options.
+Create an answer file (e.g., `projects/my-project/answers/<blueprint_id>/my_answers.yaml`) and provide values for each question. See `definitions/questions.yaml` for question details and valid options.
 
 ### 3. Generate infrastructure code
 
