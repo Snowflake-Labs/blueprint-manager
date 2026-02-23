@@ -129,6 +129,116 @@ Provides curated guidance from Snowflake SMEs. Triggered when you ask about:
 - Cost management and resource monitoring
 - Naming conventions and architecture decisions
 
+## Schema Reference
+
+### Blueprint `meta.yaml` Schema
+
+Each blueprint contains a `meta.yaml` file that defines its structure. The schema supports both flat (steps-only) and nested (tasks with steps) formats for backwards compatibility.
+
+#### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `blueprint_id` | string | Unique identifier for the blueprint |
+| `name` | string | Display name for the blueprint |
+| `summary` | string | Brief description of the blueprint's purpose |
+| `overview` | string | Detailed description of what the blueprint accomplishes |
+| `steps` | list | List of step slugs (references to step directories) |
+
+#### Optional Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `is_repeatable` | boolean | Whether the blueprint can be run multiple times (default: false) |
+| `tasks` | list | Groupings of steps with metadata (see below) |
+
+#### Tasks Structure
+
+The `tasks` field enables grouping steps into logical units with explicit metadata. This provides context about what each group accomplishes, who should perform it, and what prerequisites are required.
+
+```yaml
+tasks:
+  - slug: string              # Unique identifier for the task (e.g., "platform-planning")
+    title: string             # Display title for the task
+    summary: string           # Short summary of what will be accomplished
+    role_requirements:        # Snowflake role requirements
+      - string
+    external_requirements:    # External requirements (SSO, data integration sources, etc.)
+      - string
+    personas:                 # Personas/roles needed for this task
+      - string
+    description: string       # Optional detailed content for the Skill and future UI
+    steps:                    # Steps that belong to this task
+      - slug: string          # Reference to step slug in the blueprint's steps list
+        title: string         # Display title for the step within this task
+```
+
+#### Example: Minimal Blueprint (flat, without tasks)
+
+```yaml
+blueprint_id: blueprint_abc123
+name: Simple Setup
+summary: Basic configuration workflow
+overview: A straightforward setup process.
+steps:
+  - step-one
+  - step-two
+  - step-three
+```
+
+#### Example: Full Blueprint (with tasks)
+
+```yaml
+blueprint_id: blueprint_def456
+name: Platform Foundation Setup
+summary: Establish core platform infrastructure
+overview: Complete platform setup workflow.
+is_repeatable: false
+steps:
+  - determine-account-strategy
+  - configure-organization-name
+  - create-infrastructure-database
+tasks:
+  - slug: platform-foundation
+    title: Platform Foundation
+    summary: Define account strategy and create shared infrastructure.
+    external_requirements:
+      - Snowflake account (trial or provisioned)
+      - Organization information
+    personas:
+      - Platform Administrator
+      - Cloud/Infrastructure Team
+    role_requirements:
+      - ORGADMIN or ACCOUNTADMIN privileges
+    steps:
+      - slug: determine-account-strategy
+        title: Determine Account Strategy
+      - slug: configure-organization-name
+        title: Configure Organization Name
+      - slug: create-infrastructure-database
+        title: Create Infrastructure Database
+```
+
+#### Task Content Files
+
+Task overview content can also be stored in separate markdown files using a flat directory structure:
+
+```
+blueprints/<blueprint-name>/
+├── meta.yaml
+├── overview.md
+├── tasks/
+│   ├── platform-planning.md      # Flat structure (recommended)
+│   ├── security-setup.md
+│   └── cost-management.md
+└── <step-slug>/
+    ├── overview.md
+    ├── code.sql.jinja
+    └── dynamic.md.jinja
+```
+
+The task markdown files can include additional details like time estimates, key decisions, and deliverables that supplement the structured fields in `meta.yaml`.
+
 ## Manual Configuration (Alternative)
 
 If you prefer to manage files directly without the guided experience:
