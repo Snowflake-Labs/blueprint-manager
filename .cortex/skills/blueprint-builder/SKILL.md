@@ -681,6 +681,113 @@ Invoke this skill when users:
 - Confirm save
 - End workflow
 
+### Handling Navigation and Progress Questions During Walkthrough
+
+During any point in the walkthrough (Step 7), users may ask navigation and progress questions. Use the functions in `scripts/render_journey.py` to answer them accurately.
+
+**Available Navigation Functions:**
+
+The following functions from `render_journey.py` are available for answering navigation queries. Load the blueprint's task metadata first:
+
+```python
+from scripts.render_journey import load_task_metadata, get_current_task, get_remaining_steps, get_task_progress
+
+tasks = load_task_metadata(blueprint_dir)
+```
+
+- **`get_current_task(step_slug, tasks)`** — Returns the parent task metadata (slug, title, summary, personas, role_requirements, external_requirements, steps) for a given step
+- **`get_remaining_steps(step_slug, tasks)`** — Returns the list of remaining steps within the current task (respects task boundaries)
+- **`get_task_progress(step_slug, tasks)`** — Returns task-level and blueprint-level completion percentages and counts
+
+#### Responding to "What's next?" queries
+
+When a user asks "what's next?", "what comes after this?", or similar:
+
+1. Use `get_current_task(current_step_slug, tasks)` to identify the parent task
+2. Use `get_remaining_steps(current_step_slug, tasks)` to get the remaining steps in the current task
+3. Present the response:
+
+```
+**Current Task:** [Task Title]
+
+**Next steps in this task:**
+1. [Next step title]
+2. [Following step title]
+...
+
+[If no remaining steps in current task, check if there are more tasks:]
+
+You've completed all steps in "[Task Title]". 
+The next task is "[Next Task Title]": [Next task summary]
+```
+
+#### Responding to "How much is left?" / Progress queries
+
+When a user asks "how much is left?", "what's my progress?", "how far along am I?", or similar:
+
+1. Use `get_task_progress(current_step_slug, tasks)` to get progress data
+2. Present the response:
+
+```
+**Current Task:** [Task Title] — [completed]/[total] steps ([percentage]%)
+
+**Overall Blueprint Progress:** [completed_steps]/[total_steps] steps ([percentage]%)
+  - Completed tasks: [completed_tasks]/[total_tasks]
+```
+
+#### Context Recovery (Returning Users)
+
+When a user returns to an in-progress blueprint (e.g., they resume a previous session or say "where was I?"):
+
+1. Identify the current step from the answer file (the last step with answers provided, or the first step with null/missing answers)
+2. Use `get_current_task(current_step_slug, tasks)` to get the task context
+3. Use `get_task_progress(current_step_slug, tasks)` to show overall progress
+4. Present a recovery summary:
+
+```
+**Welcome back! Here's where you left off:**
+
+**Current Task:** [Task Title]
+[Task summary]
+
+**Current Step:** Step [N]: [Step Title]
+
+**Progress:** [completed_steps]/[total_steps] steps complete ([percentage]%)
+
+**Remaining in this task:**
+1. [Remaining step title]
+2. [Remaining step title]
+...
+
+Would you like to continue from here, or jump to a different step?
+```
+
+#### Task Boundary Transitions
+
+When the user completes the last step in a task (the current step is the final step in its task), proactively inform them about the transition:
+
+1. Use `get_current_task(current_step_slug, tasks)` — check if this is the last step in the task by comparing position to total steps
+2. Use `get_task_progress(current_step_slug, tasks)` — get blueprint-level progress
+3. Present the transition:
+
+```
+**Task Complete: [Current Task Title]**
+
+You've finished all [N] steps in this task.
+
+**Up Next — Task [M]: [Next Task Title]**
+[Next task summary]
+
+**Prerequisites:**
+- Personas: [personas]
+- Role Requirements: [role_requirements]
+- External Requirements: [external_requirements]
+
+**Overall Progress:** [completed_tasks]/[total_tasks] tasks complete
+
+Ready to continue to the next task?
+```
+
 ### Step 8: Fill In Required Values
 
 **Goal:** Help user provide values that only they can supply (account names, emails, etc.)

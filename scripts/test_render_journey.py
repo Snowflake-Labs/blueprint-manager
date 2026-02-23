@@ -1296,5 +1296,329 @@ class TestGenerateTableOfContents(TestCase):
         self.assertTrue(lines[3].startswith("  - ["))  # Step line (2-space indent)
 
 
+class TestGetCurrentTask(TestCase):
+    """Test get_current_task() navigation function (CXE-14254)."""
+
+    def _make_tasks(self):
+        return [
+            {
+                "slug": "platform-foundation",
+                "title": "Platform Foundation",
+                "summary": "Set up foundational infrastructure",
+                "external_requirements": ["Snowflake account"],
+                "personas": ["Platform Administrator"],
+                "role_requirements": ["ORGADMIN"],
+                "steps": [
+                    {"slug": "determine-account-strategy", "title": "Determine Account Strategy"},
+                    {"slug": "configure-org-name", "title": "Configure Org Name"},
+                ],
+            },
+            {
+                "slug": "platform-security",
+                "title": "Platform Security",
+                "summary": "Configure security and identity",
+                "external_requirements": ["Identity Provider"],
+                "personas": ["Security Administrator"],
+                "role_requirements": ["ACCOUNTADMIN"],
+                "steps": [
+                    {"slug": "select-idp", "title": "Select Identity Provider"},
+                    {"slug": "configure-scim", "title": "Configure SCIM"},
+                    {"slug": "configure-sso", "title": "Configure SSO"},
+                ],
+            },
+        ]
+
+    def test_returns_correct_task_for_first_step(self):
+        """Should return the first task when querying its first step."""
+        from render_journey import get_current_task
+
+        tasks = self._make_tasks()
+        result = get_current_task("determine-account-strategy", tasks)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["slug"], "platform-foundation")
+        self.assertEqual(result["title"], "Platform Foundation")
+        self.assertEqual(result["summary"], "Set up foundational infrastructure")
+        self.assertEqual(result["task_index"], 0)
+        self.assertEqual(len(result["steps"]), 2)
+        self.assertEqual(result["personas"], ["Platform Administrator"])
+        self.assertEqual(result["role_requirements"], ["ORGADMIN"])
+        self.assertEqual(result["external_requirements"], ["Snowflake account"])
+
+    def test_returns_correct_task_for_second_task_step(self):
+        """Should return the second task when querying one of its steps."""
+        from render_journey import get_current_task
+
+        tasks = self._make_tasks()
+        result = get_current_task("configure-scim", tasks)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["slug"], "platform-security")
+        self.assertEqual(result["task_index"], 1)
+        self.assertEqual(len(result["steps"]), 3)
+
+    def test_returns_none_for_unknown_step(self):
+        """Should return None for a step that doesn't exist."""
+        from render_journey import get_current_task
+
+        tasks = self._make_tasks()
+        result = get_current_task("nonexistent-step", tasks)
+
+        self.assertIsNone(result)
+
+    def test_returns_none_for_empty_tasks(self):
+        """Should return None when tasks list is empty."""
+        from render_journey import get_current_task
+
+        result = get_current_task("any-step", [])
+
+        self.assertIsNone(result)
+
+    def test_handles_string_steps(self):
+        """Should handle tasks where steps are plain strings instead of dicts."""
+        from render_journey import get_current_task
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Task One",
+                "summary": "",
+                "steps": ["step-a", "step-b"],
+            },
+        ]
+        result = get_current_task("step-b", tasks)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result["slug"], "task-1")
+
+
+class TestGetRemainingSteps(TestCase):
+    """Test get_remaining_steps() navigation function (CXE-14254)."""
+
+    def _make_tasks(self):
+        return [
+            {
+                "slug": "task-1",
+                "title": "First Task",
+                "steps": [
+                    {"slug": "step-1", "title": "Step One"},
+                    {"slug": "step-2", "title": "Step Two"},
+                    {"slug": "step-3", "title": "Step Three"},
+                ],
+            },
+            {
+                "slug": "task-2",
+                "title": "Second Task",
+                "steps": [
+                    {"slug": "step-4", "title": "Step Four"},
+                    {"slug": "step-5", "title": "Step Five"},
+                ],
+            },
+        ]
+
+    def test_remaining_from_first_step(self):
+        """Should return all subsequent steps in the task."""
+        from render_journey import get_remaining_steps
+
+        tasks = self._make_tasks()
+        remaining = get_remaining_steps("step-1", tasks)
+
+        self.assertEqual(len(remaining), 2)
+        self.assertEqual(remaining[0]["slug"], "step-2")
+        self.assertEqual(remaining[0]["title"], "Step Two")
+        self.assertEqual(remaining[0]["step_index"], 1)
+        self.assertEqual(remaining[1]["slug"], "step-3")
+        self.assertEqual(remaining[1]["step_index"], 2)
+
+    def test_remaining_from_middle_step(self):
+        """Should return only steps after the current one."""
+        from render_journey import get_remaining_steps
+
+        tasks = self._make_tasks()
+        remaining = get_remaining_steps("step-2", tasks)
+
+        self.assertEqual(len(remaining), 1)
+        self.assertEqual(remaining[0]["slug"], "step-3")
+
+    def test_remaining_from_last_step_in_task(self):
+        """Should return empty list when on the last step of a task."""
+        from render_journey import get_remaining_steps
+
+        tasks = self._make_tasks()
+        remaining = get_remaining_steps("step-3", tasks)
+
+        self.assertEqual(remaining, [])
+
+    def test_respects_task_boundaries(self):
+        """Should NOT include steps from the next task."""
+        from render_journey import get_remaining_steps
+
+        tasks = self._make_tasks()
+        # step-3 is the last step in task-1; step-4 is in task-2
+        remaining = get_remaining_steps("step-3", tasks)
+
+        self.assertEqual(len(remaining), 0)
+        slugs = [s["slug"] for s in remaining]
+        self.assertNotIn("step-4", slugs)
+        self.assertNotIn("step-5", slugs)
+
+    def test_unknown_step_returns_empty(self):
+        """Should return empty list for unknown step."""
+        from render_journey import get_remaining_steps
+
+        remaining = get_remaining_steps("nonexistent", self._make_tasks())
+
+        self.assertEqual(remaining, [])
+
+    def test_empty_tasks_returns_empty(self):
+        """Should return empty list when tasks list is empty."""
+        from render_journey import get_remaining_steps
+
+        remaining = get_remaining_steps("any-step", [])
+
+        self.assertEqual(remaining, [])
+
+    def test_handles_string_steps(self):
+        """Should handle tasks where steps are plain strings."""
+        from render_journey import get_remaining_steps
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Task",
+                "steps": ["step-a", "step-b", "step-c"],
+            },
+        ]
+        remaining = get_remaining_steps("step-a", tasks)
+
+        self.assertEqual(len(remaining), 2)
+        self.assertEqual(remaining[0]["slug"], "step-b")
+        self.assertEqual(remaining[0]["title"], "")  # string steps have no title
+
+
+class TestGetTaskProgress(TestCase):
+    """Test get_task_progress() navigation function (CXE-14254)."""
+
+    def _make_tasks(self):
+        return [
+            {
+                "slug": "task-1",
+                "title": "First Task",
+                "steps": [
+                    {"slug": "step-1", "title": "Step One"},
+                    {"slug": "step-2", "title": "Step Two"},
+                    {"slug": "step-3", "title": "Step Three"},
+                    {"slug": "step-4", "title": "Step Four"},
+                ],
+            },
+            {
+                "slug": "task-2",
+                "title": "Second Task",
+                "steps": [
+                    {"slug": "step-5", "title": "Step Five"},
+                    {"slug": "step-6", "title": "Step Six"},
+                ],
+            },
+        ]
+
+    def test_first_step_progress(self):
+        """First step should show 1/4 task progress and 1/6 blueprint progress."""
+        from render_journey import get_task_progress
+
+        tasks = self._make_tasks()
+        progress = get_task_progress("step-1", tasks)
+
+        self.assertIsNotNone(progress)
+        # Task-level
+        self.assertEqual(progress["current_task"]["slug"], "task-1")
+        self.assertEqual(progress["current_task"]["title"], "First Task")
+        self.assertEqual(progress["current_task"]["task_index"], 0)
+        self.assertEqual(progress["current_task"]["completed_steps"], 1)
+        self.assertEqual(progress["current_task"]["total_steps"], 4)
+        self.assertEqual(progress["current_task"]["completion_percentage"], 25.0)
+        # Blueprint-level
+        self.assertEqual(progress["blueprint"]["completed_tasks"], 0)
+        self.assertEqual(progress["blueprint"]["total_tasks"], 2)
+        self.assertEqual(progress["blueprint"]["completed_steps"], 1)
+        self.assertEqual(progress["blueprint"]["total_steps"], 6)
+        self.assertAlmostEqual(progress["blueprint"]["completion_percentage"], 16.7, places=1)
+
+    def test_last_step_in_first_task(self):
+        """Last step in first task should show 100% task and 4/6 blueprint."""
+        from render_journey import get_task_progress
+
+        tasks = self._make_tasks()
+        progress = get_task_progress("step-4", tasks)
+
+        self.assertEqual(progress["current_task"]["completed_steps"], 4)
+        self.assertEqual(progress["current_task"]["total_steps"], 4)
+        self.assertEqual(progress["current_task"]["completion_percentage"], 100.0)
+        self.assertEqual(progress["blueprint"]["completed_tasks"], 0)
+        self.assertEqual(progress["blueprint"]["completed_steps"], 4)
+        self.assertAlmostEqual(progress["blueprint"]["completion_percentage"], 66.7, places=1)
+
+    def test_first_step_of_second_task(self):
+        """First step of second task should show 1 completed task at blueprint level."""
+        from render_journey import get_task_progress
+
+        tasks = self._make_tasks()
+        progress = get_task_progress("step-5", tasks)
+
+        self.assertEqual(progress["current_task"]["slug"], "task-2")
+        self.assertEqual(progress["current_task"]["completed_steps"], 1)
+        self.assertEqual(progress["current_task"]["total_steps"], 2)
+        self.assertEqual(progress["current_task"]["completion_percentage"], 50.0)
+        self.assertEqual(progress["blueprint"]["completed_tasks"], 1)
+        self.assertEqual(progress["blueprint"]["completed_steps"], 5)
+        self.assertAlmostEqual(progress["blueprint"]["completion_percentage"], 83.3, places=1)
+
+    def test_last_step_overall(self):
+        """Last step of last task should show 100% blueprint completion."""
+        from render_journey import get_task_progress
+
+        tasks = self._make_tasks()
+        progress = get_task_progress("step-6", tasks)
+
+        self.assertEqual(progress["current_task"]["completion_percentage"], 100.0)
+        self.assertEqual(progress["blueprint"]["completed_tasks"], 1)
+        self.assertEqual(progress["blueprint"]["completed_steps"], 6)
+        self.assertEqual(progress["blueprint"]["total_steps"], 6)
+        self.assertEqual(progress["blueprint"]["completion_percentage"], 100.0)
+
+    def test_unknown_step_returns_none(self):
+        """Should return None for unknown step slug."""
+        from render_journey import get_task_progress
+
+        progress = get_task_progress("nonexistent", self._make_tasks())
+
+        self.assertIsNone(progress)
+
+    def test_empty_tasks_returns_none(self):
+        """Should return None when tasks list is empty."""
+        from render_journey import get_task_progress
+
+        progress = get_task_progress("any-step", [])
+
+        self.assertIsNone(progress)
+
+    def test_single_step_task(self):
+        """Single-step task should show 100% after that step."""
+        from render_journey import get_task_progress
+
+        tasks = [
+            {
+                "slug": "only-task",
+                "title": "Only Task",
+                "steps": [{"slug": "only-step", "title": "Only Step"}],
+            },
+        ]
+        progress = get_task_progress("only-step", tasks)
+
+        self.assertEqual(progress["current_task"]["completed_steps"], 1)
+        self.assertEqual(progress["current_task"]["total_steps"], 1)
+        self.assertEqual(progress["current_task"]["completion_percentage"], 100.0)
+        self.assertEqual(progress["blueprint"]["completion_percentage"], 100.0)
+
+
 if __name__ == "__main__":
     main()
