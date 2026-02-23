@@ -1,0 +1,100 @@
+# =============================================================================
+# Data Product Configuration - SimpleCo Claims Processing (DEV)
+# Blueprint: blueprint_2db08610
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Organization Context (inherited from Platform Foundation)
+# -----------------------------------------------------------------------------
+snowflake_org_name: SIMPLECO
+account_strategy: Single Account
+object_component_order: <domain>_<env>_<dataproduct>
+governance_name: GOVERNANCE
+platform_database_name: PLATFORM
+
+# -----------------------------------------------------------------------------
+# Target Account (same account for single-account strategy)
+# -----------------------------------------------------------------------------
+target_account_name: SIMPLECO_MAIN
+target_account_access_confirmed: Yes - I have SYSADMIN access
+
+# -----------------------------------------------------------------------------
+# Data Product Identity
+# -----------------------------------------------------------------------------
+data_product_name: claims
+data_product_domain: claims
+data_product_environment: dev
+data_product_description: Claims processing and analytics platform for insurance policy claims, adjudication, and reporting
+
+# -----------------------------------------------------------------------------
+# Data Product Ownership & Cost Attribution
+# -----------------------------------------------------------------------------
+cost_center: POC-2024
+owner_users:
+- jordan.example@simpleco.com
+
+# -----------------------------------------------------------------------------
+# Role Structure
+# -----------------------------------------------------------------------------
+role_structure: Simple (Admin + Read only)
+admin_role_granted_to: SYSADMIN
+grant_account_access_roles: No - Skip account access roles
+reader_zone_access: consumption
+
+# -----------------------------------------------------------------------------
+# SCIM Configuration
+# -----------------------------------------------------------------------------
+scim_prefix: NONE
+
+# -----------------------------------------------------------------------------
+# Zone Configuration (data_zones)
+# -----------------------------------------------------------------------------
+data_zones:
+- name: raw
+  description: Source system data ingestion layer
+  time_travel_days: 1
+- name: curated
+  description: Transformed and validated data layer
+  time_travel_days: 1
+- name: consumption
+  description: Analytics-ready data for reporting and dashboards
+  time_travel_days: 1
+
+# -----------------------------------------------------------------------------
+# Schema Configuration (schema_configuration)
+# -----------------------------------------------------------------------------
+schema_configuration:
+- zone: raw
+  schemas: policies, claims_intake, providers
+- zone: curated
+  schemas: claims_validated, adjudication
+- zone: consumption
+  schemas: analytics, reporting
+
+# -----------------------------------------------------------------------------
+# Warehouse Configuration (warehouse_configuration)
+# -----------------------------------------------------------------------------
+warehouse_configuration:
+- name: GENERAL
+  workload: GENERAL
+  size: XSMALL
+  min_cluster_count: 1
+  max_cluster_count: 1
+  auto_suspend_seconds: 60
+  timeout_minutes: 30
+  comment: General purpose warehouse for development workloads
+
+# -----------------------------------------------------------------------------
+# Resource Monitor Configuration
+# -----------------------------------------------------------------------------
+resource_monitor_credits: 50
+resource_monitor_frequency: MONTHLY
+notification_email: jordan.example@simpleco.com
+
+# -----------------------------------------------------------------------------
+# Custom Read Roles (optional)
+# -----------------------------------------------------------------------------
+# custom_read_roles:
+# - name: PARTNER_ACCESS
+#   description: Read access for external partners
+#   schema_access: consumption.analytics, consumption.reporting

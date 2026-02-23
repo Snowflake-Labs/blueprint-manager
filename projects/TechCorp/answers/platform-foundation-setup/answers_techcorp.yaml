@@ -1,0 +1,129 @@
+# =============================================================================
+# Platform Foundation Setup - TechCorp Answer File
+# Blueprint: blueprint_4d563df2
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Account Strategy & Naming
+# -----------------------------------------------------------------------------
+account_strategy: Multi-Account (Environment-based)
+snowflake_org_name: TECHCORP
+account_name_prefix: NONE
+object_component_order: <domain>_<env>_<dataproduct>
+
+# -----------------------------------------------------------------------------
+# Organization Account Configuration
+# -----------------------------------------------------------------------------
+enable_org_account: Yes
+org_account_name: ORG
+org_account_edition: ENTERPRISE
+org_account_region: us-east-2
+org_admin_name: platform_admin
+org_admin_email: platform-admin@techcorp.io
+
+# -----------------------------------------------------------------------------
+# Platform Structure
+# -----------------------------------------------------------------------------
+governance_name: GOVERNANCE
+platform_database_name: INFRA
+infrastructure_replication_group: infrastructure_replication_group
+replication_schedule: Every hour
+
+zone_list:
+- raw
+- curated
+
+environment_list:
+- dev
+- prod
+
+domain_list:
+- security
+- finance
+
+# -----------------------------------------------------------------------------
+# Identity & Authentication
+# -----------------------------------------------------------------------------
+identity_provider: None - Manual User Management
+human_auth_methods: Password with MFA
+service_auth_methods: OAuth or Key Pair
+configure_saml: No - Configure SAML later
+
+# MFA Configuration
+mfa_method: Either TOTP or Passkey
+preferred_mfa_method: User's Choice
+mfa_enforcement_timeline: 7 Days - Allow one week for enrollment
+mfa_support_contact: it-helpdesk@techcorp.io
+apply_auth_policies_account_level: Yes - Apply default policy to all users
+
+# Manual Admin Users (used when identity_provider is Manual)
+manual_admin_users:
+- admin_role: ACCOUNTADMIN
+  email: casey.demo@techcorp.io
+  first_name: Casey
+  last_name: Demo
+  username: CASEY_DEMO
+- admin_role: SYSADMIN
+  email: riley.test@techcorp.io
+  first_name: Riley
+  last_name: Test
+  username: RILEY_TEST
+
+# SAML Configuration (empty - SAML deferred)
+saml_integration_name:
+saml_issuer:
+saml_sso_url:
+saml_certificate:
+saml_sso_login_page:
+
+# SCIM Configuration (empty - using manual user management)
+scim_integration_name:
+scim_provisioner_role:
+scim_admin_users: []
+
+# -----------------------------------------------------------------------------
+# Network Security
+# -----------------------------------------------------------------------------
+enable_account_network_policy: No - Apply only to specific users
+
+allowed_network_rules:
+- ip_addresses: 0.0.0.0/0
+  rule_name: ALLOW_ALL_RULE
+
+blocked_network_rules: []
+
+breakglass_accounts:
+- allowed_ips: 10.0.0.0/8
+  email: emergency-access@techcorp.io
+  username: BREAKGLASS_ADMIN
+
+# -----------------------------------------------------------------------------
+# Cost Management - Budgets
+# -----------------------------------------------------------------------------
+enable_budgets: Yes
+budget_alert_emails:
+- finops@techcorp.io
+- platform-admin@techcorp.io
+account_monthly_budget: 1923
+budget_notification_threshold: 75
+budget_refresh_interval: 6.5 hours (default)
+
+# -----------------------------------------------------------------------------
+# Cost Management - Resource Monitors
+# -----------------------------------------------------------------------------
+enable_resource_monitors: Yes
+account_resource_monitor_limit: 1923
+account_resource_monitor_reset_frequency: WEEKLY
+account_resource_monitor_action: Suspend After Current Queries
+
+# -----------------------------------------------------------------------------
+# Cost Management - Tags
+# -----------------------------------------------------------------------------
+enable_cost_tags: No
+additional_tag_dimensions: None
+require_cost_tags: No
+
+# -----------------------------------------------------------------------------
+# Initial Account (for multi-account setup verification)
+# -----------------------------------------------------------------------------
+new_account_name: TECHCORP_DEV
