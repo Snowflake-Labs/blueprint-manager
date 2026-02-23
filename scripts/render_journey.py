@@ -370,8 +370,10 @@ def get_task_progress(step_slug, tasks):
         completed_steps_all += len(tasks[i].get("steps", []))
     completed_steps_all += completed_in_task
 
-    # Fully completed tasks = all tasks before the current one
+    # Fully completed tasks = all tasks before the current one + current if all its steps are done
     completed_tasks = found_task_index
+    if completed_in_task == total_steps_in_task:
+        completed_tasks += 1
 
     task_pct = round((completed_in_task / total_steps_in_task) * 100, 1) if total_steps_in_task > 0 else 0.0
     blueprint_pct = round((completed_steps_all / total_steps_all) * 100, 1) if total_steps_all > 0 else 0.0

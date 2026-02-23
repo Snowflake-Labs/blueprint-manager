@@ -1553,7 +1553,7 @@ class TestGetTaskProgress(TestCase):
         self.assertEqual(progress["current_task"]["completed_steps"], 4)
         self.assertEqual(progress["current_task"]["total_steps"], 4)
         self.assertEqual(progress["current_task"]["completion_percentage"], 100.0)
-        self.assertEqual(progress["blueprint"]["completed_tasks"], 0)
+        self.assertEqual(progress["blueprint"]["completed_tasks"], 1)
         self.assertEqual(progress["blueprint"]["completed_steps"], 4)
         self.assertAlmostEqual(progress["blueprint"]["completion_percentage"], 66.7, places=1)
 
@@ -1580,7 +1580,7 @@ class TestGetTaskProgress(TestCase):
         progress = get_task_progress("step-6", tasks)
 
         self.assertEqual(progress["current_task"]["completion_percentage"], 100.0)
-        self.assertEqual(progress["blueprint"]["completed_tasks"], 1)
+        self.assertEqual(progress["blueprint"]["completed_tasks"], 2)
         self.assertEqual(progress["blueprint"]["completed_steps"], 6)
         self.assertEqual(progress["blueprint"]["total_steps"], 6)
         self.assertEqual(progress["blueprint"]["completion_percentage"], 100.0)
