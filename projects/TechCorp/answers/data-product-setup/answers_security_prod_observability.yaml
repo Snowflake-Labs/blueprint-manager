@@ -1,0 +1,104 @@
+# =============================================================================
+# Data Product Configuration - TechCorp Security Observability (PROD)
+# Blueprint: blueprint_2db08610
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Organization Context (inherited from Platform Foundation)
+# -----------------------------------------------------------------------------
+snowflake_org_name: TECHCORP
+account_strategy: Multi-Account (Environment-based)
+object_component_order: <domain>_<env>_<dataproduct>
+governance_name: GOVERNANCE
+platform_database_name: INFRA
+
+# -----------------------------------------------------------------------------
+# Target Account
+# -----------------------------------------------------------------------------
+target_account_name: prod
+target_account_access_confirmed: Yes - I have SYSADMIN access
+
+# -----------------------------------------------------------------------------
+# Data Product Identity
+# -----------------------------------------------------------------------------
+data_product_name: observability
+data_product_domain: security
+data_product_environment: prod
+data_product_description: Security observability platform for monitoring threats, analyzing logs, and tracking security metrics across the enterprise
+
+# -----------------------------------------------------------------------------
+# Data Product Ownership & Cost Attribution
+# -----------------------------------------------------------------------------
+cost_center: CC-SEC-2026
+owner_users:
+- morgan.placeholder@techcorp.io
+- security-ops@techcorp.io
+
+# -----------------------------------------------------------------------------
+# Role Structure
+# -----------------------------------------------------------------------------
+role_structure: Full (Admin + Create + Write + Read)
+admin_role_granted_to: ACCOUNTADMIN
+grant_account_access_roles: Yes - Grant account access roles (tasks, masking, tagging)
+reader_zone_access: curated
+
+# -----------------------------------------------------------------------------
+# SCIM Configuration
+# -----------------------------------------------------------------------------
+scim_prefix: NONE
+
+# -----------------------------------------------------------------------------
+# Zone Configuration (data_zones)
+# -----------------------------------------------------------------------------
+data_zones:
+- name: raw
+  description: Source system data from SIEM, EDR, and cloud audit logs
+  time_travel_days: 90
+- name: curated
+  description: Enriched threat intelligence and security metrics
+  time_travel_days: 90
+
+# -----------------------------------------------------------------------------
+# Schema Configuration (schema_configuration)
+# -----------------------------------------------------------------------------
+schema_configuration:
+- zone: raw
+  schemas: siem_logs, endpoint_events, network_flows, audit_logs
+- zone: curated
+  schemas: threats, incidents, metrics, compliance
+
+# -----------------------------------------------------------------------------
+# Warehouse Configuration (warehouse_configuration)
+# -----------------------------------------------------------------------------
+warehouse_configuration:
+- name: INGEST
+  workload: INGEST
+  size: MEDIUM
+  min_cluster_count: 1
+  max_cluster_count: 2
+  auto_suspend_seconds: 60
+  timeout_minutes: 120
+  comment: High-throughput warehouse for security log ingestion
+- name: TRANSFORM
+  workload: TRANSFORM
+  size: LARGE
+  min_cluster_count: 1
+  max_cluster_count: 3
+  auto_suspend_seconds: 300
+  timeout_minutes: 180
+  comment: Large warehouse for threat enrichment and correlation
+- name: REPORT
+  workload: REPORT
+  size: MEDIUM
+  min_cluster_count: 1
+  max_cluster_count: 2
+  auto_suspend_seconds: 600
+  timeout_minutes: 60
+  comment: Warehouse for security dashboards and ad-hoc queries
+
+# -----------------------------------------------------------------------------
+# Resource Monitor Configuration
+# -----------------------------------------------------------------------------
+resource_monitor_credits: 5000
+resource_monitor_frequency: MONTHLY
+notification_email: morgan.placeholder@techcorp.io

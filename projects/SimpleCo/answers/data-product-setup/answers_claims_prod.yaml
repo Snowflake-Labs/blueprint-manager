@@ -1,0 +1,93 @@
+# =============================================================================
+# Data Product Configuration - SimpleCo Claims Processing (PROD)
+# Blueprint: blueprint_2db08610
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Organization Context (inherited from Platform Foundation)
+# -----------------------------------------------------------------------------
+snowflake_org_name: SIMPLECO
+account_strategy: Single Account
+object_component_order: <domain>_<env>_<dataproduct>
+governance_name: GOVERNANCE
+platform_database_name: PLATFORM
+
+# -----------------------------------------------------------------------------
+# Target Account (same account for single-account strategy)
+# -----------------------------------------------------------------------------
+target_account_name: SIMPLECO_MAIN
+target_account_access_confirmed: Yes - I have SYSADMIN access
+
+# -----------------------------------------------------------------------------
+# Data Product Identity
+# -----------------------------------------------------------------------------
+data_product_name: claims
+data_product_domain: claims
+data_product_environment: prod
+data_product_description: Claims processing and analytics platform for insurance policy claims, adjudication, and reporting
+
+# -----------------------------------------------------------------------------
+# Data Product Ownership & Cost Attribution
+# -----------------------------------------------------------------------------
+cost_center: POC-2024
+owner_users:
+- jordan.example@simpleco.com
+- alex.sample@simpleco.com
+
+# -----------------------------------------------------------------------------
+# Role Structure
+# -----------------------------------------------------------------------------
+role_structure: Simple (Admin + Read only)
+admin_role_granted_to: SYSADMIN
+grant_account_access_roles: No - Skip account access roles
+reader_zone_access: consumption
+
+# -----------------------------------------------------------------------------
+# SCIM Configuration
+# -----------------------------------------------------------------------------
+scim_prefix: NONE
+
+# -----------------------------------------------------------------------------
+# Zone Configuration (data_zones)
+# -----------------------------------------------------------------------------
+data_zones:
+- name: raw
+  description: Source system data ingestion layer
+  time_travel_days: 7
+- name: curated
+  description: Transformed and validated data layer
+  time_travel_days: 7
+- name: consumption
+  description: Analytics-ready data for reporting and dashboards
+  time_travel_days: 7
+
+# -----------------------------------------------------------------------------
+# Schema Configuration (schema_configuration)
+# -----------------------------------------------------------------------------
+schema_configuration:
+- zone: raw
+  schemas: policies, claims_intake, providers
+- zone: curated
+  schemas: claims_validated, adjudication
+- zone: consumption
+  schemas: analytics, reporting
+
+# -----------------------------------------------------------------------------
+# Warehouse Configuration (warehouse_configuration)
+# -----------------------------------------------------------------------------
+warehouse_configuration:
+- name: GENERAL
+  workload: GENERAL
+  size: SMALL
+  min_cluster_count: 1
+  max_cluster_count: 2
+  auto_suspend_seconds: 300
+  timeout_minutes: 60
+  comment: General purpose warehouse for production workloads
+
+# -----------------------------------------------------------------------------
+# Resource Monitor Configuration
+# -----------------------------------------------------------------------------
+resource_monitor_credits: 300
+resource_monitor_frequency: MONTHLY
+notification_email: jordan.example@simpleco.com

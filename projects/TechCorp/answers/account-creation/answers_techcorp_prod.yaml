@@ -1,0 +1,130 @@
+# =============================================================================
+# Account Creation - TechCorp PROD Account
+# Blueprint: blueprint_4e7081df
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Organization Context (inherited from Platform Foundation)
+# -----------------------------------------------------------------------------
+snowflake_org_name: TECHCORP
+org_account_name: ORG
+account_strategy: Multi-Account (Environment-based)
+account_name_prefix: NONE
+object_component_order: <domain>_<env>_<dataproduct>
+
+# Platform References
+governance_name: GOVERNANCE
+platform_database_name: INFRA
+infrastructure_replication_group: infrastructure_replication_group
+shared_database_name: INFRA_SHARED
+
+# Structure Context
+domain_list:
+- security
+- finance
+
+environment_list:
+- dev
+- prod
+
+# -----------------------------------------------------------------------------
+# New Account Details
+# -----------------------------------------------------------------------------
+new_account_name: TECHCORP_PROD
+new_account_admin_name: Casey Demo
+new_account_admin_email: casey.demo@techcorp.io
+new_account_edition: ENTERPRISE
+new_account_region: us-east-2
+
+account_domain: security
+account_environment: prod
+account_description: Production environment for all TechCorp data products
+
+# -----------------------------------------------------------------------------
+# Account Security Configuration Approach
+# -----------------------------------------------------------------------------
+security_config_approach: Use Organization Configuration
+account_configure_saml: No - Configure SAML later
+
+# Identity & Authentication (inherited from org)
+identity_provider: None - Manual User Management
+human_auth_methods: Password with MFA
+service_auth_methods: OAuth or Key Pair
+configure_saml: No - Configure SAML later
+mfa_method: Either TOTP or Passkey
+apply_auth_policies_account_level: Yes - Apply default policy to all users
+
+# Account MFA Support
+account_mfa_support_contact: it-helpdesk@techcorp.io
+
+# -----------------------------------------------------------------------------
+# Account Network Security
+# -----------------------------------------------------------------------------
+enable_account_network_policy: No - Apply only to specific users
+
+allowed_network_rules:
+- ip_addresses: 10.0.0.0/8
+  rule_name: CORPORATE_NETWORK
+- ip_addresses: 192.168.0.0/16
+  rule_name: VPN_NETWORK
+
+blocked_network_rules: []
+
+# Account SAML Configuration (empty - SAML deferred)
+account_saml_integration_name:
+account_saml_sso_url:
+account_saml_issuer:
+account_saml_certificate:
+
+# Account SCIM Configuration (empty - using manual user management)
+account_scim_integration_name:
+account_scim_allowed_ips:
+
+# -----------------------------------------------------------------------------
+# Account Admin Users
+# -----------------------------------------------------------------------------
+account_admin_users:
+- admin_role: ACCOUNTADMIN
+  email: casey.demo@techcorp.io
+  first_name: Sarah
+  last_name: Chen
+  login_name: casey.demo@techcorp.io
+- admin_role: SYSADMIN
+  email: riley.test@techcorp.io
+  first_name: Mike
+  last_name: Johnson
+  login_name: riley.test@techcorp.io
+
+# Account Network Rules
+account_allowed_network_rules:
+- ip_addresses: 10.0.0.0/8
+  rule_name: CORPORATE_NETWORK
+- ip_addresses: 192.168.0.0/16
+  rule_name: VPN_NETWORK
+
+account_blocked_network_rules: []
+
+# Account Breakglass
+account_breakglass_accounts:
+- allowed_ips: 10.0.0.0/8
+  email: emergency-access@techcorp.io
+  username: BREAKGLASS_ADMIN
+
+# -----------------------------------------------------------------------------
+# Account Local Infrastructure
+# -----------------------------------------------------------------------------
+local_infra_database: INFRA_LOCAL
+local_policies_schema: POLICIES
+
+# -----------------------------------------------------------------------------
+# Account Cost Management
+# -----------------------------------------------------------------------------
+account_budget_limit: 10000
+account_budget_threshold: 75
+account_budget_emails:
+- finops@techcorp.io
+- platform-admin@techcorp.io
+
+account_resource_monitor_limit: 8000
+account_resource_monitor_reset_frequency: MONTHLY
+account_resource_monitor_action: Suspend After Current Qu

@@ -1,0 +1,131 @@
+# =============================================================================
+# Platform Foundation Setup - SimpleCo Answer File
+# Blueprint: blueprint_4d563df2
+# Company: SimpleCo Insurance - POC/Pilot Setup
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Account Strategy & Naming
+# -----------------------------------------------------------------------------
+account_strategy: Single Account
+snowflake_org_name: SIMPLECO
+account_name_prefix: NONE
+object_component_order: <domain>_<env>_<dataproduct>
+
+# -----------------------------------------------------------------------------
+# Organization Account Configuration
+# -----------------------------------------------------------------------------
+enable_org_account: Yes
+org_account_name: SIMPLECO_MAIN
+org_account_edition: ENTERPRISE
+org_account_region: us-west-2
+org_admin_name: admin
+org_admin_email: snowflake-admin@simpleco.com
+
+# -----------------------------------------------------------------------------
+# Platform Structure
+# -----------------------------------------------------------------------------
+governance_name: GOVERNANCE
+platform_database_name: PLATFORM
+infrastructure_replication_group: infrastructure_replication_group
+replication_schedule: Every hour
+
+zone_list:
+- raw
+- curated
+- consumption
+
+environment_list:
+- dev
+- test
+- prod
+
+domain_list:
+- claims
+
+# -----------------------------------------------------------------------------
+# Identity & Authentication
+# -----------------------------------------------------------------------------
+identity_provider: None - Manual User Management
+human_auth_methods: Password with MFA
+service_auth_methods: Key Pair Only
+configure_saml: No - Configure SAML later
+
+# MFA Configuration
+mfa_method: Either TOTP or Passkey
+preferred_mfa_method: User's Choice
+mfa_enforcement_timeline: 14 Days - Allow two weeks for enrollment
+mfa_support_contact: it-support@simpleco.com
+apply_auth_policies_account_level: Yes - Apply default policy to all users
+
+# Manual Admin Users (used when identity_provider is Manual)
+manual_admin_users:
+- admin_role: ACCOUNTADMIN
+  email: alex.sample@simpleco.com
+  first_name: Alex
+  last_name: Sample
+  username: ALEX_SAMPLE
+- admin_role: SYSADMIN
+  email: jordan.example@simpleco.com
+  first_name: Jordan
+  last_name: Example
+  username: JORDAN_EXAMPLE
+
+# SAML Configuration (empty - SAML deferred)
+saml_integration_name:
+saml_issuer:
+saml_sso_url:
+saml_certificate:
+saml_sso_login_page:
+
+# SCIM Configuration (empty - using manual user management)
+scim_integration_name:
+scim_provisioner_role:
+scim_admin_users: []
+
+# -----------------------------------------------------------------------------
+# Network Security
+# -----------------------------------------------------------------------------
+enable_account_network_policy: No - Apply only to specific users
+
+allowed_network_rules:
+- ip_addresses: 0.0.0.0/0
+  rule_name: ALLOW_ALL_POC
+
+blocked_network_rules: []
+
+breakglass_accounts:
+- allowed_ips: 0.0.0.0/0
+  email: breakglass@simpleco.com
+  username: BREAKGLASS_ADMIN
+
+# -----------------------------------------------------------------------------
+# Cost Management - Budgets
+# -----------------------------------------------------------------------------
+enable_budgets: Yes
+budget_alert_emails:
+- alex.sample@simpleco.com
+- finance@simpleco.com
+account_monthly_budget: 500
+budget_notification_threshold: 80
+budget_refresh_interval: 6.5 hours (default)
+
+# -----------------------------------------------------------------------------
+# Cost Management - Resource Monitors
+# -----------------------------------------------------------------------------
+enable_resource_monitors: Yes
+account_resource_monitor_limit: 500
+account_resource_monitor_reset_frequency: MONTHLY
+account_resource_monitor_action: Notify Only
+
+# -----------------------------------------------------------------------------
+# Cost Management - Tags
+# -----------------------------------------------------------------------------
+enable_cost_tags: No
+additional_tag_dimensions: None
+require_cost_tags: No
+
+# -----------------------------------------------------------------------------
+# Initial Account (not used for single account, but required)
+# -----------------------------------------------------------------------------
+new_account_name: 
