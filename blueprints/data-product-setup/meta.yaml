@@ -54,3 +54,142 @@ steps:
 - create-resource-monitors
 - assign-monitors-to-warehouses
 - configure-alert-notifications
+tasks:
+- slug: data-product-planning
+  title: Data Product Planning
+  summary: 'Select the target Snowflake account for deployment, define the data product''s
+    name,
+
+    domain, environment, and SCIM configuration, plan zone structure and schemas,
+
+    and define warehouse requirements for different workloads.
+
+    '
+  external_requirements:
+  - Platform Foundation Setup completed
+  - Target account exists and is accessible
+  personas:
+  - Data Team
+  - Platform Team
+  - Data Architecture Team
+  role_requirements:
+  - SYSADMIN role access in the target account
+  steps:
+  - slug: select-target-account
+    title: Select Target Account
+  - slug: define-data-product-identity
+    title: Define Data Product Identity
+  - slug: configure-zone-structure
+    title: Configure Zone Structure
+  - slug: plan-schema-organization
+    title: Plan Schema Organization
+  - slug: plan-warehouse-requirements
+    title: Plan Warehouse Requirements
+- slug: core-roles-database-setup
+  title: Core Roles & Database Setup
+  summary: 'Create the foundational infrastructure for your data product including
+    five
+
+    core account-level roles, databases for each zone with database-level access
+
+    roles, schemas with schema-level access roles, and complete role hierarchy.
+
+    '
+  external_requirements:
+  - Task 1 (Data Product Planning) completed
+  - Target account accessible
+  - data_product_name, data_product_domain, data_product_environment from Task 1
+  - scim_prefix, data_zones, schema_configuration from Task 1
+  personas:
+  - Platform Administrator
+  - Data Architect
+  - Security Administrator
+  role_requirements:
+  - USERADMIN role
+  - SYSADMIN role
+  - SECURITYADMIN role
+  steps:
+  - slug: create-data-product-core-roles
+    title: Create Data Product Core Roles
+  - slug: create-databases
+    title: Create Databases
+  - slug: create-schemas
+    title: Create Schemas
+- slug: warehouse-access-configuration
+  title: Warehouse & Access Configuration
+  summary: 'Create warehouses for each workload type, create warehouse access roles
+    for
+
+    controlled compute access, transfer ownership to admin roles, and wire the
+
+    complete role hierarchy connecting account roles to warehouse access.
+
+    '
+  external_requirements:
+  - Task 2 (Core Roles & Database Setup) completed
+  - warehouse_definitions from Task 1
+  - Core roles created (ADMIN, CREATE, WRITE, RBAC, READ)
+  - Databases and schemas with database roles
+  personas:
+  - Platform Administrator
+  - Data Team
+  role_requirements:
+  - SYSADMIN role
+  - USERADMIN role
+  - SECURITYADMIN role
+  steps:
+  - slug: create-warehouses
+    title: Create Warehouses
+  - slug: create-warehouse-access-roles
+    title: Create Warehouse Access Roles
+  - slug: transfer-ownership-wire-hierarchy
+    title: Transfer Ownership & Wire Hierarchy
+- slug: consumer-access
+  title: Consumer Access
+  summary: 'Enable external consumers to access your data product by creating purpose-specific
+
+    consumer access roles that provide granular, SCIM-manageable access for end users
+
+    who need only specific data zones.
+
+    '
+  external_requirements:
+  - Task 3 completed (all infrastructure in place)
+  - Knowledge of consumer groups and their data needs
+  - SCIM prefix configured (if using SCIM)
+  personas:
+  - Data Product Owner
+  - Security Administrator
+  - Identity Team
+  role_requirements:
+  - USERADMIN role (or SCIM provisioner role if using SCIM)
+  steps:
+  - slug: create-custom-read-roles
+    title: Create Custom Read Roles
+  - slug: grant-database-access-to-roles
+    title: Grant Database Access to Roles
+- slug: data-product-cost-management
+  title: Data Product Cost Management
+  summary: 'Establish cost controls for your data product through Snowflake resource
+    monitors
+
+    that track credit consumption and can trigger alerts or suspend warehouses when
+
+    thresholds are reached.
+
+    '
+  external_requirements:
+  - Warehouses created (Task 3)
+  - Understanding of expected credit consumption
+  personas:
+  - FinOps Team
+  - Platform Administrator
+  role_requirements:
+  - ACCOUNTADMIN role access (required for resource monitors)
+  steps:
+  - slug: create-resource-monitors
+    title: Create Resource Monitors
+  - slug: assign-monitors-to-warehouses
+    title: Assign Monitors to Warehouses
+  - slug: configure-alert-notifications
+    title: Configure Alert Notifications

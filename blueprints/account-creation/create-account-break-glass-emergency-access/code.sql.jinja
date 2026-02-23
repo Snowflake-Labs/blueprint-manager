@@ -27,6 +27,14 @@ USE SCHEMA {{ local_policies_schema | upper }};
 
 {%- for account in account_breakglass_accounts %}
 
+{# Determine if identifier needs quoting #}
+{%- set needs_quoting = '@' in account.username or '.' in account.username %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ account.username ~ '"' %}
+{%- else %}
+{%- set quoted_id = account.username | upper %}
+{%- endif %}
+
 -- ============================================================================
 -- BREAK-GLASS ACCOUNT: {{ account.username | upper }}
 -- ============================================================================
@@ -49,7 +57,7 @@ CREATE OR REPLACE NETWORK POLICY {{ account.username | upper }}_NETWORK_POLICY
   COMMENT = 'Network policy for break-glass account {{ account.username }}';
 
 -- Step 3: Create the break-glass user
-CREATE USER IF NOT EXISTS {{ account.username | upper }}
+CREATE USER IF NOT EXISTS {{ quoted_id }}
   LOGIN_NAME = '{{ account.username }}'
   EMAIL = '{{ account.email }}'
   PASSWORD = 'BreakGlass{{ loop.index }}ChangeMe!'
@@ -58,10 +66,10 @@ CREATE USER IF NOT EXISTS {{ account.username | upper }}
   COMMENT = 'Break-glass emergency access account - RESTRICTED USE ONLY';
 
 -- Step 4: Assign ACCOUNTADMIN role
-GRANT ROLE ACCOUNTADMIN TO USER {{ account.username | upper }};
+GRANT ROLE ACCOUNTADMIN TO USER {{ quoted_id }};
 
 -- Step 5: Apply network policy to this user
-ALTER USER {{ account.username | upper }} SET NETWORK_POLICY = '{{ account.username | upper }}_NETWORK_POLICY';
+ALTER USER {{ quoted_id }} SET NETWORK_POLICY = '{{ account.username | upper }}_NETWORK_POLICY';
 
 {%- endfor %}
 
@@ -81,7 +89,13 @@ CREATE OR REPLACE AUTHENTICATION POLICY BREAKGLASS_AUTH_POLICY
 
 -- Apply the auth policy to break-glass users
 {%- for account in account_breakglass_accounts %}
-ALTER USER {{ account.username | upper }} SET AUTHENTICATION_POLICY = BREAKGLASS_AUTH_POLICY;
+{%- set needs_quoting = '@' in account.username or '.' in account.username %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ account.username ~ '"' %}
+{%- else %}
+{%- set quoted_id = account.username | upper %}
+{%- endif %}
+ALTER USER {{ quoted_id }} SET AUTHENTICATION_POLICY = BREAKGLASS_AUTH_POLICY;
 {%- endfor %}
 
 -- ============================================================================
@@ -93,8 +107,14 @@ ALTER USER {{ account.username | upper }} SET AUTHENTICATION_POLICY = BREAKGLASS
 -- ============================================================================
 
 {%- for account in account_breakglass_accounts %}
+{%- set needs_quoting = '@' in account.username or '.' in account.username %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ account.username ~ '"' %}
+{%- else %}
+{%- set quoted_id = account.username | upper %}
+{%- endif %}
 -- Generate 10 OTPs for {{ account.username | upper }}
--- ALTER USER {{ account.username | upper }} ADD MFA METHOD OTP COUNT = 10;
+-- ALTER USER {{ quoted_id }} ADD MFA METHOD OTP COUNT = 10;
 {%- endfor %}
 
 -- ============================================================================
@@ -103,7 +123,7 @@ ALTER USER {{ account.username | upper }} SET AUTHENTICATION_POLICY = BREAKGLASS
 
 -- Verify break-glass users were created
 {%- for account in account_breakglass_accounts %}
-SHOW USERS LIKE '{{ account.username | upper }}';
+SHOW USERS LIKE '{{ account.username }}';
 {%- endfor %}
 
 -- Verify authentication policy

@@ -55,3 +55,111 @@ steps:
 - configure-account-budget
 - configure-account-resource-monitor
 - apply-cost-allocation-tags
+tasks:
+- slug: account-provisioning
+  title: Account Provisioning
+  summary: 'Define the new account''s purpose (domain, environment, description),
+    configure
+
+    account parameters (edition, region, initial administrator), create the account
+
+    in your Snowflake organization, and establish access to shared infrastructure
+    objects.
+
+    '
+  external_requirements:
+  - Platform Foundation workflow completed with Multi-Account strategy (recommended)
+  - Infrastructure Database Sharing configured (Step 1.8 of Platform Foundation)
+  personas:
+  - Platform Administrator
+  - Cloud Team
+  - Security Team
+  role_requirements:
+  - ORGADMIN role access in the Organization Account
+  steps:
+  - slug: confirm-account-strategy
+    title: Confirm Account Strategy
+  - slug: define-account-purpose-domain
+    title: Define Account Purpose - Domain
+  - slug: define-account-purpose-environment
+    title: Define Account Purpose - Environment
+  - slug: define-account-purpose-domain-environment
+    title: Define Account Purpose - Domain + Environment
+  - slug: configure-account-parameters
+    title: Configure Account Parameters
+  - slug: create-account
+    title: Create Account
+  - slug: create-infrastructure-database-replica
+    title: Create Infrastructure Database Replica
+- slug: account-security-identity
+  title: Account Security & Identity
+  summary: 'Configure user provisioning (SCIM or manual), establish administrator
+    access,
+
+    set up network rules and policies, configure authentication policies,
+
+    create break-glass emergency access, and enable multi-factor authentication.
+
+    '
+  external_requirements:
+  - Account created and accessible (Task 1 completed)
+  - Infrastructure share consumed
+  - Identity Provider selection (Okta, Azure, None)
+  - SAML/SSO configuration preference
+  - Network policy IP ranges
+  personas:
+  - Security Administrator
+  - Platform Administrator
+  - Network Team
+  role_requirements:
+  - ACCOUNTADMIN role access
+  - Logged into the new account
+  steps:
+  - slug: select-security-configuration-approach
+    title: Select Security Configuration Approach
+  - slug: configure-account-scim-integration
+    title: Configure Account SCIM Integration
+  - slug: create-account-administrators
+    title: Create Account Administrators
+  - slug: configure-account-samlsso
+    title: Configure Account SAML/SSO
+  - slug: create-account-break-glass-emergency-access
+    title: Create Account Break-Glass Emergency Access
+  - slug: configure-account-custom-network-rules
+    title: Configure Account Custom Network Rules
+  - slug: configure-network-rules-and-policies
+    title: Configure Network Rules and Policies
+  - slug: apply-organization-network-configuration
+    title: Apply Organization Network Configuration
+  - slug: configure-account-authentication-policies
+    title: Configure Account Authentication Policies
+  - slug: enable-account-multi-factor-authentication
+    title: Enable Account Multi-Factor Authentication
+- slug: account-cost-management
+  title: Account Cost Management
+  summary: 'Configure an account-level budget with spending limits and alerts, set
+    up a
+
+    resource monitor for active cost control, and apply domain and environment
+
+    tags for cost allocation and FinOps reporting.
+
+    '
+  external_requirements:
+  - Security & Identity Configuration complete (Task 2)
+  - Infrastructure share consumed (access to governance objects)
+  - Knowledge of expected credit consumption for this account
+  - List of stakeholders to receive budget alerts
+  personas:
+  - FinOps Team
+  - Platform Administrator
+  - Finance Team
+  role_requirements:
+  - ACCOUNTADMIN role access
+  steps:
+  - slug: configure-account-budget
+    title: Configure Account Budget
+  - slug: configure-account-resource-monitor
+    title: Configure Account Resource Monitor
+  - slug: apply-cost-allocation-tags
+    title: Apply Cost Allocation Tags

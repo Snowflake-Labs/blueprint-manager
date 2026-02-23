@@ -53,6 +53,7 @@ Define one or more break-glass emergency access accounts. Each account can bypas
 - Use a descriptive name: `BREAKGLASS_ADMIN`, `EMERGENCY_ACCESS`, `SOS_ADMIN`
 - Avoid personal names since this is a shared emergency account
 - For multiple accounts, use suffixes: `BREAKGLASS_ADMIN_01`, `BREAKGLASS_ADMIN_02`
+- **Important:** Do NOT use email addresses as usernames. Break-glass accounts must work when SSO is unavailable, so use simple identifiers without `@` or `.` characters.
 
 **Email**
 - Use a team distribution list, not a personal email

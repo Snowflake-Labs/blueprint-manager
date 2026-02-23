@@ -22,7 +22,13 @@ SHOW USERS LIKE '{{ user.login_name }}';
 -- STEP 2: GRANT ADMINISTRATIVE ROLES
 -- ============================================================================
 {%- for user in scim_admin_users %}
-GRANT ROLE {{ user.admin_role | upper }} TO USER "{{ user.login_name }}";
+{%- set needs_quoting = '@' in user.login_name or '.' in user.login_name %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ user.login_name ~ '"' %}
+{%- else %}
+{%- set quoted_id = user.login_name | upper %}
+{%- endif %}
+GRANT ROLE {{ user.admin_role | upper }} TO USER {{ quoted_id }};
 {%- endfor %}
 
 -- ============================================================================
@@ -32,8 +38,14 @@ GRANT ROLE {{ user.admin_role | upper }} TO USER "{{ user.login_name }}";
 -- to enable proper role usage for day-to-day tasks
 {%- for user in scim_admin_users %}
 {%- if user.admin_role | upper == "ACCOUNTADMIN" %}
-GRANT ROLE SECURITYADMIN TO USER "{{ user.login_name }}";
-GRANT ROLE SYSADMIN TO USER "{{ user.login_name }}";
+{%- set needs_quoting = '@' in user.login_name or '.' in user.login_name %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ user.login_name ~ '"' %}
+{%- else %}
+{%- set quoted_id = user.login_name | upper %}
+{%- endif %}
+GRANT ROLE SECURITYADMIN TO USER {{ quoted_id }};
+GRANT ROLE SYSADMIN TO USER {{ quoted_id }};
 {%- endif %}
 {%- endfor %}
 
@@ -43,12 +55,18 @@ GRANT ROLE SYSADMIN TO USER "{{ user.login_name }}";
 -- Set appropriate default roles for each administrator
 -- Users should use the least-privileged role needed for their work
 {%- for user in scim_admin_users %}
+{%- set needs_quoting = '@' in user.login_name or '.' in user.login_name %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ user.login_name ~ '"' %}
+{%- else %}
+{%- set quoted_id = user.login_name | upper %}
+{%- endif %}
 {%- if user.admin_role | upper == "ACCOUNTADMIN" %}
 -- Set default role for {{ user.login_name }} (use SYSADMIN for day-to-day work)
-ALTER USER "{{ user.login_name }}" SET DEFAULT_ROLE = 'SYSADMIN';
+ALTER USER {{ quoted_id }} SET DEFAULT_ROLE = 'SYSADMIN';
 {%- else %}
 -- Set default role for {{ user.login_name }}
-ALTER USER "{{ user.login_name }}" SET DEFAULT_ROLE = '{{ user.admin_role | upper }}';
+ALTER USER {{ quoted_id }} SET DEFAULT_ROLE = '{{ user.admin_role | upper }}';
 {%- endif %}
 {%- endfor %}
 

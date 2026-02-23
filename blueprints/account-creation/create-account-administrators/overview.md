@@ -100,18 +100,25 @@ Administrator access is critical for account governance. Having the right people
 - Principle of least privilege is maintained
 - Clear accountability for administrative actions
 
+**SSO-Ready Recommendation: Use Email as Login Name**
+We strongly recommend using the user's **email address** as the `login_name`, even if you are not currently using SSO. This provides several benefits:
+- **SSO-Ready:** Most identity providers (Okta, Azure AD, etc.) use email as the default identifier. Using email now means seamless SSO integration later.
+- **Uniqueness:** Email addresses are globally unique and prevent naming conflicts.
+- **Consistency:** Users log in with the same identifier across all systems.
+**Example:** Use `john.doe@company.com` instead of `JDOE` or `JOHNDOE`.
+
 **If using SCIM (automated provisioning):**
 Users are created automatically from your IdP. You only need to specify:
-- **login_name**: The username as it appears in Snowflake (check `SHOW USERS;` after SCIM sync)
+- **login_name**: The username as it appears in Snowflake (typically the email address—check `SHOW USERS;` after SCIM sync)
 - **admin_role**: The administrative role to assign
 
 Leave `email`, `first_name`, and `last_name` blank for SCIM users—these are managed by your IdP.
 
 **If using Manual User Management:**
 Users will be created directly in Snowflake. Provide:
-- **login_name**: The username for Snowflake login
+- **login_name**: The username for Snowflake login (**recommended: use email address** for SSO-readiness)
 - **admin_role**: The administrative role to assign
-- **email**: Email address for notifications
+- **email**: Email address for notifications (can match login_name)
 - **first_name**: User's first name
 - **last_name**: User's last name
 

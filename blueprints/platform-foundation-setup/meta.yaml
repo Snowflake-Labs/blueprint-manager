@@ -32,3 +32,111 @@ steps:
 - configure-resource-monitors
 - enable-cost-allocation-tags
 - configure-cost-allocation-tags
+tasks:
+- slug: platform-foundation
+  title: Platform Foundation
+  summary: 'Define your account strategy, configure account identifiers, set up centralized
+    management,
+
+    create shared infrastructure, and organize your platform with domains, environments,
+
+    FinOps tags, and naming conventions.
+
+    '
+  external_requirements:
+  - Snowflake account (trial or provisioned)
+  - Organization information (org name from account URL)
+  personas:
+  - Platform Administrator
+  - Cloud/Infrastructure Team
+  role_requirements:
+  - ORGADMIN or ACCOUNTADMIN privileges
+  - Enterprise Edition or higher for Organization Account features
+  steps:
+  - slug: determine-account-strategy
+    title: Determine Account Strategy
+  - slug: configure-organization-name-for-connectivity
+    title: Configure Organization Name for Connectivity
+  - slug: enable-organization-account
+    title: Enable Organization Account
+  - slug: create-organization-account
+    title: Create Organization Account
+  - slug: create-infrastructure-database
+    title: Create Infrastructure Database
+  - slug: define-domains-environments-and-object-naming-conventions
+    title: Define Domains, Environments, and Object Naming Conventions
+  - slug: configure-infrastructure-database-replication
+    title: Configure Infrastructure Database Replication
+- slug: platform-security-identity
+  title: Platform Security & Identity
+  summary: 'Configure user provisioning via SCIM or manual management, provision platform
+
+    administrators, configure single sign-on, create emergency access, implement
+
+    network security, define authentication policies, and enable multi-factor authentication.
+
+    '
+  external_requirements:
+  - Task 1 (Platform Foundation) completed
+  - Identity Provider Access (Okta, Azure AD, etc.)
+  - Network Information (corporate IP ranges, VPN endpoints, cloud service IPs)
+  - Administrator Details (names and email addresses)
+  personas:
+  - Security Administrator
+  - Identity Team
+  - Platform Administrator
+  role_requirements:
+  - ACCOUNTADMIN privileges
+  - Logged into Organization Account (if created) or primary account
+  steps:
+  - slug: select-identity-management-approach
+    title: Select Identity Management Approach
+  - slug: configure-scim-integration
+    title: Configure SCIM Integration
+  - slug: provision-account-administrators
+    title: Provision Account Administrators
+  - slug: create-organization-account-administrators
+    title: Create Organization Account Administrators
+  - slug: configure-samlsso
+    title: Configure SAML/SSO
+  - slug: create-break-glass-emergency-access
+    title: Create Break-Glass Emergency Access
+  - slug: configure-network-rules-and-policies
+    title: Configure Network Rules and Policies
+  - slug: configure-authentication-policies
+    title: Configure Authentication Policies
+  - slug: enable-multi-factor-authentication
+    title: Enable Multi-Factor Authentication
+- slug: platform-cost-management
+  title: Platform Cost Management
+  summary: 'Set up Snowflake''s native budget feature for automated spending alerts,
+
+    configure account-level resource monitors with hard limits, extend the tagging
+
+    framework with cost center and ownership tracking, and create cost reporting views.
+
+    '
+  external_requirements:
+  - Task 1 (Platform Foundation) completed
+  - Task 2 (Security & Identity Configuration) completed
+  - Estimated monthly credit budget from finance team
+  - List of cost centers for chargeback (if applicable)
+  personas:
+  - FinOps Team
+  - Finance Team
+  - Platform Administrator
+  role_requirements:
+  - ACCOUNTADMIN role access
+  steps:
+  - slug: enable-spending-budgets
+    title: Enable Spending Budgets
+  - slug: configure-spending-budgets
+    title: Configure Spending Budgets
+  - slug: enable-resource-monitors
+    title: Enable Resource Monitors
+  - slug: configure-resource-monitors
+    title: Configure Resource Monitors
+  - slug: enable-cost-allocation-tags
+    title: Enable Cost Allocation Tags
+  - slug: configure-cost-allocation-tags
+    title: Configure Cost Allocation Tags

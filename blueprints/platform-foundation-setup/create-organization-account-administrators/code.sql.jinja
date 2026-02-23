@@ -14,8 +14,16 @@ USE ROLE ACCOUNTADMIN;
 -- Initial password should be communicated securely to each user
 {%- for user in manual_admin_users %}
 
+{# Determine if identifier needs quoting (contains @ or .) #}
+{%- set needs_quoting = '@' in user.username or '.' in user.username %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ user.username ~ '"' %}
+{%- else %}
+{%- set quoted_id = user.username | upper %}
+{%- endif %}
+
 -- Create user: {{ user.first_name }} {{ user.last_name }} ({{ user.admin_role | upper }})
-CREATE USER IF NOT EXISTS {{ user.username | upper }}
+CREATE USER IF NOT EXISTS {{ quoted_id }}
   PASSWORD = 'TempPassword123!'  -- MUST be changed on first login
   LOGIN_NAME = '{{ user.username }}'
   DISPLAY_NAME = '{{ user.first_name }} {{ user.last_name }}'
@@ -31,7 +39,13 @@ CREATE USER IF NOT EXISTS {{ user.username | upper }}
 -- STEP 2: GRANT ADMINISTRATIVE ROLES
 -- ============================================================================
 {%- for user in manual_admin_users %}
-GRANT ROLE {{ user.admin_role | upper }} TO USER {{ user.username | upper }};
+{%- set needs_quoting = '@' in user.username or '.' in user.username %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ user.username ~ '"' %}
+{%- else %}
+{%- set quoted_id = user.username | upper %}
+{%- endif %}
+GRANT ROLE {{ user.admin_role | upper }} TO USER {{ quoted_id }};
 {%- endfor %}
 
 -- ============================================================================
@@ -41,8 +55,14 @@ GRANT ROLE {{ user.admin_role | upper }} TO USER {{ user.username | upper }};
 -- to enable proper role usage for day-to-day tasks
 {%- for user in manual_admin_users %}
 {%- if user.admin_role | upper == "ACCOUNTADMIN" %}
-GRANT ROLE SECURITYADMIN TO USER {{ user.username | upper }};
-GRANT ROLE SYSADMIN TO USER {{ user.username | upper }};
+{%- set needs_quoting = '@' in user.username or '.' in user.username %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ user.username ~ '"' %}
+{%- else %}
+{%- set quoted_id = user.username | upper %}
+{%- endif %}
+GRANT ROLE SECURITYADMIN TO USER {{ quoted_id }};
+GRANT ROLE SYSADMIN TO USER {{ quoted_id }};
 {%- endif %}
 {%- endfor %}
 

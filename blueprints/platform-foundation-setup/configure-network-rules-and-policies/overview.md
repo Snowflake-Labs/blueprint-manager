@@ -198,6 +198,12 @@ If your organization has an enterprise IdP, we strongly recommend configuring SC
 **What is this asking?**
 Define the administrators who will manage your Snowflake account. For each administrator, provide their details and specify their administrative role.
 
+**SSO-Ready Recommendation: Use Email as Username**
+We strongly recommend using the user's **email address** as the `username`, even if you are not currently using SSO. Benefits include:
+- **SSO-Ready:** Most identity providers (Okta, Azure AD, etc.) use email as the default identifier. Using email now ensures seamless SSO integration later.
+- **Uniqueness:** Email addresses are globally unique and prevent naming conflicts.
+- **Consistency:** Users log in with the same identifier across all systems.
+
 **Administrative Role (admin_role field)**
 
 Enter ONE of the following values exactly as shown:
@@ -209,20 +215,20 @@ Enter ONE of the following values exactly as shown:
 | `SYSADMIN` | Manage databases, warehouses, infrastructure | 3-10 |
 | `USERADMIN` | Manage users and custom roles | 2-5 |
 
-**⚠️ Important:** The `admin_role` field must be entered exactly as shown above (case-insensitive, but use uppercase for consistency).
+**Important:** The `admin_role` field must be entered exactly as shown above (case-insensitive, but use uppercase for consistency).
 
-**Example Entries:**
+**Example Entries (SSO-Ready):**
 
 | username | email | first_name | last_name | admin_role |
 |----------|-------|------------|-----------|------------|
-| `john.smith` | `john.smith@company.com` | `John` | `Smith` | `ACCOUNTADMIN` |
-| `jane.doe` | `jane.doe@company.com` | `Jane` | `Doe` | `ACCOUNTADMIN` |
-| `bob.wilson` | `bob.wilson@company.com` | `Bob` | `Wilson` | `SYSADMIN` |
+| `john.smith@company.com` | `john.smith@company.com` | `John` | `Smith` | `ACCOUNTADMIN` |
+| `jane.doe@company.com` | `jane.doe@company.com` | `Jane` | `Doe` | `ACCOUNTADMIN` |
+| `bob.wilson@company.com` | `bob.wilson@company.com` | `Bob` | `Wilson` | `SYSADMIN` |
 
 **Recommendations:**
 - Create at least **2 ACCOUNTADMIN users** to prevent lockout scenarios
 - Use individual accounts, not shared/generic accounts
-- Usernames should follow a consistent pattern (e.g., `first.last` or `first_last`)
+- Use email addresses as usernames for SSO-readiness
 - Use corporate email addresses (not personal emails)
 
 **Security Notes:**

@@ -154,6 +154,8 @@ Without break-glass access, an IdP outage or misconfiguration could leave you lo
 - `emergency_access`
 - `{{ new_account_name | lower }}_breakglass`
 
+**Important:** Do NOT use email addresses as break-glass usernames. Break-glass accounts must work when SSO/IdP is unavailable, so they should use simple local identifiers without special characters like `@` or `.` in the username.
+
 **Email considerations:**
 - Use a monitored shared mailbox
 - Avoid personal emails that may become inactive

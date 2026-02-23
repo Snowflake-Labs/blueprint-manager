@@ -19,12 +19,27 @@ USE ROLE ACCOUNTADMIN;
 
 {%- for user in account_admin_users %}
 
--- Create user: {{ user.login_name }}
-CREATE USER IF NOT EXISTS {{ user.login_name | upper }}
+{# Determine if identifier needs quoting (contains @ or .) #}
+{%- set identifier = user.user_identifier | default(user.login_name) %}
+{%- set needs_quoting = '@' in identifier or '.' in identifier %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ identifier ~ '"' %}
+{%- else %}
+{%- set quoted_id = identifier | upper %}
+{%- endif %}
+
+-- Create user: {{ identifier }}
+CREATE USER IF NOT EXISTS {{ quoted_id }}
   LOGIN_NAME = '{{ user.login_name }}'
+{%- if user.email %}
   EMAIL = '{{ user.email }}'
+{%- endif %}
+{%- if user.first_name %}
   FIRST_NAME = '{{ user.first_name }}'
+{%- endif %}
+{%- if user.last_name %}
   LAST_NAME = '{{ user.last_name }}'
+{%- endif %}
   PASSWORD = 'ChangeMe123!'
   MUST_CHANGE_PASSWORD = TRUE
   COMMENT = 'Administrator user - {{ user.admin_role | upper }}';
@@ -39,8 +54,17 @@ CREATE USER IF NOT EXISTS {{ user.login_name | upper }}
 
 {%- for user in account_admin_users %}
 
--- Grant {{ user.admin_role | upper }} to {{ user.login_name }}
-GRANT ROLE {{ user.admin_role | upper }} TO USER {{ user.login_name | upper }};
+{# Use same identifier logic #}
+{%- set identifier = user.user_identifier | default(user.login_name) %}
+{%- set needs_quoting = '@' in identifier or '.' in identifier %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ identifier ~ '"' %}
+{%- else %}
+{%- set quoted_id = identifier | upper %}
+{%- endif %}
+
+-- Grant {{ user.admin_role | upper }} to {{ identifier }}
+GRANT ROLE {{ user.admin_role | upper }} TO USER {{ quoted_id }};
 
 {%- endfor %}
 
@@ -53,7 +77,14 @@ SHOW USERS;
 
 -- Verify role grants
 {%- for user in account_admin_users %}
-SHOW GRANTS TO USER {{ user.login_name | upper }};
+{%- set identifier = user.user_identifier | default(user.login_name) %}
+{%- set needs_quoting = '@' in identifier or '.' in identifier %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ identifier ~ '"' %}
+{%- else %}
+{%- set quoted_id = identifier | upper %}
+{%- endif %}
+SHOW GRANTS TO USER {{ quoted_id }};
 {%- endfor %}
 
 -- ============================================================================

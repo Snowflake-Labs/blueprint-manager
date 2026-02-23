@@ -74,11 +74,23 @@ ALTER ACCOUNT SET NETWORK_POLICY = account_network_policy;
 -- Uncomment the users you want to apply the network policy to:
 {%- if identity_provider == 'None - Manual User Management' %}
 {%- for user in manual_admin_users %}
--- ALTER USER "{{ user.username | upper }}" SET NETWORK_POLICY = account_network_policy;
+{%- set needs_quoting = '@' in user.username or '.' in user.username %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ user.username ~ '"' %}
+{%- else %}
+{%- set quoted_id = user.username | upper %}
+{%- endif %}
+-- ALTER USER {{ quoted_id }} SET NETWORK_POLICY = account_network_policy;
 {%- endfor %}
 {%- else %}
 {%- for user in scim_admin_users %}
--- ALTER USER "{{ user.login_name }}" SET NETWORK_POLICY = account_network_policy;
+{%- set needs_quoting = '@' in user.login_name or '.' in user.login_name %}
+{%- if needs_quoting %}
+{%- set quoted_id = '"' ~ user.login_name ~ '"' %}
+{%- else %}
+{%- set quoted_id = user.login_name | upper %}
+{%- endif %}
+-- ALTER USER {{ quoted_id }} SET NETWORK_POLICY = account_network_policy;
 {%- endfor %}
 {%- endif %}
 {%- endif %}
