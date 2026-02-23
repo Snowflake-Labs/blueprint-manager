@@ -37,6 +37,196 @@ def load_yaml(file_path):
         return yaml.safe_load(f)
 
 
+def load_task_metadata(blueprint_dir):
+    """
+    Load task metadata from a blueprint's meta.yaml file.
+    
+    Parses the 'tasks' array from meta.yaml and returns structured task information
+    including slug, title, summary, external_requirements, personas, role_requirements,
+    and the list of steps associated with each task.
+    
+    Args:
+        blueprint_dir: Path to the blueprint directory containing meta.yaml
+        
+    Returns:
+        List of task metadata dictionaries, or empty list if no tasks defined.
+        Each task dict contains:
+        - slug: Task identifier
+        - title: Human-readable task title
+        - summary: Brief description of what the task accomplishes
+        - external_requirements: List of external dependencies
+        - personas: List of personas/roles involved
+        - role_requirements: List of required Snowflake roles
+        - steps: List of step dicts with 'slug' and 'title'
+    """
+    meta_file = blueprint_dir / "meta.yaml"
+    if not meta_file.exists():
+        return []
+    
+    try:
+        meta = load_yaml(meta_file)
+        if meta is None:
+            return []
+        
+        tasks = meta.get("tasks", [])
+        if not tasks:
+            return []
+        
+        # Normalize task structure with defaults for optional fields
+        normalized_tasks = []
+        for task in tasks:
+            if not isinstance(task, dict):
+                continue
+            
+            normalized_task = {
+                "slug": task.get("slug", ""),
+                "title": task.get("title", ""),
+                "summary": task.get("summary", ""),
+                "external_requirements": task.get("external_requirements", []),
+                "personas": task.get("personas", []),
+                "role_requirements": task.get("role_requirements", []),
+                "steps": task.get("steps", []),
+            }
+            
+            # Normalize steps within task
+            normalized_steps = []
+            for step in normalized_task["steps"]:
+                if isinstance(step, dict):
+                    normalized_steps.append({
+                        "slug": step.get("slug", ""),
+                        "title": step.get("title", ""),
+                    })
+                elif isinstance(step, str):
+                    # Handle case where step is just a string slug
+                    normalized_steps.append({
+                        "slug": step,
+                        "title": "",
+                    })
+            normalized_task["steps"] = normalized_steps
+            
+            if normalized_task["slug"]:  # Only add tasks with valid slugs
+                normalized_tasks.append(normalized_task)
+        
+        return normalized_tasks
+    except Exception as e:
+        sys.stderr.write(f"Warning: Error loading task metadata from {meta_file}: {e}\n")
+        return []
+
+
+def load_task_overview(blueprint_dir, task_slug):
+    """
+    Load task overview content from a markdown file.
+    
+    Reads the content from tasks/<task-slug>.md within the blueprint directory.
+    Uses flat directory structure as per design requirements.
+    
+    Args:
+        blueprint_dir: Path to the blueprint directory
+        task_slug: The task slug/identifier (e.g., 'platform-foundation')
+        
+    Returns:
+        String containing the markdown content, or None if file doesn't exist.
+    """
+    tasks_dir = blueprint_dir / "tasks"
+    task_file = tasks_dir / f"{task_slug}.md"
+    
+    if not task_file.exists():
+        return None
+    
+    try:
+        with open(task_file, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        sys.stderr.write(f"Warning: Error reading task overview {task_file}: {e}\n")
+        return None
+
+
+def build_task_step_mapping(tasks):
+    """
+    Build a mapping from step slugs to their parent task information.
+    
+    Creates a dictionary that allows looking up which task a step belongs to,
+    enabling progress tracking queries like "what's next?" and "how much is left?".
+    
+    Args:
+        tasks: List of task metadata dictionaries (from load_task_metadata)
+        
+    Returns:
+        Dictionary mapping step slugs to task context:
+        {
+            "step-slug": {
+                "task_slug": "parent-task-slug",
+                "task_title": "Parent Task Title",
+                "task_index": 0,  # 0-based index of parent task
+                "step_index": 0,  # 0-based index within the task
+                "total_steps_in_task": 5,
+            },
+            ...
+        }
+    """
+    step_mapping = {}
+    
+    for task_index, task in enumerate(tasks):
+        task_slug = task.get("slug", "")
+        task_title = task.get("title", "")
+        task_steps = task.get("steps", [])
+        total_steps = len(task_steps)
+        
+        for step_index, step in enumerate(task_steps):
+            step_slug = step.get("slug", "") if isinstance(step, dict) else step
+            if step_slug:
+                step_mapping[step_slug] = {
+                    "task_slug": task_slug,
+                    "task_title": task_title,
+                    "task_index": task_index,
+                    "step_index": step_index,
+                    "total_steps_in_task": total_steps,
+                }
+    
+    return step_mapping
+
+
+def get_progress_info(step_slug, step_mapping, total_tasks):
+    """
+    Get progress information for a given step.
+    
+    Returns information about where the step is in the overall workflow,
+    useful for answering "what's next?" and "how much is left?" queries.
+    
+    Args:
+        step_slug: The step identifier
+        step_mapping: Dictionary from build_task_step_mapping
+        total_tasks: Total number of tasks in the blueprint
+        
+    Returns:
+        Dictionary with progress info, or None if step not found:
+        {
+            "task_slug": "current-task",
+            "task_title": "Current Task Title",
+            "task_number": 1,  # 1-based task number
+            "total_tasks": 3,
+            "step_number": 2,  # 1-based step number within task
+            "total_steps_in_task": 5,
+            "is_last_step_in_task": False,
+            "is_last_task": False,
+        }
+    """
+    if step_slug not in step_mapping:
+        return None
+    
+    info = step_mapping[step_slug]
+    return {
+        "task_slug": info["task_slug"],
+        "task_title": info["task_title"],
+        "task_number": info["task_index"] + 1,
+        "total_tasks": total_tasks,
+        "step_number": info["step_index"] + 1,
+        "total_steps_in_task": info["total_steps_in_task"],
+        "is_last_step_in_task": info["step_index"] == info["total_steps_in_task"] - 1,
+        "is_last_task": info["task_index"] == total_tasks - 1,
+    }
+
+
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -369,12 +559,25 @@ def render_step_guidance(step_path, answers, jinja_env, base_dir):
         return None, step_id, []
 
 
-def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
+def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=None):
     """
     Render all code templates in a workflow.
     Only renders steps where all required variables are available.
     Steps with missing variables include a skip note in the output.
     Returns the concatenated rendered code and count of rendered/skipped steps.
+    
+    Args:
+        blueprint_dir: Path to the blueprint directory
+        lang: Language to render (sql, terraform)
+        answers: Dictionary of user-provided answers
+        base_dir: Base directory for template loading
+        task_context: Optional dict with task metadata for enhanced rendering:
+            - tasks: List of task metadata from load_task_metadata()
+            - step_mapping: Dict from build_task_step_mapping()
+            When provided, adds task context headers to rendered output.
+    
+    Returns:
+        Tuple of (rendered_code, rendered_count, skipped_count)
     """
     blueprint_id = blueprint_dir.name
 
@@ -402,6 +605,11 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
     rendered_count = 0
     skipped_count = 0
 
+    # Extract task context if provided
+    step_mapping = task_context.get("step_mapping", {}) if task_context else {}
+    tasks = task_context.get("tasks", []) if task_context else []
+    current_task_slug = None
+
     # Add header
     header = [
         f"{comment_char} ============================================================",
@@ -415,6 +623,23 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
 
     # Process steps in the order defined in meta.yaml
     for step_id in step_order:
+        # Add task header when entering a new task (if task context provided)
+        if step_mapping and step_id in step_mapping:
+            task_info = step_mapping[step_id]
+            if task_info["task_slug"] != current_task_slug:
+                current_task_slug = task_info["task_slug"]
+                task_title = task_info["task_title"]
+                task_num = task_info["task_index"] + 1
+                total_tasks = len(tasks)
+                
+                task_header = [
+                    "",
+                    f"{comment_char} ############################################################",
+                    f"{comment_char} TASK {task_num}/{total_tasks}: {task_title}",
+                    f"{comment_char} ############################################################",
+                    "",
+                ]
+                rendered_sections.append("\n".join(task_header))
         step_path = blueprint_dir / step_id
         if not step_path.exists():
             sys.stderr.write(f"Warning: Step directory not found: {step_path}\n")
@@ -472,12 +697,24 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir):
     return "\n".join(rendered_sections), rendered_count, skipped_count
 
 
-def render_blueprint_guidance(blueprint_dir, answers, base_dir):
+def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=None):
     """
     Render all guidance/overview documents in a workflow.
     Only renders steps where all required variables are available.
     Steps with missing variables include a skip note in the output.
     Returns the concatenated rendered guidance markdown and count of rendered/skipped steps.
+    
+    Args:
+        blueprint_dir: Path to the blueprint directory
+        answers: Dictionary of user-provided answers
+        base_dir: Base directory for template loading
+        task_context: Optional dict with task metadata for enhanced rendering:
+            - tasks: List of task metadata from load_task_metadata()
+            - step_mapping: Dict from build_task_step_mapping()
+            When provided, adds task sections with overview content to rendered output.
+    
+    Returns:
+        Tuple of (rendered_guidance, rendered_count, skipped_count)
     """
     blueprint_id = blueprint_dir.name
 
@@ -505,6 +742,11 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
     rendered_count = 0
     skipped_count = 0
 
+    # Extract task context if provided
+    step_mapping = task_context.get("step_mapping", {}) if task_context else {}
+    tasks = task_context.get("tasks", []) if task_context else []
+    current_task_slug = None
+
     # Add header
     header = [
         f"# {blueprint_name}",
@@ -522,11 +764,88 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir):
         header.append("---")
         header.append("")
 
+    # Add table of contents if task context is available
+    if tasks:
+        header.append("## Table of Contents")
+        header.append("")
+        for i, task in enumerate(tasks):
+            task_title = task.get("title", task.get("slug", f"Task {i+1}"))
+            task_slug = task.get("slug", "")
+            header.append(f"{i+1}. [{task_title}](#{task_slug})")
+        header.append("")
+        header.append("---")
+        header.append("")
+
     rendered_sections.append("\n".join(header))
 
     # Process steps in the order defined in meta.yaml
     step_num = 1
     for step_id in step_order:
+        # Add task header when entering a new task (if task context provided)
+        if step_mapping and step_id in step_mapping:
+            task_info = step_mapping[step_id]
+            if task_info["task_slug"] != current_task_slug:
+                current_task_slug = task_info["task_slug"]
+                task_title = task_info["task_title"]
+                task_num = task_info["task_index"] + 1
+                total_tasks = len(tasks)
+                
+                # Find task metadata for additional info
+                task_meta = next(
+                    (t for t in tasks if t.get("slug") == current_task_slug), 
+                    {}
+                )
+                
+                task_section = [
+                    "",
+                    f"# Task {task_num}/{total_tasks}: {task_title} {{#{current_task_slug}}}",
+                    "",
+                ]
+                
+                # Add task summary if available
+                if task_meta.get("summary"):
+                    task_section.append(f"> {task_meta['summary'].strip()}")
+                    task_section.append("")
+                
+                # Add prerequisites section if available
+                prereqs = []
+                if task_meta.get("external_requirements"):
+                    prereqs.append("**External Requirements:**")
+                    for req in task_meta["external_requirements"]:
+                        prereqs.append(f"- {req}")
+                    prereqs.append("")
+                
+                if task_meta.get("role_requirements"):
+                    prereqs.append("**Role Requirements:**")
+                    for role in task_meta["role_requirements"]:
+                        prereqs.append(f"- {role}")
+                    prereqs.append("")
+                
+                if task_meta.get("personas"):
+                    prereqs.append("**Personas:**")
+                    for persona in task_meta["personas"]:
+                        prereqs.append(f"- {persona}")
+                    prereqs.append("")
+                
+                if prereqs:
+                    task_section.extend(prereqs)
+                
+                # Load and add task overview content if available
+                task_overview = load_task_overview(blueprint_dir, current_task_slug)
+                if task_overview:
+                    task_section.append("<details>")
+                    task_section.append("<summary>Task Overview (click to expand)</summary>")
+                    task_section.append("")
+                    task_section.append(task_overview)
+                    task_section.append("")
+                    task_section.append("</details>")
+                    task_section.append("")
+                
+                task_section.append("---")
+                task_section.append("")
+                
+                rendered_sections.append("\n".join(task_section))
+
         step_path = blueprint_dir / step_id
         if not step_path.exists():
             sys.stderr.write(f"Warning: Step directory not found: {step_path}\n")
