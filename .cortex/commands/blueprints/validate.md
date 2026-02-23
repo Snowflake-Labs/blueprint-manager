@@ -1,6 +1,6 @@
 # Blueprints Validate
 
-Check an answer file for completeness against blueprint requirements.
+Check an answer file for completeness against blueprint requirements and validate blueprint schema.
 
 ## Usage
 
@@ -19,10 +19,62 @@ Validate an answer file by checking:
 
 1. **File Existence**: Verify the answer file exists and is valid YAML
 2. **Blueprint Match**: Ensure the blueprint exists
-3. **Required Variables**: Check each step's templates for required variables
-4. **Missing Values**: Identify variables that are missing from the answer file
-5. **Null Values**: Identify variables that exist but have null/empty values
-6. **Type Validation**: Check that values match expected types (text, list, object-list, multi-select)
+3. **Blueprint Schema**: Validate the blueprint's meta.yaml structure (see Schema Validation below)
+4. **Required Variables**: Check each step's templates for required variables
+5. **Missing Values**: Identify variables that are missing from the answer file
+6. **Null Values**: Identify variables that exist but have null/empty values
+7. **Type Validation**: Check that values match expected types (text, list, object-list, multi-select)
+
+## Schema Validation
+
+The validator supports both flat (steps-only) and nested (tasks with steps) blueprint formats:
+
+### Flat Format (without tasks)
+```yaml
+blueprint_id: blueprint_abc123
+name: Simple Setup
+summary: Basic configuration
+overview: Description here.
+steps:
+  - step-one
+  - step-two
+```
+
+### Nested Format (with tasks)
+```yaml
+blueprint_id: blueprint_def456
+name: Platform Setup
+summary: Full platform configuration
+overview: Description here.
+steps:
+  - step-one
+  - step-two
+tasks:
+  - slug: task-one
+    title: Task One
+    summary: First task group
+    role_requirements:
+      - ACCOUNTADMIN
+    external_requirements:
+      - External system access
+    personas:
+      - Platform Administrator
+    steps:
+      - slug: step-one
+        title: Step One
+      - slug: step-two
+        title: Step Two
+```
+
+### Task Structure Validation Rules
+
+When a blueprint includes `tasks`, the following validations are performed:
+
+1. **Required task fields**: Each task must have `slug`, `title`, and `summary`
+2. **Optional task fields**: `role_requirements`, `external_requirements`, `personas`, `description`, `steps`
+3. **Step references**: Step slugs in tasks must reference valid steps defined in the blueprint's `steps` list
+4. **Unique slugs**: Task slugs must be unique within the blueprint
+5. **Step coverage**: All steps should be assigned to at least one task (warning if not)
 
 ## Output Format
 
