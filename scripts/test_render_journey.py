@@ -981,5 +981,320 @@ class TestBackwardCompatibility(TestCase):
         self.assertEqual(rendered_count, 1)
 
 
+class TestGenerateAnchor(TestCase):
+    """Test anchor generation for TOC links (CXE-14253)."""
+
+    def test_generate_anchor_basic(self):
+        """Basic heading should convert to lowercase with hyphens."""
+        from render_journey import generate_anchor
+
+        anchor = generate_anchor("Task 1: Platform Foundation")
+        self.assertEqual(anchor, "task-1-platform-foundation")
+
+    def test_generate_anchor_with_special_characters(self):
+        """Special characters should be removed."""
+        from render_journey import generate_anchor
+
+        anchor = generate_anchor("Step 1.1: Configure Account & Settings")
+        self.assertEqual(anchor, "step-11-configure-account-settings")
+
+    def test_generate_anchor_with_multiple_spaces(self):
+        """Multiple spaces should collapse to single hyphen."""
+        from render_journey import generate_anchor
+
+        anchor = generate_anchor("Task  1:   Multiple   Spaces")
+        self.assertEqual(anchor, "task-1-multiple-spaces")
+
+    def test_generate_anchor_with_underscores(self):
+        """Underscores should be converted to hyphens."""
+        from render_journey import generate_anchor
+
+        anchor = generate_anchor("my_task_name")
+        self.assertEqual(anchor, "my-task-name")
+
+    def test_generate_anchor_preserves_numbers(self):
+        """Numbers should be preserved in anchors."""
+        from render_journey import generate_anchor
+
+        anchor = generate_anchor("Step 2.3: Configure 10 Settings")
+        self.assertEqual(anchor, "step-23-configure-10-settings")
+
+    def test_generate_anchor_removes_parentheses(self):
+        """Parentheses and their contents should be handled."""
+        from render_journey import generate_anchor
+
+        anchor = generate_anchor("Task (Optional): Setup")
+        self.assertEqual(anchor, "task-optional-setup")
+
+    def test_generate_anchor_empty_string(self):
+        """Empty string should return empty anchor."""
+        from render_journey import generate_anchor
+
+        anchor = generate_anchor("")
+        self.assertEqual(anchor, "")
+
+
+class TestGenerateTableOfContents(TestCase):
+    """Test hierarchical TOC generation (CXE-14253)."""
+
+    def test_generate_toc_basic(self):
+        """Basic TOC should show tasks and steps with proper anchors."""
+        from render_journey import generate_table_of_contents
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Platform Foundation",
+                "steps": [
+                    {"slug": "step-1", "title": "Configure Account"},
+                    {"slug": "step-2", "title": "Set Up Roles"},
+                ],
+            },
+        ]
+        rendered_steps = {"step-1", "step-2"}
+
+        toc = generate_table_of_contents(tasks, rendered_steps)
+
+        self.assertIn("## Table of Contents", toc)
+        self.assertIn("- [Task 1: Platform Foundation](#task-1-platform-foundation)", toc)
+        self.assertIn("  - [Step 1.1: Configure Account](#step-11-configure-account)", toc)
+        self.assertIn("  - [Step 1.2: Set Up Roles](#step-12-set-up-roles)", toc)
+
+    def test_generate_toc_respects_skipped_steps(self):
+        """Skipped steps should not appear in TOC."""
+        from render_journey import generate_table_of_contents
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Platform Foundation",
+                "steps": [
+                    {"slug": "step-1", "title": "Configure Account"},
+                    {"slug": "step-2", "title": "Skipped Step"},
+                    {"slug": "step-3", "title": "Set Up Roles"},
+                ],
+            },
+        ]
+        # Only step-1 and step-3 were rendered
+        rendered_steps = {"step-1", "step-3"}
+
+        toc = generate_table_of_contents(tasks, rendered_steps)
+
+        self.assertIn("Step 1.1: Configure Account", toc)
+        self.assertIn("Step 1.2: Set Up Roles", toc)  # Note: numbered 1.2, not 1.3
+        self.assertNotIn("Skipped Step", toc)
+
+    def test_generate_toc_skips_empty_tasks(self):
+        """Tasks with no rendered steps should be skipped entirely."""
+        from render_journey import generate_table_of_contents
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Platform Foundation",
+                "steps": [
+                    {"slug": "step-1", "title": "Configure Account"},
+                ],
+            },
+            {
+                "slug": "task-2",
+                "title": "Empty Task",
+                "steps": [
+                    {"slug": "step-2", "title": "Skipped Step"},
+                ],
+            },
+            {
+                "slug": "task-3",
+                "title": "Security Setup",
+                "steps": [
+                    {"slug": "step-3", "title": "Configure Auth"},
+                ],
+            },
+        ]
+        # Only steps from task-1 and task-3 were rendered
+        rendered_steps = {"step-1", "step-3"}
+
+        toc = generate_table_of_contents(tasks, rendered_steps)
+
+        self.assertIn("Task 1: Platform Foundation", toc)
+        self.assertIn("Task 3: Security Setup", toc)
+        self.assertNotIn("Task 2", toc)
+        self.assertNotIn("Empty Task", toc)
+
+    def test_generate_toc_depth_1(self):
+        """Depth 1 should only show tasks, not steps."""
+        from render_journey import generate_table_of_contents
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Platform Foundation",
+                "steps": [
+                    {"slug": "step-1", "title": "Configure Account"},
+                    {"slug": "step-2", "title": "Set Up Roles"},
+                ],
+            },
+        ]
+        rendered_steps = {"step-1", "step-2"}
+
+        toc = generate_table_of_contents(tasks, rendered_steps, depth=1)
+
+        self.assertIn("- [Task 1: Platform Foundation](#task-1-platform-foundation)", toc)
+        self.assertNotIn("Step 1.1", toc)
+        self.assertNotIn("Step 1.2", toc)
+
+    def test_generate_toc_depth_2_default(self):
+        """Default depth 2 should show tasks and steps."""
+        from render_journey import generate_table_of_contents
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Platform Foundation",
+                "steps": [
+                    {"slug": "step-1", "title": "Configure Account"},
+                ],
+            },
+        ]
+        rendered_steps = {"step-1"}
+
+        toc = generate_table_of_contents(tasks, rendered_steps)
+
+        self.assertIn("Task 1: Platform Foundation", toc)
+        self.assertIn("Step 1.1: Configure Account", toc)
+
+    def test_generate_toc_empty_tasks(self):
+        """Empty tasks list should return empty string."""
+        from render_journey import generate_table_of_contents
+
+        toc = generate_table_of_contents([], set())
+
+        self.assertEqual(toc, "")
+
+    def test_generate_toc_no_rendered_steps(self):
+        """No rendered steps should result in empty TOC content."""
+        from render_journey import generate_table_of_contents
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Platform Foundation",
+                "steps": [
+                    {"slug": "step-1", "title": "Configure Account"},
+                ],
+            },
+        ]
+        rendered_steps = set()  # No steps rendered
+
+        toc = generate_table_of_contents(tasks, rendered_steps)
+
+        # TOC header is present but no tasks/steps
+        self.assertIn("## Table of Contents", toc)
+        self.assertNotIn("Task 1", toc)
+
+    def test_generate_toc_multiple_tasks(self):
+        """Multiple tasks should all appear with correct numbering."""
+        from render_journey import generate_table_of_contents
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Platform Foundation",
+                "steps": [
+                    {"slug": "step-1", "title": "Configure Account"},
+                ],
+            },
+            {
+                "slug": "task-2",
+                "title": "Security Setup",
+                "steps": [
+                    {"slug": "step-2", "title": "Configure Auth"},
+                    {"slug": "step-3", "title": "Enable MFA"},
+                ],
+            },
+            {
+                "slug": "task-3",
+                "title": "Cost Management",
+                "steps": [
+                    {"slug": "step-4", "title": "Set Budgets"},
+                ],
+            },
+        ]
+        rendered_steps = {"step-1", "step-2", "step-3", "step-4"}
+
+        toc = generate_table_of_contents(tasks, rendered_steps)
+
+        self.assertIn("- [Task 1: Platform Foundation](#task-1-platform-foundation)", toc)
+        self.assertIn("- [Task 2: Security Setup](#task-2-security-setup)", toc)
+        self.assertIn("- [Task 3: Cost Management](#task-3-cost-management)", toc)
+        self.assertIn("  - [Step 1.1: Configure Account](#step-11-configure-account)", toc)
+        self.assertIn("  - [Step 2.1: Configure Auth](#step-21-configure-auth)", toc)
+        self.assertIn("  - [Step 2.2: Enable MFA](#step-22-enable-mfa)", toc)
+        self.assertIn("  - [Step 3.1: Set Budgets](#step-31-set-budgets)", toc)
+
+    def test_generate_toc_step_slug_fallback(self):
+        """Steps without titles should use slug as display name."""
+        from render_journey import generate_table_of_contents
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Platform Foundation",
+                "steps": [
+                    {"slug": "configure-account", "title": ""},  # Empty title
+                    {"slug": "set-up-roles"},  # No title key at all
+                ],
+            },
+        ]
+        rendered_steps = {"configure-account", "set-up-roles"}
+
+        toc = generate_table_of_contents(tasks, rendered_steps)
+
+        self.assertIn("Step 1.1: configure-account", toc)
+        self.assertIn("Step 1.2: set-up-roles", toc)
+
+    def test_generate_toc_string_steps(self):
+        """Steps defined as strings should work correctly."""
+        from render_journey import generate_table_of_contents
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Platform Foundation",
+                "steps": ["step-1", "step-2"],  # String format
+            },
+        ]
+        rendered_steps = {"step-1", "step-2"}
+
+        toc = generate_table_of_contents(tasks, rendered_steps)
+
+        self.assertIn("Step 1.1: step-1", toc)
+        self.assertIn("Step 1.2: step-2", toc)
+
+    def test_generate_toc_format_matches_markdown_conventions(self):
+        """TOC format should match standard markdown conventions."""
+        from render_journey import generate_table_of_contents
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "My Task",
+                "steps": [
+                    {"slug": "step-1", "title": "My Step"},
+                ],
+            },
+        ]
+        rendered_steps = {"step-1"}
+
+        toc = generate_table_of_contents(tasks, rendered_steps)
+
+        # Check format: unordered list with nested items
+        lines = toc.strip().split("\n")
+        self.assertEqual(lines[0], "## Table of Contents")
+        self.assertEqual(lines[1], "")
+        self.assertTrue(lines[2].startswith("- ["))  # Task line
+        self.assertTrue(lines[3].startswith("  - ["))  # Step line (2-space indent)
+
+
 if __name__ == "__main__":
     main()

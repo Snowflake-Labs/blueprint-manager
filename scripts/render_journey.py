@@ -227,6 +227,125 @@ def get_progress_info(step_slug, step_mapping, total_tasks):
     }
 
 
+def generate_anchor(text):
+    """
+    Generate a markdown-compatible anchor from heading text.
+    
+    Follows standard markdown anchor conventions:
+    - Convert to lowercase
+    - Replace spaces with hyphens
+    - Remove special characters except hyphens
+    - Collapse multiple hyphens into single hyphen
+    
+    Args:
+        text: The heading text to convert to an anchor
+        
+    Returns:
+        String suitable for use as a markdown anchor (without the # prefix)
+    """
+    import re
+    # Convert to lowercase
+    anchor = text.lower()
+    # Replace spaces and underscores with hyphens
+    anchor = re.sub(r'[\s_]+', '-', anchor)
+    # Remove special characters except hyphens and alphanumerics
+    anchor = re.sub(r'[^a-z0-9-]', '', anchor)
+    # Collapse multiple hyphens into single hyphen
+    anchor = re.sub(r'-+', '-', anchor)
+    # Remove leading/trailing hyphens
+    anchor = anchor.strip('-')
+    return anchor
+
+
+def generate_table_of_contents(tasks, rendered_steps, depth=2):
+    """
+    Generate a hierarchical Table of Contents for rendered blueprint documentation.
+    
+    Creates a markdown-formatted TOC from the task→step hierarchy with proper
+    anchor links. Only includes steps that were actually rendered (not skipped).
+    
+    Args:
+        tasks: List of task metadata dictionaries from load_task_metadata().
+               Each task should have 'slug', 'title', and 'steps' keys.
+        rendered_steps: Set or list of step slugs that were successfully rendered.
+                       Steps not in this collection are excluded from the TOC.
+        depth: Controls nesting levels in TOC (default: 2)
+               - depth=1: Only tasks (no steps)
+               - depth=2: Tasks and steps (default)
+               - depth>2: Reserved for future sub-step support
+               
+    Returns:
+        String containing markdown-formatted TOC, or empty string if no tasks.
+        
+    Example output:
+        ## Table of Contents
+        
+        - [Task 1: Platform Foundation](#task-1-platform-foundation)
+          - [Step 1.1: Configure Account](#step-11-configure-account)
+          - [Step 1.2: Set Up Roles](#step-12-set-up-roles)
+        - [Task 2: Data Integration](#task-2-data-integration)
+          - [Step 2.1: Connect Sources](#step-21-connect-sources)
+    """
+    if not tasks:
+        return ""
+    
+    # Convert rendered_steps to set for O(1) lookup
+    rendered_set = set(rendered_steps) if rendered_steps else set()
+    
+    toc_lines = [
+        "## Table of Contents",
+        "",
+    ]
+    
+    for task_index, task in enumerate(tasks):
+        task_num = task_index + 1
+        task_title = task.get("title", task.get("slug", f"Task {task_num}"))
+        task_steps = task.get("steps", [])
+        
+        # Check if any steps in this task were rendered
+        task_step_slugs = [
+            s.get("slug", s) if isinstance(s, dict) else s 
+            for s in task_steps
+        ]
+        rendered_task_steps = [slug for slug in task_step_slugs if slug in rendered_set]
+        
+        # Skip task entirely if no steps were rendered
+        if not rendered_task_steps:
+            continue
+        
+        # Generate task entry with anchor link
+        task_heading = f"Task {task_num}: {task_title}"
+        task_anchor = generate_anchor(task_heading)
+        toc_lines.append(f"- [{task_heading}](#{task_anchor})")
+        
+        # Add step entries if depth >= 2
+        if depth >= 2:
+            step_num_in_task = 0
+            for step in task_steps:
+                step_slug = step.get("slug", step) if isinstance(step, dict) else step
+                step_title = step.get("title", "") if isinstance(step, dict) else ""
+                
+                # Skip steps that weren't rendered
+                if step_slug not in rendered_set:
+                    continue
+                
+                step_num_in_task += 1
+                step_label = f"{task_num}.{step_num_in_task}"
+                
+                # Use step title if available, otherwise use slug
+                step_display = step_title if step_title else step_slug
+                step_heading = f"Step {step_label}: {step_display}"
+                step_anchor = generate_anchor(step_heading)
+                toc_lines.append(f"  - [{step_heading}](#{step_anchor})")
+    
+    # Add trailing empty line and separator
+    toc_lines.append("")
+    toc_lines.append("---")
+    toc_lines.append("")
+    
+    return "\n".join(toc_lines)
+
+
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -751,7 +870,7 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
     return "\n".join(rendered_sections), rendered_count, skipped_count
 
 
-def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=None):
+def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=None, toc_depth=2):
     """
     Render all guidance/overview documents in a workflow.
     Only renders steps where all required variables are available.
@@ -766,6 +885,9 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
             - tasks: List of task metadata from load_task_metadata()
             - step_mapping: Dict from build_task_step_mapping()
             When provided, adds task sections with overview content to rendered output.
+        toc_depth: Controls Table of Contents nesting levels (default: 2)
+            - depth=1: Only tasks (no steps)
+            - depth=2: Tasks and steps (default)
     
     Returns:
         Tuple of (rendered_guidance, rendered_count, skipped_count)
@@ -792,13 +914,33 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
         keep_trailing_newline=True,
     )
 
-    rendered_sections = []
-    rendered_count = 0
-    skipped_count = 0
-
     # Extract task context if provided
     step_mapping = task_context.get("step_mapping", {}) if task_context else {}
     tasks = task_context.get("tasks", []) if task_context else []
+
+    # PHASE 1: Pre-scan to determine which steps can be rendered
+    # This is needed to generate an accurate TOC that respects skipped steps
+    renderable_steps = set()
+    for step_id in step_order:
+        step_path = blueprint_dir / step_id
+        if not step_path.exists():
+            continue
+        
+        dynamic_file = step_path / "dynamic.md.jinja"
+        if not dynamic_file.exists():
+            continue
+        
+        # Check if this step can be rendered
+        can_render, _, _ = check_template_renderable(
+            dynamic_file, answers, jinja_env, base_dir
+        )
+        if can_render:
+            renderable_steps.add(step_id)
+
+    # PHASE 2: Build header with task-aware TOC
+    rendered_sections = []
+    rendered_count = 0
+    skipped_count = 0
     current_task_slug = None
     current_task_num = 0
 
@@ -819,19 +961,13 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
         header.append("---")
         header.append("")
 
-    # Add table of contents if task context is available
-    if tasks:
-        header.append("## Table of Contents")
-        header.append("")
-        for i, task in enumerate(tasks):
-            task_title = task.get("title", task.get("slug", f"Task {i+1}"))
-            task_slug = task.get("slug", "")
-            header.append(f"{i+1}. [{task_title}](#{task_slug})")
-        header.append("")
-        header.append("---")
-        header.append("")
-
     rendered_sections.append("\n".join(header))
+
+    # Generate and add hierarchical table of contents (only includes rendered steps)
+    if tasks:
+        toc = generate_table_of_contents(tasks, renderable_steps, depth=toc_depth)
+        if toc:
+            rendered_sections.append(toc)
 
     # Process steps in the order defined in meta.yaml
     flat_step_num = 1  # Fallback for backward compatibility
