@@ -852,7 +852,7 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
                 
                 task_section = [
                     "",
-                    f"# Task {current_task_num}: {task_title} {{#{current_task_slug}}}",
+                    f"# Task {current_task_num}: {task_title}",
                     "",
                 ]
                 
@@ -1084,10 +1084,20 @@ def main():
     print(f"Loading answers from {answers_path}...")
     answers = load_yaml(answers_path) or {}
 
+    # Load task context for hierarchical rendering
+    tasks = load_task_metadata(blueprint_dir)
+    task_context = None
+    if tasks:
+        step_mapping = build_task_step_mapping(tasks)
+        task_context = {
+            "tasks": tasks,
+            "step_mapping": step_mapping,
+        }
+
     # Render IaC code
     print(f"Rendering blueprint '{args.blueprint}' for language '{args.lang}'...")
     rendered_code, code_rendered, code_skipped = render_blueprint_code(
-        blueprint_dir, args.lang, answers, base_dir
+        blueprint_dir, args.lang, answers, base_dir, task_context=task_context
     )
 
     # Generate IaC output filename
@@ -1110,7 +1120,7 @@ def main():
     if not args.skip_guidance:
         print("\nRendering guidance documents...")
         rendered_guidance, guide_rendered, guide_skipped = render_blueprint_guidance(
-            blueprint_dir, answers, base_dir
+            blueprint_dir, answers, base_dir, task_context=task_context
         )
 
         # Generate guidance output filename
