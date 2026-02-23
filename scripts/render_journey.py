@@ -609,6 +609,7 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
     step_mapping = task_context.get("step_mapping", {}) if task_context else {}
     tasks = task_context.get("tasks", []) if task_context else []
     current_task_slug = None
+    current_task_num = 0
 
     # Add header
     header = [
@@ -629,16 +630,45 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
             if task_info["task_slug"] != current_task_slug:
                 current_task_slug = task_info["task_slug"]
                 task_title = task_info["task_title"]
-                task_num = task_info["task_index"] + 1
+                current_task_num = task_info["task_index"] + 1
                 total_tasks = len(tasks)
+                
+                # Find task metadata for additional info
+                task_meta = next(
+                    (t for t in tasks if t.get("slug") == current_task_slug), 
+                    {}
+                )
                 
                 task_header = [
                     "",
-                    f"{comment_char} ############################################################",
-                    f"{comment_char} TASK {task_num}/{total_tasks}: {task_title}",
-                    f"{comment_char} ############################################################",
-                    "",
+                    f"{comment_char} ============================================================================",
+                    f"{comment_char} TASK {current_task_num}: {task_title}",
                 ]
+                
+                # Add summary if available
+                if task_meta.get("summary"):
+                    summary = task_meta["summary"].strip().replace("\n", " ")
+                    task_header.append(f"{comment_char} Summary: {summary}")
+                
+                # Add personas if available
+                if task_meta.get("personas"):
+                    personas_str = ", ".join(task_meta["personas"])
+                    task_header.append(f"{comment_char} Personas: {personas_str}")
+                
+                # Add role requirements if available
+                if task_meta.get("role_requirements"):
+                    roles_str = ", ".join(task_meta["role_requirements"])
+                    task_header.append(f"{comment_char} Role Requirements: {roles_str}")
+                
+                # Add external requirements if available
+                if task_meta.get("external_requirements"):
+                    ext_reqs_str = ", ".join(task_meta["external_requirements"])
+                    task_header.append(f"{comment_char} External Requirements: {ext_reqs_str}")
+                
+                task_header.extend([
+                    f"{comment_char} ============================================================================",
+                    "",
+                ])
                 rendered_sections.append("\n".join(task_header))
         step_path = blueprint_dir / step_id
         if not step_path.exists():
@@ -648,6 +678,15 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
         rendered_code, step_id, missing_vars = render_step_code(
             step_path, lang, answers, jinja_env, base_dir
         )
+
+        # Determine step numbering (hierarchical if task context available, flat otherwise)
+        if step_mapping and step_id in step_mapping:
+            task_info = step_mapping[step_id]
+            step_num_in_task = task_info["step_index"] + 1
+            step_label = f"{current_task_num}.{step_num_in_task}"
+        else:
+            # Fallback to flat numbering for backward compatibility
+            step_label = str(rendered_count + skipped_count + 1)
 
         if rendered_code is None:
             # No code file or missing variables - add skip note if file existed
@@ -662,14 +701,14 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
                 # Get step title for better readability
                 step_title = get_step_title(step_path)
                 if step_title:
-                    skip_header = f"SKIPPED: {step_title} ({step_id})"
+                    skip_header = f"SKIPPED Step {step_label}: {step_title}"
                 else:
-                    skip_header = f"SKIPPED: {step_id}"
+                    skip_header = f"SKIPPED Step {step_label}: {step_id}"
 
                 # Build skip note
                 skip_note = [
                     "",
-                    f"{comment_char} ============================================================",
+                    f"{comment_char} ------------------------------------------------------------",
                     f"{comment_char} {skip_header}",
                 ]
                 if missing_only:
@@ -683,7 +722,7 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
                 skip_note.extend(
                     [
                         f"{comment_char} Provide values for the above variables to render this step.",
-                        f"{comment_char} ============================================================",
+                        f"{comment_char} ------------------------------------------------------------",
                         "",
                     ]
                 )
@@ -691,6 +730,21 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
                 skipped_count += 1
             continue
 
+        # Add step header with hierarchical numbering
+        step_title = get_step_title(step_path)
+        if step_title:
+            step_header_text = f"Step {step_label}: {step_title}"
+        else:
+            step_header_text = f"Step {step_label}: {step_id}"
+        
+        step_header = [
+            "",
+            f"{comment_char} ------------------------------------------------------------",
+            f"{comment_char} {step_header_text}",
+            f"{comment_char} ------------------------------------------------------------",
+            "",
+        ]
+        rendered_sections.append("\n".join(step_header))
         rendered_sections.append(rendered_code)
         rendered_count += 1
 
@@ -746,6 +800,7 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
     step_mapping = task_context.get("step_mapping", {}) if task_context else {}
     tasks = task_context.get("tasks", []) if task_context else []
     current_task_slug = None
+    current_task_num = 0
 
     # Add header
     header = [
@@ -779,7 +834,7 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
     rendered_sections.append("\n".join(header))
 
     # Process steps in the order defined in meta.yaml
-    step_num = 1
+    flat_step_num = 1  # Fallback for backward compatibility
     for step_id in step_order:
         # Add task header when entering a new task (if task context provided)
         if step_mapping and step_id in step_mapping:
@@ -787,8 +842,7 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
             if task_info["task_slug"] != current_task_slug:
                 current_task_slug = task_info["task_slug"]
                 task_title = task_info["task_title"]
-                task_num = task_info["task_index"] + 1
-                total_tasks = len(tasks)
+                current_task_num = task_info["task_index"] + 1
                 
                 # Find task metadata for additional info
                 task_meta = next(
@@ -798,37 +852,34 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
                 
                 task_section = [
                     "",
-                    f"# Task {task_num}/{total_tasks}: {task_title} {{#{current_task_slug}}}",
+                    f"# Task {current_task_num}: {task_title}",
                     "",
                 ]
                 
                 # Add task summary if available
                 if task_meta.get("summary"):
-                    task_section.append(f"> {task_meta['summary'].strip()}")
+                    summary = task_meta["summary"].strip().replace("\n", " ")
+                    task_section.append(f"**Summary:** {summary}")
                     task_section.append("")
                 
                 # Add prerequisites section if available
                 prereqs = []
-                if task_meta.get("external_requirements"):
-                    prereqs.append("**External Requirements:**")
-                    for req in task_meta["external_requirements"]:
-                        prereqs.append(f"- {req}")
-                    prereqs.append("")
+                if task_meta.get("personas"):
+                    personas_str = ", ".join(task_meta["personas"])
+                    prereqs.append(f"- **Personas:** {personas_str}")
                 
                 if task_meta.get("role_requirements"):
-                    prereqs.append("**Role Requirements:**")
-                    for role in task_meta["role_requirements"]:
-                        prereqs.append(f"- {role}")
-                    prereqs.append("")
+                    roles_str = ", ".join(task_meta["role_requirements"])
+                    prereqs.append(f"- **Role Requirements:** {roles_str}")
                 
-                if task_meta.get("personas"):
-                    prereqs.append("**Personas:**")
-                    for persona in task_meta["personas"]:
-                        prereqs.append(f"- {persona}")
-                    prereqs.append("")
+                if task_meta.get("external_requirements"):
+                    ext_reqs_str = ", ".join(task_meta["external_requirements"])
+                    prereqs.append(f"- **External Requirements:** {ext_reqs_str}")
                 
                 if prereqs:
+                    task_section.append("**Prerequisites:**")
                     task_section.extend(prereqs)
+                    task_section.append("")
                 
                 # Load and add task overview content if available
                 task_overview = load_task_overview(blueprint_dir, current_task_slug)
@@ -855,6 +906,16 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
             step_path, answers, jinja_env, base_dir
         )
 
+        # Determine step numbering (hierarchical if task context available, flat otherwise)
+        if step_mapping and step_id in step_mapping:
+            task_info = step_mapping[step_id]
+            step_num_in_task = task_info["step_index"] + 1
+            step_label = f"{current_task_num}.{step_num_in_task}"
+        else:
+            # Fallback to flat numbering for backward compatibility
+            step_label = str(flat_step_num)
+            flat_step_num += 1
+
         if rendered_guidance is None:
             # No dynamic template or missing variables - add skip note if file existed
             dynamic_file = step_path / "dynamic.md.jinja"
@@ -868,16 +929,16 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
                 # Get step title for better readability
                 step_title = get_step_title(step_path)
                 if step_title:
-                    step_heading = f"{step_title} ({step_id})"
+                    step_heading = f"{step_title}"
                 else:
                     step_heading = step_id
 
                 # Build skip note
                 skip_note = [
                     "",
-                    f"## Step {step_num}: {step_heading}",
+                    f"## Step {step_label}: {step_heading}",
                     "",
-                    "> ⚠️ **SKIPPED:** This step could not be rendered due to missing answers.",
+                    "> **SKIPPED:** This step could not be rendered due to missing answers.",
                     ">",
                 ]
                 if missing_only:
@@ -900,13 +961,18 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
                 )
                 rendered_sections.append("\n".join(skip_note))
                 skipped_count += 1
-                step_num += 1
             continue
 
-        # Add step header
+        # Add step header with hierarchical numbering
+        step_title = get_step_title(step_path)
+        if step_title:
+            step_heading = f"{step_title}"
+        else:
+            step_heading = step_id
+        
         step_header = [
             "",
-            f"## Step {step_num}: {step_id}",
+            f"## Step {step_label}: {step_heading}",
             "",
         ]
 
@@ -915,7 +981,6 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
         rendered_sections.append("\n---\n")
 
         rendered_count += 1
-        step_num += 1
 
     return "\n".join(rendered_sections), rendered_count, skipped_count
 
@@ -1019,10 +1084,20 @@ def main():
     print(f"Loading answers from {answers_path}...")
     answers = load_yaml(answers_path) or {}
 
+    # Load task context for hierarchical rendering
+    tasks = load_task_metadata(blueprint_dir)
+    task_context = None
+    if tasks:
+        step_mapping = build_task_step_mapping(tasks)
+        task_context = {
+            "tasks": tasks,
+            "step_mapping": step_mapping,
+        }
+
     # Render IaC code
     print(f"Rendering blueprint '{args.blueprint}' for language '{args.lang}'...")
     rendered_code, code_rendered, code_skipped = render_blueprint_code(
-        blueprint_dir, args.lang, answers, base_dir
+        blueprint_dir, args.lang, answers, base_dir, task_context=task_context
     )
 
     # Generate IaC output filename
@@ -1045,7 +1120,7 @@ def main():
     if not args.skip_guidance:
         print("\nRendering guidance documents...")
         rendered_guidance, guide_rendered, guide_skipped = render_blueprint_guidance(
-            blueprint_dir, answers, base_dir
+            blueprint_dir, answers, base_dir, task_context=task_context
         )
 
         # Generate guidance output filename
