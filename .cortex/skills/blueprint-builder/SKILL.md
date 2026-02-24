@@ -788,7 +788,7 @@ When a user asks "how much is left?", "what's my progress?", "how far along am I
 2. Present the response:
 
 ```
-**Current Task:** [Task Title] — [completed]/[total] steps ([percentage]%)
+**Current Task:** [Task Title] — [completed_steps_in_task]/[total_steps_in_task] steps ([percentage]%)
 
 **Overall Blueprint Progress:** [completed_steps]/[total_steps] steps ([percentage]%)
   - Completed tasks: [completed_tasks]/[total_tasks]
@@ -830,9 +830,9 @@ When a user returns to an in-progress blueprint (e.g., they resume a previous se
 
 ---
 
-**Current Step:** Step [N]: [Step Title]
+**Current Step:** Step [N of M]: [Step Title]
 
-**Task Progress:** [completed_steps]/[total_steps_in_task] steps complete ([percentage]%)
+**Task Progress:** [completed_steps_in_task]/[total_steps_in_task] steps complete ([percentage]%)
 
 **Remaining steps in this task:**
 1. [Remaining step title]
