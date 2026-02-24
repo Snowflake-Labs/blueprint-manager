@@ -227,6 +227,176 @@ def get_progress_info(step_slug, step_mapping, total_tasks):
     }
 
 
+def get_current_task(step_slug, tasks):
+    """
+    Determine which task a given step belongs to.
+
+    Maps a step identifier back to its parent task, returning the full task
+    metadata including summary, personas, role requirements, and step list.
+
+    Args:
+        step_slug: The step identifier (e.g., 'configure-scim-integration')
+        tasks: List of task metadata dictionaries (from load_task_metadata)
+
+    Returns:
+        Dictionary with parent task metadata, or None if step not found:
+        {
+            "slug": "parent-task-slug",
+            "title": "Parent Task Title",
+            "summary": "Brief description...",
+            "task_index": 0,  # 0-based index
+            "external_requirements": [...],
+            "personas": [...],
+            "role_requirements": [...],
+            "steps": [{"slug": "...", "title": "..."}, ...],
+        }
+    """
+    for task_index, task in enumerate(tasks):
+        task_steps = task.get("steps", [])
+        for step in task_steps:
+            slug = step.get("slug", "") if isinstance(step, dict) else step
+            if slug == step_slug:
+                return {
+                    "slug": task.get("slug", ""),
+                    "title": task.get("title", ""),
+                    "summary": task.get("summary", ""),
+                    "task_index": task_index,
+                    "external_requirements": task.get("external_requirements", []),
+                    "personas": task.get("personas", []),
+                    "role_requirements": task.get("role_requirements", []),
+                    "steps": task.get("steps", []),
+                }
+    return None
+
+
+def get_remaining_steps(step_slug, tasks):
+    """
+    List the remaining steps within the current task after the given step.
+
+    Respects task boundaries — only returns steps within the same task,
+    not steps from subsequent tasks.
+
+    Args:
+        step_slug: The current step identifier
+        tasks: List of task metadata dictionaries (from load_task_metadata)
+
+    Returns:
+        List of remaining step dicts (after the current step, within the same task),
+        or empty list if step not found or it is the last step in the task.
+        Each dict contains:
+        {
+            "slug": "step-slug",
+            "title": "Step Title",
+            "step_index": 3,  # 0-based index within the task
+        }
+    """
+    for task in tasks:
+        task_steps = task.get("steps", [])
+        for i, step in enumerate(task_steps):
+            slug = step.get("slug", "") if isinstance(step, dict) else step
+            if slug == step_slug:
+                remaining = []
+                for j in range(i + 1, len(task_steps)):
+                    s = task_steps[j]
+                    remaining.append({
+                        "slug": s.get("slug", "") if isinstance(s, dict) else s,
+                        "title": s.get("title", "") if isinstance(s, dict) else "",
+                        "step_index": j,
+                    })
+                return remaining
+    return []
+
+
+def get_task_progress(step_slug, tasks):
+    """
+    Report task-level and blueprint-level completion based on the current step.
+
+    Computes how far through the current task and overall blueprint the user is,
+    treating all steps up to and including the current step as completed.
+
+    Args:
+        step_slug: The current step identifier
+        tasks: List of task metadata dictionaries (from load_task_metadata)
+
+    Returns:
+        Dictionary with progress information, or None if step not found:
+        {
+            "current_task": {
+                "slug": "task-slug",
+                "title": "Task Title",
+                "task_index": 0,
+                "completed_steps": 2,
+                "total_steps": 5,
+                "completion_percentage": 40.0,
+            },
+            "blueprint": {
+                "completed_tasks": 1,  # tasks fully before the current one
+                "total_tasks": 3,
+                "completed_steps": 9,  # all steps up to and including current
+                "total_steps": 21,
+                "completion_percentage": 42.9,
+            },
+        }
+    """
+    # Find which task and step index the current step is in
+    found_task_index = None
+    found_step_index = None
+    for task_index, task in enumerate(tasks):
+        task_steps = task.get("steps", [])
+        for step_index, step in enumerate(task_steps):
+            slug = step.get("slug", "") if isinstance(step, dict) else step
+            if slug == step_slug:
+                found_task_index = task_index
+                found_step_index = step_index
+                break
+        if found_task_index is not None:
+            break
+
+    if found_task_index is None:
+        return None
+
+    current_task = tasks[found_task_index]
+    current_task_steps = current_task.get("steps", [])
+    total_steps_in_task = len(current_task_steps)
+    completed_in_task = found_step_index + 1  # current step counts as completed
+
+    # Blueprint-level progress
+    total_tasks = len(tasks)
+    total_steps_all = sum(len(t.get("steps", [])) for t in tasks)
+
+    # Steps completed across all tasks: all steps in prior tasks + completed in current
+    completed_steps_all = 0
+    for i in range(found_task_index):
+        completed_steps_all += len(tasks[i].get("steps", []))
+    completed_steps_all += completed_in_task
+
+    # Fully completed tasks = all tasks before the current one + current if all its steps are done
+    completed_tasks = found_task_index
+    if completed_in_task == total_steps_in_task:
+        completed_tasks += 1
+
+    task_pct = round((completed_in_task / total_steps_in_task) * 100, 1) if total_steps_in_task > 0 else 0.0
+    blueprint_pct = round((completed_steps_all / total_steps_all) * 100, 1) if total_steps_all > 0 else 0.0
+
+    return {
+        "current_task": {
+            "slug": current_task.get("slug", ""),
+            "title": current_task.get("title", ""),
+            "task_index": found_task_index,
+            "completed_steps": completed_in_task,
+            "total_steps": total_steps_in_task,
+            "completion_percentage": task_pct,
+        },
+        "blueprint": {
+            "completed_tasks": completed_tasks,
+            "total_tasks": total_tasks,
+            "completed_steps": completed_steps_all,
+            "total_steps": total_steps_all,
+            "completion_percentage": blueprint_pct,
+        },
+    }
+
+
 def generate_anchor(text):
     """
     Generate a markdown-compatible anchor from heading text.
