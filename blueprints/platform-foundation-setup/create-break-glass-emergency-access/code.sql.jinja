@@ -54,8 +54,11 @@ CREATE OR REPLACE NETWORK POLICY {{ account.username | lower }}_network_policy
 {%- endif %}
 
 -- Create break-glass user
+-- ⚠️  IMPORTANT: Replace <REPLACE_WITH_SECURE_PASSWORD> with a strong, unique password before executing.
+--    Password requirements: min 14 chars, 1+ uppercase, 1+ lowercase, 1+ digit, 1+ special character.
+--    Do NOT use a shared or reused password. Use a password manager to generate and store it.
 CREATE USER IF NOT EXISTS {{ quoted_id }}
-  PASSWORD = 'TempBreakGlass123!'  -- MUST be changed on first login
+  PASSWORD = '<REPLACE_WITH_SECURE_PASSWORD>'
   EMAIL = '{{ account.email }}'
   MUST_CHANGE_PASSWORD = TRUE
   DEFAULT_ROLE = 'ACCOUNTADMIN'

@@ -57,10 +57,13 @@ CREATE OR REPLACE NETWORK POLICY {{ account.username | upper }}_NETWORK_POLICY
   COMMENT = 'Network policy for break-glass account {{ account.username }}';
 
 -- Step 3: Create the break-glass user
+-- ⚠️  IMPORTANT: Replace <REPLACE_WITH_SECURE_PASSWORD> with a strong, unique password before executing.
+--    Password requirements: min 14 chars, 1+ uppercase, 1+ lowercase, 1+ digit, 1+ special character.
+--    Do NOT use a shared or reused password. Use a password manager to generate and store it.
 CREATE USER IF NOT EXISTS {{ quoted_id }}
   LOGIN_NAME = '{{ account.username }}'
   EMAIL = '{{ account.email }}'
-  PASSWORD = 'BreakGlass{{ loop.index }}ChangeMe!'
+  PASSWORD = '<REPLACE_WITH_SECURE_PASSWORD>'
   MUST_CHANGE_PASSWORD = TRUE
   DISABLED = FALSE
   COMMENT = 'Break-glass emergency access account - RESTRICTED USE ONLY';

@@ -40,7 +40,9 @@ CREATE USER IF NOT EXISTS {{ quoted_id }}
 {%- if user.last_name %}
   LAST_NAME = '{{ user.last_name }}'
 {%- endif %}
-  PASSWORD = 'ChangeMe123!'
+  -- ⚠️  Replace <REPLACE_WITH_SECURE_PASSWORD> with a strong, unique password before executing.
+  --    Min 14 chars, 1+ uppercase, 1+ lowercase, 1+ digit, 1+ special character.
+  PASSWORD = '<REPLACE_WITH_SECURE_PASSWORD>'
   MUST_CHANGE_PASSWORD = TRUE
   COMMENT = 'Administrator user - {{ user.admin_role | upper }}';
 

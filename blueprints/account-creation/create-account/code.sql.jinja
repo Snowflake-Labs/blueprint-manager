@@ -14,14 +14,18 @@ USE ROLE GLOBALORGADMIN;
 -- ============================================================================
 -- STEP 1: CREATE THE ACCOUNT
 -- ============================================================================
--- NOTE: A temporary password is provided below. The user will be required to 
---       change this password on first login (MUST_CHANGE_PASSWORD = TRUE).
---       For production, replace with a unique secure password.
+-- ⚠️  IMPORTANT: Replace <REPLACE_WITH_SECURE_PASSWORD> with a strong, unique
+--    password before executing. The user will be required to change this
+--    password on first login (MUST_CHANGE_PASSWORD = TRUE).
+--    Password requirements: min 14 chars, 1+ uppercase, 1+ lowercase,
+--    1+ digit, 1+ special character.
+--    Do NOT use a shared or reused password. Use a password manager to
+--    generate and store it.
 -- ============================================================================
 
 CREATE ACCOUNT {{ new_account_name | upper }}
   ADMIN_NAME = '{{ new_account_admin_name }}'
-  ADMIN_PASSWORD = 'TempPass#2026!Snflk'
+  ADMIN_PASSWORD = '<REPLACE_WITH_SECURE_PASSWORD>'
   EMAIL = '{{ new_account_admin_email }}'
   MUST_CHANGE_PASSWORD = TRUE
   EDITION = {{ new_account_edition | upper }}
