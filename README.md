@@ -286,3 +286,7 @@ python scripts/render_journey.py \
 ### 4. Execute the generated code
 
 Review the generated SQL file, then execute it in your Snowflake worksheet. The SQL is idempotent — safe to run multiple times.
+
+License
+Copyright (c) Snowflake Inc. All rights reserved.
+This repo is source-available and licensed under these [terms](/LICENSE).
