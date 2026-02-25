@@ -541,6 +541,65 @@ Invoke this skill when users:
 
 **For each step in blueprint.steps:**
 
+#### Step 7.0: Display Task Overview at Task Boundaries
+
+Before presenting a step's details, check whether this step is the **first step in a new task**. If so, display a task overview before proceeding. This gives users immediate context about what they are about to work on, what roles/access they need, and who should be involved.
+
+**Actions:**
+
+1. **Determine if this is a task boundary:**
+   - Use `get_current_task(current_step_slug, tasks)` to get the parent task
+   - Check if the current step is the first step in that task (i.e., `step_index == 0` in the task's steps list)
+
+2. **If this is the first step in a new task, display the task overview:**
+
+   First, load the task overview markdown file if available:
+   ```bash
+   read blueprints/<blueprint_id>/tasks/<task_slug>.md
+   ```
+
+   Then present the task overview:
+
+   ```
+   ======================================================================
+    Starting Task [N] of [Total]: [Task Title]
+   ======================================================================
+
+   ## What You Will Accomplish
+   [Task summary from the task's `summary` field]
+
+   ## Prerequisites
+
+   **Snowflake Role Requirements:**
+   - [role_requirement_1]
+   - [role_requirement_2]
+
+   **External Requirements:**
+   - [external_requirement_1]
+   - [external_requirement_2]
+
+   ## Who Should Be Involved
+   - [persona_1]
+   - [persona_2]
+
+   [If task overview markdown file exists, include the Details, Steps in This Task,
+    Key Decisions, and Deliverables sections from it]
+
+   ---
+
+   This task contains [N] steps. Let's begin with the first one.
+   ```
+
+   **Rules for displaying the task overview:**
+   - **Summary** comes from the task's `summary` field in meta.yaml
+   - **Role Requirements** comes from the task's `role_requirements` field — show each as a bullet point. If empty, omit this section.
+   - **External Requirements** comes from the task's `external_requirements` field — show each as a bullet point. If empty, omit this section.
+   - **Personas** comes from the task's `personas` field — show each as a bullet point. If empty, omit this section.
+   - If a `tasks/<task_slug>.md` file exists, include its supplementary content (step tables, key decisions, deliverables, execution context, etc.) after the structured overview fields.
+   - If this is the first task in the blueprint, also display a brief introduction to the overall blueprint.
+
+3. **If this is NOT the first step in a task**, skip the task overview and proceed directly to Step 7.1.
+
 #### Step 7.1: Display Step Overview and Questions
 
 **Actions:**
@@ -729,7 +788,7 @@ When a user asks "how much is left?", "what's my progress?", "how far along am I
 2. Present the response:
 
 ```
-**Current Task:** [Task Title] — [completed]/[total] steps ([percentage]%)
+**Current Task:** [Task Title] — [completed_steps_in_task]/[total_steps_in_task] steps ([percentage]%)
 
 **Overall Blueprint Progress:** [completed_steps]/[total_steps] steps ([percentage]%)
   - Completed tasks: [completed_tasks]/[total_tasks]
@@ -742,25 +801,62 @@ When a user returns to an in-progress blueprint (e.g., they resume a previous se
 1. Identify the current step from the answer file (the last step with answers provided, or the first step with null/missing answers)
 2. Use `get_current_task(current_step_slug, tasks)` to get the task context
 3. Use `get_task_progress(current_step_slug, tasks)` to show overall progress
-4. Present a recovery summary:
+4. Load the task overview for the current task: `read blueprints/<blueprint_id>/tasks/<task_slug>.md`
+5. Present a recovery summary that includes the current task's overview context:
 
 ```
 **Welcome back! Here's where you left off:**
 
-**Current Task:** [Task Title]
-[Task summary]
+======================================================================
+ Current Task [N] of [Total]: [Task Title]
+======================================================================
 
-**Current Step:** Step [N]: [Step Title]
+## What You Will Accomplish
+[Task summary from the task's `summary` field]
 
-**Progress:** [completed_steps]/[total_steps] steps complete ([percentage]%)
+## Prerequisites
 
-**Remaining in this task:**
+**Snowflake Role Requirements:**
+- [role_requirement_1]
+- [role_requirement_2]
+
+**External Requirements:**
+- [external_requirement_1]
+- [external_requirement_2]
+
+## Who Should Be Involved
+- [persona_1]
+- [persona_2]
+
+---
+
+**Current Step:** Step [N of M]: [Step Title]
+
+**Task Progress:** [completed_steps_in_task]/[total_steps_in_task] steps complete ([percentage]%)
+
+**Remaining steps in this task:**
 1. [Remaining step title]
 2. [Remaining step title]
 ...
 
+---
+
+**Previously Completed Tasks:**
+- Task 1: [Task Title] — [summary] (all [N] steps complete)
+- Task 2: [Task Title] — [summary] (all [N] steps complete)
+[List all tasks before the current one that are fully completed]
+
+**Overall Blueprint Progress:** [completed_steps]/[total_steps] steps ([percentage]%)
+
 Would you like to continue from here, or jump to a different step?
 ```
+
+**Rules for context recovery:**
+- **Always show the current task's overview** (summary, prerequisites, personas) so the user understands the context of where they are
+- **List previously completed tasks** with a brief summary of each, so the user can recall what was already done. Use the `summary` field from each completed task.
+- **Show remaining steps** in the current task using `get_remaining_steps(current_step_slug, tasks)`
+- **Omit prerequisite sections** (role requirements, external requirements, personas) if they are empty for the current task
+- If the user is on the very first step of the very first task, skip the "Previously Completed Tasks" section
 
 #### Task Boundary Transitions
 
@@ -787,6 +883,56 @@ You've finished all [N] steps in this task.
 
 Ready to continue to the next task?
 ```
+
+#### Question Grouping by Task for Persona/Role Routing
+
+When presenting questions during a walkthrough (Step 7) or summary (Step 6), group questions by their parent task's `personas` field to enable organizational routing. This helps users identify which teams or individuals should review specific answers.
+
+**How to apply persona-based grouping:**
+
+1. **At the start of each task's questions**, announce the personas involved:
+
+   ```
+   ## Questions for Task [N]: [Task Title]
+
+   **Reviewers:** The following questions are for your [Persona 1] and [Persona 2] to review.
+   ```
+
+   For example:
+   ```
+   ## Questions for Task 2: Account Security & Identity
+
+   **Reviewers:** The following questions are for your Security Administrator and Network Team to review.
+   ```
+
+2. **When presenting the configuration summary (Step 6)**, group answers by task and annotate each group with the relevant personas:
+
+   ```
+   ### Task 1: Platform Foundation (Reviewers: Platform Administrator, Cloud/Infrastructure Team)
+
+   - [Question name]: [Answer] — Reasoning: [why]
+   - [Question name]: [Answer] — Reasoning: [why]
+
+   ### Task 2: Platform Security & Identity (Reviewers: Security Administrator, Identity Team)
+
+   - [Question name]: [Answer] — Reasoning: [why]
+   - [Question name]: [Answer] — Reasoning: [why]
+
+   ### Task 3: Platform Cost Management (Reviewers: FinOps Team, Finance Team)
+
+   - [Question name]: [Answer] — Reasoning: [why]
+   ```
+
+3. **When multiple personas share a task**, list all of them. The user can then forward the relevant section to each team for review.
+
+4. **When a task has no personas defined**, omit the reviewer annotation and present questions without grouping metadata.
+
+5. **For step-by-step mode (Step 7)**, apply grouping at task boundaries:
+   - When entering a new task, display the persona annotation (as part of the Step 7.0 task overview)
+   - Questions within the same task inherit the task's persona context
+   - When transitioning between tasks, clearly indicate the change in reviewer context
+
+**Why this matters:** Different parts of a blueprint require input from different teams. A security task needs review by the Security Administrator, while a cost management task needs review by FinOps. Grouping by persona enables users to efficiently route configuration decisions to the right people, rather than requiring every reviewer to read the entire blueprint.
 
 ### Step 8: Fill In Required Values
 
