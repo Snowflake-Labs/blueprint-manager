@@ -15,6 +15,7 @@ Steps with missing variables are skipped entirely.
 """
 
 import argparse
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -26,13 +27,75 @@ try:
         FileSystemLoader,
         StrictUndefined,
         TemplateError,
-        meta,
-        nodes,
+        UndefinedError,
     )
 except ImportError as e:
     sys.stderr.write(f"Error: Required library not found: {e}\n")
     sys.stderr.write("Please install dependencies: pip install pyyaml jinja2\n")
     sys.exit(1)
+
+
+class NullTracker:
+    """
+    Marker class to track null values that are actually accessed during template rendering.
+
+    Wraps variables whose answer value is None so that Jinja2's StrictUndefined mode
+    can distinguish between "missing" and "null" variables at render time.
+
+    Note: {% if var is none %} won't work correctly because NullTracker is not
+    actually None. Templates should use {% if var == None %} or other patterns.
+    """
+
+    def __init__(self, var_name):
+        self.var_name = var_name
+
+    def __str__(self):
+        raise UndefinedError(f"'{self.var_name}' is null")
+
+    def __repr__(self):
+        raise UndefinedError(f"'{self.var_name}' is null")
+
+    def __bool__(self):
+        raise UndefinedError(f"'{self.var_name}' is null")
+
+    def __iter__(self):
+        raise UndefinedError(f"'{self.var_name}' is null")
+
+    def __len__(self):
+        raise UndefinedError(f"'{self.var_name}' is null")
+
+    def __getattr__(self, name):
+        raise UndefinedError(f"'{self.var_name}' is null")
+
+    def __getitem__(self, key):
+        raise UndefinedError(f"'{self.var_name}' is null")
+
+    # Allow equality comparisons for conditional checks like {% if var == "value" %}
+    def __eq__(self, other):
+        # If comparing None/null with something, return appropriate result
+        return other is None
+
+    def __ne__(self, other):
+        return other is not None
+
+    def __lt__(self, other):
+        raise UndefinedError(f"'{self.var_name}' is null")
+
+    def __gt__(self, other):
+        raise UndefinedError(f"'{self.var_name}' is null")
+
+    def __le__(self, other):
+        raise UndefinedError(f"'{self.var_name}' is null")
+
+    def __ge__(self, other):
+        raise UndefinedError(f"'{self.var_name}' is null")
+
+    def __hash__(self):
+        # Explicitly make NullTracker unhashable (consistent with __eq__ override)
+        raise TypeError(f"unhashable type: 'NullTracker'")
+
+
+DEFAULT_PROJECT_NAME = "default-project"
 
 
 def load_yaml(file_path):
@@ -68,11 +131,11 @@ def load_task_metadata(blueprint_dir):
         return []
     
     try:
-        meta = load_yaml(meta_file)
-        if meta is None:
+        blueprint_meta = load_yaml(meta_file)
+        if blueprint_meta is None:
             return []
         
-        tasks = meta.get("tasks", [])
+        tasks = blueprint_meta.get("tasks", [])
         if not tasks:
             return []
         
@@ -417,7 +480,6 @@ def generate_anchor(text):
     Returns:
         String suitable for use as a markdown anchor (without the # prefix)
     """
-    import re
     # Convert to lowercase
     anchor = text.lower()
     # Replace spaces and underscores with hyphens
@@ -541,16 +603,6 @@ def parse_args():
         help="Code language to render (sql or terraform)",
     )
     parser.add_argument(
-        "--output-dir",
-        default="output/iac",
-        help="Output directory for rendered IaC files (default: output/iac)",
-    )
-    parser.add_argument(
-        "--guidance-dir",
-        default="output/documentation",
-        help="Output directory for rendered guidance files (default: output/documentation)",
-    )
-    parser.add_argument(
         "--skip-guidance",
         action="store_true",
         help="Skip rendering guidance documents",
@@ -601,44 +653,6 @@ def get_step_title(step_path):
     return None
 
 
-def find_template_variables(template_source, jinja_env):
-    """
-    Use Jinja2's AST parser to find all undeclared variables in a template.
-
-    Returns a set of variable names referenced in the template.
-    """
-    try:
-        ast = jinja_env.parse(template_source)
-        return meta.find_undeclared_variables(ast)
-    except TemplateError:
-        # If parsing fails, return empty set - the actual render will catch the error
-        return set()
-
-
-def find_template_set_variables(template_source, jinja_env):
-    """
-    Find variables that are set within the template using {% set %}.
-
-    Returns a set of variable names defined internally in the template.
-    """
-    try:
-        ast = jinja_env.parse(template_source)
-        set_vars = set()
-        for node in ast.find_all(nodes.Assign):
-            target = node.target
-            # Handle tuple unpacking: {% set x, y = values %}
-            if isinstance(target, nodes.Tuple):
-                for item in target.items:
-                    if isinstance(item, nodes.Name):
-                        set_vars.add(item.name)
-            # Handle simple assignments: {% set x = value %}
-            elif isinstance(target, nodes.Name):
-                set_vars.add(target.name)
-        return set_vars
-    except TemplateError:
-        return set()
-
-
 def check_template_renderable(template_path, answers, jinja_env, base_dir):
     """
     Check if a template can be rendered with the given answers by attempting
@@ -658,67 +672,9 @@ def check_template_renderable(template_path, answers, jinja_env, base_dir):
     - missing_vars: list of variables that are actually needed but not in answers
     - null_vars: list of variables that are actually needed but are None in answers
     """
-    from jinja2 import UndefinedError
-
     try:
         # Load and attempt to render the template
         template = jinja_env.get_template(str(template_path.relative_to(base_dir)))
-
-        # Create a context that tracks which null variables are actually accessed
-        # We need to distinguish between missing vars and null vars
-        class NullTracker:
-            """Marker class to track null values that are actually accessed."""
-
-            def __init__(self, var_name):
-                self.var_name = var_name
-
-            def __str__(self):
-                raise UndefinedError(f"'{self.var_name}' is null")
-
-            def __repr__(self):
-                raise UndefinedError(f"'{self.var_name}' is null")
-
-            def __bool__(self):
-                raise UndefinedError(f"'{self.var_name}' is null")
-
-            def __iter__(self):
-                raise UndefinedError(f"'{self.var_name}' is null")
-
-            def __len__(self):
-                raise UndefinedError(f"'{self.var_name}' is null")
-
-            def __getattr__(self, name):
-                raise UndefinedError(f"'{self.var_name}' is null")
-
-            def __getitem__(self, key):
-                raise UndefinedError(f"'{self.var_name}' is null")
-
-            # Allow equality comparisons for conditional checks like {% if var == "value" %}
-            def __eq__(self, other):
-                # If comparing None/null with something, return appropriate result
-                return other is None
-
-            def __ne__(self, other):
-                return other is not None
-
-            def __lt__(self, other):
-                raise UndefinedError(f"'{self.var_name}' is null")
-
-            def __gt__(self, other):
-                raise UndefinedError(f"'{self.var_name}' is null")
-
-            def __le__(self, other):
-                raise UndefinedError(f"'{self.var_name}' is null")
-
-            def __ge__(self, other):
-                raise UndefinedError(f"'{self.var_name}' is null")
-
-            def __hash__(self):
-                # Explicitly make NullTracker unhashable (consistent with __eq__ override)
-                raise TypeError(f"unhashable type: 'NullTracker'")
-
-            # Note: {% if var is none %} won't work correctly because NullTracker is not
-            # actually None. Templates should use {% if var == None %} or other patterns.
 
         # Build render context: wrap null values with NullTracker
         render_context = {}
@@ -743,8 +699,6 @@ def check_template_renderable(template_path, answers, jinja_env, base_dir):
         # Parse the error message to identify the variable
         # Jinja2 UndefinedError messages typically look like:
         # "'variable_name' is undefined" or "'variable_name' is null" (our custom)
-        import re
-
         match = re.search(r"'([^']+)'", error_msg)
         if match:
             var_name = match.group(1)
@@ -882,9 +836,9 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
         )
         sys.exit(1)
 
-    meta = load_yaml(meta_file)
-    blueprint_name = meta.get("name", blueprint_id)
-    step_order = meta.get("steps", [])
+    blueprint_meta = load_yaml(meta_file)
+    blueprint_name = blueprint_meta.get("name", blueprint_id)
+    step_order = blueprint_meta.get("steps", [])
 
     # Create Jinja2 environment once for all steps
     jinja_env = Environment(
@@ -968,7 +922,7 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
             sys.stderr.write(f"Warning: Step directory not found: {step_path}\n")
             continue
 
-        rendered_code, step_id, missing_vars = render_step_code(
+        rendered_code, _, missing_vars = render_step_code(
             step_path, lang, answers, jinja_env, base_dir
         )
 
@@ -1076,10 +1030,10 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
         )
         sys.exit(1)
 
-    meta = load_yaml(meta_file)
-    blueprint_name = meta.get("name", blueprint_id)
-    blueprint_overview = meta.get("overview", "")
-    step_order = meta.get("steps", [])
+    blueprint_meta = load_yaml(meta_file)
+    blueprint_name = blueprint_meta.get("name", blueprint_id)
+    blueprint_overview = blueprint_meta.get("overview", "")
+    step_order = blueprint_meta.get("steps", [])
 
     # Create Jinja2 environment with strict undefined checking
     jinja_env = Environment(
@@ -1212,7 +1166,7 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
             sys.stderr.write(f"Warning: Step directory not found: {step_path}\n")
             continue
 
-        rendered_guidance, step_id, missing_vars = render_step_guidance(
+        rendered_guidance, _, missing_vars = render_step_guidance(
             step_path, answers, jinja_env, base_dir
         )
 
@@ -1239,7 +1193,7 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
                 # Get step title for better readability
                 step_title = get_step_title(step_path)
                 if step_title:
-                    step_heading = f"{step_title}"
+                    step_heading = step_title
                 else:
                     step_heading = step_id
 
@@ -1276,7 +1230,7 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
         # Add step header with hierarchical numbering
         step_title = get_step_title(step_path)
         if step_title:
-            step_heading = f"{step_title}"
+            step_heading = step_title
         else:
             step_heading = step_id
         
@@ -1306,7 +1260,6 @@ def validate_name(name, name_type="name"):
     
     Allowed: alphanumeric characters, underscores, and hyphens.
     """
-    import re
     if not re.match(r'^[a-zA-Z0-9_-]+$', name):
         sys.stderr.write(
             f"Error: Invalid {name_type} '{name}'. "
@@ -1364,21 +1317,11 @@ def main():
     script_dir = Path(__file__).parent
     base_dir = script_dir.parent
 
-    project_name = args.project if args.project else "default-project"
+    project_name = args.project if args.project else DEFAULT_PROJECT_NAME
     project_dir = setup_project_directories(base_dir, project_name, args.blueprint)
     print(f"Using project: {project_name}")
     print(f"Project directory: {project_dir}")
     
-    if args.output_dir != "output/iac":
-        sys.stderr.write(
-            f"Warning: --output-dir is ignored when using project structure. "
-            f"Output will be written to: {project_dir / 'output' / 'iac'}\n"
-        )
-    if args.guidance_dir != "output/documentation":
-        sys.stderr.write(
-            f"Warning: --guidance-dir is ignored when using project structure. "
-            f"Documentation will be written to: {project_dir / 'output' / 'documentation'}\n"
-        )
     output_base_dir = project_dir / "output" / "iac"
     guidance_base_dir = project_dir / "output" / "documentation"
 
