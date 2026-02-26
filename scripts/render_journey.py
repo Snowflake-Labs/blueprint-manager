@@ -1404,7 +1404,7 @@ def main():
             )
             print(f"  Total size: {len(rendered_guidance)} characters")
 
-    except (ValueError, FileNotFoundError) as e:
+    except (ValueError, FileNotFoundError, yaml.YAMLError) as e:
         sys.stderr.write(f"Error: {e}\n")
         sys.exit(1)
 
