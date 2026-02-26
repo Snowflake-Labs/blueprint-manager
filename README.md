@@ -1,3 +1,29 @@
+# Introduction
+
+### Blueprints  
+*Expert-backed guidance for Snowflake setup*    
+Blueprints are step-by-step workflows built by Snowflake SMEs that guide you through environment configuration. Best practices are built into every blueprint—so you can configure with confidence that it follows proven patterns and will scale with your needs.
+
+### Blueprint Manager  
+*Self-service platform configuration, guided by experts*    
+Blueprint Manager walks you through each decision, captures your answers, and generates the SQL and configuration tailored to your environment. No guesswork, no waiting for help—just clear direction to get productive faster.
+
+## Why Blueprints?  
+
+Expert-backed guidance so you can configure your environment knowing it follows best practices and will scale with your needs.
+- **Confidence** - Expert-defined workflows ensure you're doing it right
+- **Best Practices** - Start with an architecture that scales
+- **Speed** - Get productive faster with guided setup
+- **Self-Service** - Move at your own pace
+
+## What's included?
+
+- **Best Practices Skill** - Provides curated expert guidance on architecture, security, governance, cost management, and more
+- **Blueprint Builder Skill** - Guides you through Snowflake configuration steps, interprets your requirements, and can help generate answers to configuration questions
+- **Rendered Output**  - A deterministic script renders the answers captured in a yaml file into:
+   - SQL scripts — ready to deploy to create your Snowflake platform, account, and data objects
+   - Documentation — records your decisions for future reference
+
 # Blueprint Manager
 
 This repository contains infrastructure-as-code templates and blueprints for setting up Snowflake blueprints.
