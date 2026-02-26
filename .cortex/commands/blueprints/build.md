@@ -1,3 +1,6 @@
+<!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
+     Licensed under the Snowflake Skills License. See LICENSE file. -->
+
 # Blueprints Build
 
 Start the interactive blueprint building process. This command wraps the `blueprint-builder` skill to guide users through creating a complete answer file for a blueprint.
