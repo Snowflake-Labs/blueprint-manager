@@ -1624,5 +1624,43 @@ class TestGetTaskProgress(TestCase):
         self.assertEqual(progress["blueprint"]["completion_percentage"], 100.0)
 
 
+class TestValidateName(TestCase):
+    """Test validate_name() raises ValueError for invalid inputs (CXE-14503)."""
+
+    def test_valid_alphanumeric(self):
+        """Valid names with alphanumeric chars, hyphens, underscores should not raise."""
+        from render_journey import validate_name
+
+        validate_name("my-project_123")  # should not raise
+
+    def test_rejects_path_traversal(self):
+        """Path traversal attempts should be rejected."""
+        from render_journey import validate_name
+
+        with self.assertRaises(ValueError):
+            validate_name("../etc/passwd")
+
+    def test_rejects_spaces(self):
+        """Names with spaces should be rejected."""
+        from render_journey import validate_name
+
+        with self.assertRaises(ValueError):
+            validate_name("my project")
+
+    def test_rejects_slashes(self):
+        """Names with slashes should be rejected."""
+        from render_journey import validate_name
+
+        with self.assertRaises(ValueError):
+            validate_name("foo/bar")
+
+    def test_rejects_empty_string(self):
+        """Empty strings should be rejected."""
+        from render_journey import validate_name
+
+        with self.assertRaises(ValueError):
+            validate_name("")
+
+
 if __name__ == "__main__":
     main()

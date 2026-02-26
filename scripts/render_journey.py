@@ -175,7 +175,7 @@ def load_task_metadata(blueprint_dir):
                 normalized_tasks.append(normalized_task)
         
         return normalized_tasks
-    except Exception as e:
+    except (yaml.YAMLError, OSError) as e:
         sys.stderr.write(f"Warning: Error loading task metadata from {meta_file}: {e}\n")
         return []
 
@@ -203,7 +203,7 @@ def load_task_overview(blueprint_dir, task_slug):
     try:
         with open(task_file, "r", encoding="utf-8") as f:
             return f.read()
-    except Exception as e:
+    except OSError as e:
         sys.stderr.write(f"Warning: Error reading task overview {task_file}: {e}\n")
         return None
 
@@ -648,7 +648,7 @@ def get_step_title(step_path):
                 line = line.strip()
                 if line.startswith("# "):
                     return line[2:].strip()
-    except Exception:
+    except OSError:
         pass
     return None
 
@@ -831,10 +831,9 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
     # Load meta.yaml for workflow metadata and step ordering
     meta_file = blueprint_dir / "meta.yaml"
     if not meta_file.exists():
-        sys.stderr.write(
-            f"Error: meta.yaml not found in blueprint directory: {blueprint_dir}\n"
+        raise FileNotFoundError(
+            f"meta.yaml not found in blueprint directory: {blueprint_dir}"
         )
-        sys.exit(1)
 
     blueprint_meta = load_yaml(meta_file)
     blueprint_name = blueprint_meta.get("name", blueprint_id)
@@ -1025,10 +1024,9 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
     # Load meta.yaml for workflow metadata and step ordering
     meta_file = blueprint_dir / "meta.yaml"
     if not meta_file.exists():
-        sys.stderr.write(
-            f"Error: meta.yaml not found in blueprint directory: {blueprint_dir}\n"
+        raise FileNotFoundError(
+            f"meta.yaml not found in blueprint directory: {blueprint_dir}"
         )
-        sys.exit(1)
 
     blueprint_meta = load_yaml(meta_file)
     blueprint_name = blueprint_meta.get("name", blueprint_id)
@@ -1261,11 +1259,10 @@ def validate_name(name, name_type="name"):
     Allowed: alphanumeric characters, underscores, and hyphens.
     """
     if not re.match(r'^[a-zA-Z0-9_-]+$', name):
-        sys.stderr.write(
-            f"Error: Invalid {name_type} '{name}'. "
-            f"{name_type.capitalize()}s can only contain alphanumeric characters, underscores, and hyphens.\n"
+        raise ValueError(
+            f"Invalid {name_type} '{name}'. "
+            f"{name_type.capitalize()}s can only contain alphanumeric characters, underscores, and hyphens."
         )
-        sys.exit(1)
 
 
 def setup_project_directories(base_dir, project_name, blueprint_id):
@@ -1317,80 +1314,91 @@ def main():
     script_dir = Path(__file__).parent
     base_dir = script_dir.parent
 
-    project_name = args.project if args.project else DEFAULT_PROJECT_NAME
-    project_dir = setup_project_directories(base_dir, project_name, args.blueprint)
-    print(f"Using project: {project_name}")
-    print(f"Project directory: {project_dir}")
-    
-    output_base_dir = project_dir / "output" / "iac"
-    guidance_base_dir = project_dir / "output" / "documentation"
+    try:
+        project_name = args.project if args.project else DEFAULT_PROJECT_NAME
+        project_dir = setup_project_directories(base_dir, project_name, args.blueprint)
+        print(f"Using project: {project_name}")
+        print(f"Project directory: {project_dir}")
+        
+        output_base_dir = project_dir / "output" / "iac"
+        guidance_base_dir = project_dir / "output" / "documentation"
 
-    blueprints_dir = base_dir / "blueprints"
+        blueprints_dir = base_dir / "blueprints"
 
-    # Find workflow directory (external repo structure)
-    blueprint_dir = blueprints_dir / args.blueprint
-    if not blueprint_dir.exists() or not blueprint_dir.is_dir():
-        sys.stderr.write(f"Error: Blueprint directory not found: {blueprint_dir}\n")
+        # Find workflow directory (external repo structure)
+        blueprint_dir = blueprints_dir / args.blueprint
+        if not blueprint_dir.exists() or not blueprint_dir.is_dir():
+            sys.stderr.write(f"Error: Blueprint directory not found: {blueprint_dir}\n")
+            sys.exit(1)
+
+        # Load answers
+        print(f"Loading answers from {answers_path}...")
+        answers = load_yaml(answers_path) or {}
+
+        if not isinstance(answers, dict):
+            sys.stderr.write(
+                f"Error: Answers file must contain a YAML mapping, got {type(answers).__name__}\n"
+            )
+            sys.exit(1)
+
+        # Load task context for hierarchical rendering
+        tasks = load_task_metadata(blueprint_dir)
+        task_context = None
+        if tasks:
+            step_mapping = build_task_step_mapping(tasks)
+            task_context = {
+                "tasks": tasks,
+                "step_mapping": step_mapping,
+            }
+
+        # Render IaC code
+        print(f"Rendering blueprint '{args.blueprint}' for language '{args.lang}'...")
+        rendered_code, code_rendered, code_skipped = render_blueprint_code(
+            blueprint_dir, args.lang, answers, base_dir, task_context=task_context
+        )
+
+        # Generate IaC output filename
+        output_dir = output_base_dir / args.lang
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        date_str = datetime.now().strftime("%Y%m%d%H%M%S")
+        extension = get_language_extension(args.lang)
+        output_file = output_dir / f"{args.blueprint}_{date_str}.{extension}"
+
+        # Write IaC output
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(rendered_code)
+
+        print(f"✓ Successfully rendered IaC to: {output_file}")
+        print(f"  Steps rendered: {code_rendered}, skipped (missing vars): {code_skipped}")
+        print(f"  Total size: {len(rendered_code)} characters")
+
+        # Render guidance documents (unless skipped)
+        if not args.skip_guidance:
+            print("\nRendering guidance documents...")
+            rendered_guidance, guide_rendered, guide_skipped = render_blueprint_guidance(
+                blueprint_dir, answers, base_dir, task_context=task_context
+            )
+
+            # Generate guidance output filename
+            guidance_dir = guidance_base_dir
+            guidance_dir.mkdir(parents=True, exist_ok=True)
+
+            guidance_file = guidance_dir / f"{args.blueprint}_{date_str}.md"
+
+            # Write guidance output
+            with open(guidance_file, "w", encoding="utf-8") as f:
+                f.write(rendered_guidance)
+
+            print(f"✓ Successfully rendered guidance to: {guidance_file}")
+            print(
+                f"  Steps rendered: {guide_rendered}, skipped (missing vars): {guide_skipped}"
+            )
+            print(f"  Total size: {len(rendered_guidance)} characters")
+
+    except (ValueError, FileNotFoundError) as e:
+        sys.stderr.write(f"Error: {e}\n")
         sys.exit(1)
-
-    # Load answers
-    print(f"Loading answers from {answers_path}...")
-    answers = load_yaml(answers_path) or {}
-
-    # Load task context for hierarchical rendering
-    tasks = load_task_metadata(blueprint_dir)
-    task_context = None
-    if tasks:
-        step_mapping = build_task_step_mapping(tasks)
-        task_context = {
-            "tasks": tasks,
-            "step_mapping": step_mapping,
-        }
-
-    # Render IaC code
-    print(f"Rendering blueprint '{args.blueprint}' for language '{args.lang}'...")
-    rendered_code, code_rendered, code_skipped = render_blueprint_code(
-        blueprint_dir, args.lang, answers, base_dir, task_context=task_context
-    )
-
-    # Generate IaC output filename
-    output_dir = output_base_dir / args.lang
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    date_str = datetime.now().strftime("%Y%m%d%H%M%S")
-    extension = get_language_extension(args.lang)
-    output_file = output_dir / f"{args.blueprint}_{date_str}.{extension}"
-
-    # Write IaC output
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(rendered_code)
-
-    print(f"✓ Successfully rendered IaC to: {output_file}")
-    print(f"  Steps rendered: {code_rendered}, skipped (missing vars): {code_skipped}")
-    print(f"  Total size: {len(rendered_code)} characters")
-
-    # Render guidance documents (unless skipped)
-    if not args.skip_guidance:
-        print("\nRendering guidance documents...")
-        rendered_guidance, guide_rendered, guide_skipped = render_blueprint_guidance(
-            blueprint_dir, answers, base_dir, task_context=task_context
-        )
-
-        # Generate guidance output filename
-        guidance_dir = guidance_base_dir
-        guidance_dir.mkdir(parents=True, exist_ok=True)
-
-        guidance_file = guidance_dir / f"{args.blueprint}_{date_str}.md"
-
-        # Write guidance output
-        with open(guidance_file, "w", encoding="utf-8") as f:
-            f.write(rendered_guidance)
-
-        print(f"✓ Successfully rendered guidance to: {guidance_file}")
-        print(
-            f"  Steps rendered: {guide_rendered}, skipped (missing vars): {guide_skipped}"
-        )
-        print(f"  Total size: {len(rendered_guidance)} characters")
 
 
 if __name__ == "__main__":
