@@ -16,13 +16,15 @@ Expert-backed guidance so you can configure your environment knowing it follows 
 - **Speed** - Get productive faster with guided setup
 - **Self-Service** - Move at your own pace
 
-## What's included?
+## How does it work?
 
 - **Best Practices Skill** - Provides curated expert guidance on architecture, security, governance, cost management, and more
 - **Blueprint Builder Skill** - Guides you through Snowflake configuration steps, interprets your requirements, and can help generate answers to configuration questions
 - **Rendered Output**  - A deterministic script renders the answers captured in a yaml file into:
    - SQL scripts — ready to deploy to create your Snowflake platform, account, and data objects
    - Documentation — records your decisions for future reference
+
+<img width="1292" height="229" alt="Screenshot 2026-02-25 at 5 42 07 PM" src="https://github.com/user-attachments/assets/8cd9e2da-5116-4ab8-a87d-7f3dc6aa59e8" />
 
 # Blueprint Manager
 
