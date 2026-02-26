@@ -1339,9 +1339,11 @@ def main():
 
         # Load answers
         print(f"Loading answers from {answers_path}...")
-        answers = load_yaml(answers_path) or {}
+        answers = load_yaml(answers_path)
 
-        if not isinstance(answers, dict):
+        if answers is None:
+            answers = {}
+        elif not isinstance(answers, dict):
             sys.stderr.write(
                 f"Error: Answers file must contain a YAML mapping, got {type(answers).__name__}\n"
             )
