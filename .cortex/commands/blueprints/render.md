@@ -1,3 +1,6 @@
+<!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
+     Licensed under the Snowflake Skills License. See LICENSE file. -->
+
 # Blueprints Render
 
 Generate SQL/Terraform/Documentation from an answer file. This command wraps the `render_journey.py` script.

@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+# Copyright (c) 2026 Snowflake Inc. All rights reserved.
+# Licensed under the Snowflake Skills License. See LICENSE file.
+
 """
 render_journey.py
 

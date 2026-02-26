@@ -1,3 +1,6 @@
+<!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
+     Licensed under the Snowflake Skills License. See LICENSE file. -->
+
 # Blueprints Validate
 
 Check an answer file for completeness against blueprint requirements and validate blueprint schema.

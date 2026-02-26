@@ -1,3 +1,6 @@
+<!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
+     Licensed under the Snowflake Skills License. See LICENSE file. -->
+
 # Blueprints Projects Create
 
 Create a new project directory structure for organizing blueprint work.
