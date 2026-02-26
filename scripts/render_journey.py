@@ -836,9 +836,9 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
         )
         sys.exit(1)
 
-    meta = load_yaml(meta_file)
-    blueprint_name = meta.get("name", blueprint_id)
-    step_order = meta.get("steps", [])
+    blueprint_meta = load_yaml(meta_file)
+    blueprint_name = blueprint_meta.get("name", blueprint_id)
+    step_order = blueprint_meta.get("steps", [])
 
     # Create Jinja2 environment once for all steps
     jinja_env = Environment(
@@ -1030,10 +1030,10 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
         )
         sys.exit(1)
 
-    meta = load_yaml(meta_file)
-    blueprint_name = meta.get("name", blueprint_id)
-    blueprint_overview = meta.get("overview", "")
-    step_order = meta.get("steps", [])
+    blueprint_meta = load_yaml(meta_file)
+    blueprint_name = blueprint_meta.get("name", blueprint_id)
+    blueprint_overview = blueprint_meta.get("overview", "")
+    step_order = blueprint_meta.get("steps", [])
 
     # Create Jinja2 environment with strict undefined checking
     jinja_env = Environment(
