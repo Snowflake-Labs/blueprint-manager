@@ -134,6 +134,8 @@ def load_task_metadata(blueprint_dir):
         blueprint_meta = load_yaml(meta_file)
         if blueprint_meta is None:
             return []
+        if not isinstance(blueprint_meta, dict):
+            return []
         
         tasks = blueprint_meta.get("tasks", [])
         if not tasks:
@@ -836,6 +838,8 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
         )
 
     blueprint_meta = load_yaml(meta_file)
+    if not isinstance(blueprint_meta, dict):
+        raise ValueError(f"meta.yaml in {blueprint_dir} must contain a YAML mapping")
     blueprint_name = blueprint_meta.get("name", blueprint_id)
     step_order = blueprint_meta.get("steps", [])
 
@@ -1029,6 +1033,8 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
         )
 
     blueprint_meta = load_yaml(meta_file)
+    if not isinstance(blueprint_meta, dict):
+        raise ValueError(f"meta.yaml in {blueprint_dir} must contain a YAML mapping")
     blueprint_name = blueprint_meta.get("name", blueprint_id)
     blueprint_overview = blueprint_meta.get("overview", "")
     step_order = blueprint_meta.get("steps", [])
