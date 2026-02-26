@@ -24,7 +24,7 @@ Expert-backed guidance so you can configure your environment knowing it follows 
    - SQL scripts — ready to deploy to create your Snowflake platform, account, and data objects
    - Documentation — records your decisions for future reference
 
-<img width="1300" height="251" alt="Screenshot 2026-02-25 at 5 46 47 PM" src="https://github.com/user-attachments/assets/150f7693-5015-4137-86ce-feae3018db98" />
+<img width="6800" height="1200" alt="Blueprint Manager Cortex Code Overview" src="https://github.com/user-attachments/assets/6434d217-395d-4092-916a-e32944b41f39" />
 
 # Blueprint Manager
 
