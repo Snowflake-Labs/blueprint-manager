@@ -140,6 +140,8 @@ def load_task_metadata(blueprint_dir):
         tasks = blueprint_meta.get("tasks", [])
         if not tasks:
             return []
+        if not isinstance(tasks, list):
+            return []
         
         # Normalize task structure with defaults for optional fields
         normalized_tasks = []
