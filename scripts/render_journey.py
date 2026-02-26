@@ -205,7 +205,7 @@ def load_task_overview(blueprint_dir, task_slug):
     try:
         with open(task_file, "r", encoding="utf-8") as f:
             return f.read()
-    except OSError as e:
+    except (OSError, UnicodeDecodeError) as e:
         sys.stderr.write(f"Warning: Error reading task overview {task_file}: {e}\n")
         return None
 
@@ -650,7 +650,7 @@ def get_step_title(step_path):
                 line = line.strip()
                 if line.startswith("# "):
                     return line[2:].strip()
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         pass
     return None
 
@@ -1404,7 +1404,7 @@ def main():
             )
             print(f"  Total size: {len(rendered_guidance)} characters")
 
-    except (ValueError, FileNotFoundError, yaml.YAMLError) as e:
+    except (ValueError, OSError, yaml.YAMLError) as e:
         sys.stderr.write(f"Error: {e}\n")
         sys.exit(1)
 
