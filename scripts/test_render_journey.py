@@ -2270,9 +2270,10 @@ class TestTocToHeadingAnchorConsistency(BlueprintTestCase):
 
         self.assertEqual(rendered_count, 1)
 
-        # Generate the TOC independently
+        # Generate the TOC independently (with blueprint_dir for resolve_step_title)
         toc = generate_table_of_contents(
-            task_context["tasks"], {"step-1"}
+            task_context["tasks"], {"step-1"},
+            blueprint_dir=self.base_dir, task_context=task_context,
         )
 
         # Extract the anchor from the TOC link
@@ -2319,7 +2320,8 @@ class TestTocToHeadingAnchorConsistency(BlueprintTestCase):
         self.assertEqual(rendered_count, 1)
 
         toc = generate_table_of_contents(
-            task_context["tasks"], {"configure-scim-integration"}
+            task_context["tasks"], {"configure-scim-integration"},
+            blueprint_dir=self.base_dir, task_context=task_context,
         )
 
         import re
@@ -2362,7 +2364,8 @@ class TestTocToHeadingAnchorConsistency(BlueprintTestCase):
         self.assertEqual(rendered_count, 1)
 
         toc = generate_table_of_contents(
-            task_context["tasks"], {"step-1"}
+            task_context["tasks"], {"step-1"},
+            blueprint_dir=self.base_dir, task_context=task_context,
         )
 
         import re
@@ -2397,7 +2400,8 @@ class TestTocToHeadingAnchorConsistency(BlueprintTestCase):
         self.assertEqual(rendered_count, 1)
 
         toc = generate_table_of_contents(
-            task_context["tasks"], {"step-1"}
+            task_context["tasks"], {"step-1"},
+            blueprint_dir=self.base_dir, task_context=task_context,
         )
 
         import re
@@ -2430,7 +2434,8 @@ class TestTocToHeadingAnchorConsistency(BlueprintTestCase):
         )
 
         toc = generate_table_of_contents(
-            task_context["tasks"], {"step-1"}
+            task_context["tasks"], {"step-1"},
+            blueprint_dir=self.base_dir, task_context=task_context,
         )
 
         import re
@@ -2442,6 +2447,57 @@ class TestTocToHeadingAnchorConsistency(BlueprintTestCase):
         body_task_heading = "Task 1: Platform Security & Identity"
         body_anchor = generate_anchor(body_task_heading)
         self.assertEqual(task_toc_anchor[0], body_anchor)
+
+    def test_toc_matches_body_when_meta_empty_but_jinja_has_title(self):
+        """TOC and body anchors match when meta.yaml title is empty but jinja has a title.
+
+        This is the gap identified in review: without blueprint_dir, the TOC
+        would fall back to the slug while the body would use the jinja title
+        via resolve_step_title(), producing mismatched anchors.
+        """
+        from render_journey import (
+            render_blueprint_guidance, generate_anchor, generate_table_of_contents,
+        )
+
+        # Step has empty title in meta.yaml
+        steps = [
+            {"slug": "setup-networking", "title": ""},
+        ]
+        meta, task_context = self._make_meta_and_context("Network Config", steps)
+
+        # But jinja template has a '# ' title line
+        step_dir = self.base_dir / "setup-networking"
+        step_dir.mkdir(parents=True, exist_ok=True)
+        (step_dir / "dynamic.md.jinja").write_text(
+            "# Set Up VPC Networking\n\nConfigure your network settings."
+        )
+
+        rendered, rendered_count, _ = render_blueprint_guidance(
+            self.base_dir, {}, self.base_dir, meta,
+            date_display="2026-01-01 00:00:00", task_context=task_context,
+        )
+
+        self.assertEqual(rendered_count, 1)
+
+        # TOC must use the same resolve_step_title fallback as the body
+        toc = generate_table_of_contents(
+            task_context["tasks"], {"setup-networking"},
+            blueprint_dir=self.base_dir, task_context=task_context,
+        )
+
+        import re
+        toc_anchors = re.findall(r'\(#([^)]+)\)', toc)
+        step_toc_anchor = [a for a in toc_anchors if a.startswith("step-")]
+        self.assertTrue(len(step_toc_anchor) > 0, "Should find step anchor in TOC")
+
+        # Both TOC and body should use the jinja title (not the slug)
+        body_heading = "Step 1.1: Set Up VPC Networking"
+        body_anchor = generate_anchor(body_heading)
+        self.assertEqual(step_toc_anchor[0], body_anchor)
+
+        # Verify the rendered body uses the jinja title, not the slug
+        self.assertIn("Set Up VPC Networking", rendered)
+        self.assertNotIn("setup-networking", rendered.split("Set Up VPC Networking")[0].split("Step")[-1])
 
 
 if __name__ == "__main__":

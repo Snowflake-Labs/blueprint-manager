@@ -563,7 +563,7 @@ def generate_anchor(text):
     return anchor
 
 
-def generate_table_of_contents(tasks, rendered_steps, depth=2):
+def generate_table_of_contents(tasks, rendered_steps, depth=2, blueprint_dir=None, task_context=None):
     """
     Generate a hierarchical Table of Contents for rendered blueprint documentation.
     
@@ -579,6 +579,11 @@ def generate_table_of_contents(tasks, rendered_steps, depth=2):
                - depth=1: Only tasks (no steps)
                - depth=2: Tasks and steps (default)
                - depth>2: Reserved for future sub-step support
+        blueprint_dir: Optional path to blueprint directory, used to resolve
+                      step titles via resolve_step_title() for consistency
+                      with document body headings.
+        task_context: Optional dict with 'tasks' and 'step_mapping' keys,
+                     passed through to resolve_step_title().
                
     Returns:
         String containing markdown-formatted TOC, or empty string if no tasks.
@@ -626,7 +631,6 @@ def generate_table_of_contents(tasks, rendered_steps, depth=2):
             step_num_in_task = 0
             for step in task_steps:
                 slug = get_step_slug(step)
-                step_title = step.get("title", "") if isinstance(step, dict) else ""
                 
                 # Skip steps that weren't rendered
                 if slug not in rendered_set:
@@ -635,8 +639,14 @@ def generate_table_of_contents(tasks, rendered_steps, depth=2):
                 step_num_in_task += 1
                 step_label = f"{task_num}.{step_num_in_task}"
                 
-                # Use step title if available, otherwise use slug
-                step_display = step_title if step_title else slug
+                # Use resolve_step_title for consistent fallback with body headings
+                if blueprint_dir is not None:
+                    step_path = blueprint_dir / slug
+                    step_display = resolve_step_title(slug, step_path, task_context)
+                else:
+                    # Legacy fallback: meta.yaml title → slug
+                    step_title = step.get("title", "") if isinstance(step, dict) else ""
+                    step_display = step_title if step_title else slug
                 step_heading = f"Step {step_label}: {step_display}"
                 step_anchor = generate_anchor(step_heading)
                 toc_lines.append(f"  - [{step_heading}](#{step_anchor})")
@@ -1117,7 +1127,7 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, blueprint_meta, 
 
     # Generate and add hierarchical table of contents (only includes rendered steps)
     if tasks:
-        toc = generate_table_of_contents(tasks, renderable_steps, depth=toc_depth)
+        toc = generate_table_of_contents(tasks, renderable_steps, depth=toc_depth, blueprint_dir=blueprint_dir, task_context=task_context)
         if toc:
             rendered_sections.append(toc)
 
