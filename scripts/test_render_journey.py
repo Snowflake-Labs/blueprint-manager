@@ -935,14 +935,15 @@ class TestBackwardCompatibility(TestCase):
         """Rendering should work without task context (backward compatibility)."""
         from render_journey import render_blueprint_code
 
-        self.create_meta_yaml({
+        meta = {
             "name": "Legacy Blueprint",
             "steps": ["test-step"],
-        })
+        }
+        self.create_meta_yaml(meta)
         self.create_step_template("-- Simple SQL\nSELECT 1;")
 
         rendered, rendered_count, skipped_count = render_blueprint_code(
-            self.blueprint_dir, "sql", {}, self.base_dir
+            self.blueprint_dir, "sql", {}, self.base_dir, meta
         )
 
         self.assertIn("Legacy Blueprint", rendered)
@@ -953,15 +954,16 @@ class TestBackwardCompatibility(TestCase):
         """Rendering should work with empty task context."""
         from render_journey import render_blueprint_code
 
-        self.create_meta_yaml({
+        meta = {
             "name": "Blueprint Without Tasks",
             "steps": ["test-step"],
-        })
+        }
+        self.create_meta_yaml(meta)
         self.create_step_template("-- SQL code\nSELECT 2;")
 
         task_context = {"tasks": [], "step_mapping": {}}
         rendered, rendered_count, skipped_count = render_blueprint_code(
-            self.blueprint_dir, "sql", {}, self.base_dir, task_context=task_context
+            self.blueprint_dir, "sql", {}, self.base_dir, meta, task_context=task_context
         )
 
         self.assertIn("SELECT 2", rendered)
