@@ -98,6 +98,19 @@ class NullTracker:
 DEFAULT_PROJECT_NAME = "default-project"
 
 
+def classify_missing_vars(missing_vars, answers):
+    """
+    Split a list of problematic variable names into those missing from answers
+    entirely and those present but set to None.
+
+    Returns:
+        Tuple of (missing_only, null_only) lists.
+    """
+    null_only = [v for v in missing_vars if v in answers and answers[v] is None]
+    missing_only = [v for v in missing_vars if v not in answers]
+    return missing_only, null_only
+
+
 def load_yaml(file_path):
     """Load and parse a YAML file."""
     with open(file_path, "r", encoding="utf-8") as f:
@@ -123,16 +136,16 @@ def _find_step_location(step_slug, tasks):
     return None, None
 
 
-def load_task_metadata(blueprint_dir):
+def load_task_metadata(blueprint_meta):
     """
-    Load task metadata from a blueprint's meta.yaml file.
+    Extract and normalize task metadata from a parsed meta.yaml dict.
     
-    Parses the 'tasks' array from meta.yaml and returns structured task information
-    including slug, title, summary, external_requirements, personas, role_requirements,
-    and the list of steps associated with each task.
+    Parses the 'tasks' array from the provided dict and returns structured task
+    information including slug, title, summary, external_requirements, personas,
+    role_requirements, and the list of steps associated with each task.
     
     Args:
-        blueprint_dir: Path to the blueprint directory containing meta.yaml
+        blueprint_meta: Parsed meta.yaml dictionary (or a Path for backward compatibility)
         
     Returns:
         List of task metadata dictionaries, or empty list if no tasks defined.
@@ -145,17 +158,23 @@ def load_task_metadata(blueprint_dir):
         - role_requirements: List of required Snowflake roles
         - steps: List of step dicts with 'slug' and 'title'
     """
-    meta_file = blueprint_dir / "meta.yaml"
-    if not meta_file.exists():
+    # Backward compatibility: if a Path is passed, load meta.yaml from it
+    if isinstance(blueprint_meta, Path):
+        meta_file = blueprint_meta / "meta.yaml"
+        if not meta_file.exists():
+            return []
+        try:
+            blueprint_meta = load_yaml(meta_file)
+        except (yaml.YAMLError, OSError) as e:
+            sys.stderr.write(f"Warning: Error loading task metadata from {meta_file}: {e}\n")
+            return []
+
+    if blueprint_meta is None:
+        return []
+    if not isinstance(blueprint_meta, dict):
         return []
     
     try:
-        blueprint_meta = load_yaml(meta_file)
-        if blueprint_meta is None:
-            return []
-        if not isinstance(blueprint_meta, dict):
-            return []
-        
         tasks = blueprint_meta.get("tasks", [])
         if not tasks:
             return []
@@ -199,7 +218,7 @@ def load_task_metadata(blueprint_dir):
         
         return normalized_tasks
     except (yaml.YAMLError, OSError) as e:
-        sys.stderr.write(f"Warning: Error loading task metadata from {meta_file}: {e}\n")
+        sys.stderr.write(f"Warning: Error processing task metadata: {e}\n")
         return []
 
 
@@ -789,7 +808,7 @@ def render_step_template(step_path, template_name, answers, jinja_env, base_dir)
     return rendered, step_id, []
 
 
-def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=None):
+def render_blueprint_code(blueprint_dir, lang, answers, base_dir, blueprint_meta, date_display=None, task_context=None):
     """
     Render all code templates in a workflow.
     Only renders steps where all required variables are available.
@@ -801,6 +820,9 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
         lang: Language to render (sql, terraform)
         answers: Dictionary of user-provided answers
         base_dir: Base directory for template loading
+        blueprint_meta: Parsed meta.yaml dictionary
+        date_display: Pre-formatted timestamp string for headers (e.g., "2026-02-27 10:30:00").
+            If None, generates one from datetime.now().
         task_context: Optional dict with task metadata for enhanced rendering:
             - tasks: List of task metadata from load_task_metadata()
             - step_mapping: Dict from build_task_step_mapping()
@@ -811,16 +833,8 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
     """
     blueprint_id = blueprint_dir.name
 
-    # Load meta.yaml for workflow metadata and step ordering
-    meta_file = blueprint_dir / "meta.yaml"
-    if not meta_file.exists():
-        raise FileNotFoundError(
-            f"meta.yaml not found in blueprint directory: {blueprint_dir}"
-        )
-
-    blueprint_meta = load_yaml(meta_file)
     if not isinstance(blueprint_meta, dict):
-        raise ValueError(f"meta.yaml in {blueprint_dir} must contain a YAML mapping")
+        raise ValueError(f"blueprint_meta must be a dict, got {type(blueprint_meta).__name__}")
     blueprint_name = blueprint_meta.get("name", blueprint_id)
     step_order = blueprint_meta.get("steps", [])
 
@@ -839,10 +853,12 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
     current_task_num = 0
 
     # Add header
+    if date_display is None:
+        date_display = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     header = [
         f"{comment_char} ============================================================",
         f"{comment_char} RENDERED JOURNEY: {blueprint_name}",
-        f"{comment_char} Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"{comment_char} Generated: {date_display}",
         f"{comment_char} Blueprint: {blueprint_id}",
         f"{comment_char} Language: {lang}",
         f"{comment_char} ============================================================\n",
@@ -919,11 +935,8 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
             # No code file or missing variables - add skip note if file existed
             code_file = step_path / f"code.{lang}.jinja"
             if code_file.exists() and missing_vars:
-                # Determine if vars are missing or null
-                null_vars = [
-                    v for v in missing_vars if v in answers and answers[v] is None
-                ]
-                missing_only = [v for v in missing_vars if v not in answers]
+                # Classify vars as missing vs null
+                missing_only, null_vars = classify_missing_vars(missing_vars, answers)
 
                 # Get step title for better readability
                 step_title = get_step_title(step_path)
@@ -978,7 +991,7 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
     return "\n".join(rendered_sections), rendered_count, skipped_count
 
 
-def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=None, toc_depth=2):
+def render_blueprint_guidance(blueprint_dir, answers, base_dir, blueprint_meta, date_display=None, task_context=None, toc_depth=2):
     """
     Render all guidance/overview documents in a workflow.
     Only renders steps where all required variables are available.
@@ -989,6 +1002,9 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
         blueprint_dir: Path to the blueprint directory
         answers: Dictionary of user-provided answers
         base_dir: Base directory for template loading
+        blueprint_meta: Parsed meta.yaml dictionary
+        date_display: Pre-formatted timestamp string for headers (e.g., "2026-02-27 10:30:00").
+            If None, generates one from datetime.now().
         task_context: Optional dict with task metadata for enhanced rendering:
             - tasks: List of task metadata from load_task_metadata()
             - step_mapping: Dict from build_task_step_mapping()
@@ -1002,16 +1018,8 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
     """
     blueprint_id = blueprint_dir.name
 
-    # Load meta.yaml for workflow metadata and step ordering
-    meta_file = blueprint_dir / "meta.yaml"
-    if not meta_file.exists():
-        raise FileNotFoundError(
-            f"meta.yaml not found in blueprint directory: {blueprint_dir}"
-        )
-
-    blueprint_meta = load_yaml(meta_file)
     if not isinstance(blueprint_meta, dict):
-        raise ValueError(f"meta.yaml in {blueprint_dir} must contain a YAML mapping")
+        raise ValueError(f"blueprint_meta must be a dict, got {type(blueprint_meta).__name__}")
     blueprint_name = blueprint_meta.get("name", blueprint_id)
     blueprint_overview = blueprint_meta.get("overview", "")
     step_order = blueprint_meta.get("steps", [])
@@ -1050,10 +1058,12 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
     current_task_num = 0
 
     # Add header
+    if date_display is None:
+        date_display = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     header = [
         f"# {blueprint_name}",
         "",
-        f"> Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"> Generated: {date_display}",
         f"> Blueprint: {blueprint_id}",
         "",
         "---",
@@ -1161,11 +1171,8 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
             # No dynamic template or missing variables - add skip note if file existed
             dynamic_file = step_path / "dynamic.md.jinja"
             if dynamic_file.exists() and missing_vars:
-                # Determine if vars are missing or null
-                null_vars = [
-                    v for v in missing_vars if v in answers and answers[v] is None
-                ]
-                missing_only = [v for v in missing_vars if v not in answers]
+                # Classify vars as missing vs null
+                missing_only, null_vars = classify_missing_vars(missing_vars, answers)
 
                 # Get step title for better readability
                 step_title = get_step_title(step_path)
@@ -1322,8 +1329,25 @@ def main():
             )
             sys.exit(1)
 
+        # Load meta.yaml once for all consumers
+        meta_file = blueprint_dir / "meta.yaml"
+        if not meta_file.exists():
+            sys.stderr.write(f"Error: meta.yaml not found: {meta_file}\n")
+            sys.exit(1)
+        blueprint_meta = load_yaml(meta_file)
+        if not isinstance(blueprint_meta, dict):
+            sys.stderr.write(
+                f"Error: meta.yaml in {blueprint_dir} must contain a YAML mapping\n"
+            )
+            sys.exit(1)
+
+        # Generate timestamp once for consistent headers and filenames
+        timestamp = datetime.now()
+        date_display = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        date_file = timestamp.strftime("%Y%m%d%H%M%S")
+
         # Load task context for hierarchical rendering
-        tasks = load_task_metadata(blueprint_dir)
+        tasks = load_task_metadata(blueprint_meta)
         task_context = None
         if tasks:
             step_mapping = build_task_step_mapping(tasks)
@@ -1335,16 +1359,16 @@ def main():
         # Render IaC code
         print(f"Rendering blueprint '{args.blueprint}' for language '{args.lang}'...")
         rendered_code, code_rendered, code_skipped = render_blueprint_code(
-            blueprint_dir, args.lang, answers, base_dir, task_context=task_context
+            blueprint_dir, args.lang, answers, base_dir, blueprint_meta,
+            date_display=date_display, task_context=task_context
         )
 
         # Generate IaC output filename
         output_dir = output_base_dir / args.lang
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        date_str = datetime.now().strftime("%Y%m%d%H%M%S")
         extension = get_language_extension(args.lang)
-        output_file = output_dir / f"{args.blueprint}_{date_str}.{extension}"
+        output_file = output_dir / f"{args.blueprint}_{date_file}.{extension}"
 
         # Write IaC output
         with open(output_file, "w", encoding="utf-8") as f:
@@ -1358,14 +1382,15 @@ def main():
         if not args.skip_guidance:
             print("\nRendering guidance documents...")
             rendered_guidance, guide_rendered, guide_skipped = render_blueprint_guidance(
-                blueprint_dir, answers, base_dir, task_context=task_context
+                blueprint_dir, answers, base_dir, blueprint_meta,
+                date_display=date_display, task_context=task_context
             )
 
             # Generate guidance output filename
             guidance_dir = guidance_base_dir
             guidance_dir.mkdir(parents=True, exist_ok=True)
 
-            guidance_file = guidance_dir / f"{args.blueprint}_{date_str}.md"
+            guidance_file = guidance_dir / f"{args.blueprint}_{date_file}.md"
 
             # Write guidance output
             with open(guidance_file, "w", encoding="utf-8") as f:
