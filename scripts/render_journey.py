@@ -657,10 +657,18 @@ def get_step_title(step_path):
     return None
 
 
-def check_template_renderable(template_path, answers, jinja_env, base_dir):
+def create_jinja_env(base_dir):
+    """Create a Jinja2 environment configured for blueprint template rendering."""
+    return Environment(
+        loader=FileSystemLoader(base_dir),
+        undefined=StrictUndefined,
+        keep_trailing_newline=True,
+    )
+
+
+def try_render_template(template_path, answers, jinja_env, base_dir):
     """
-    Check if a template can be rendered with the given answers by attempting
-    to render it and catching any UndefinedError exceptions.
+    Attempt to render a Jinja2 template with the given answers.
 
     This approach correctly handles conditional logic - variables that are only
     used inside conditional blocks that won't execute (based on current answer
@@ -671,8 +679,8 @@ def check_template_renderable(template_path, answers, jinja_env, base_dir):
     in the active code path, users may need to fix them one at a time.
     This is a tradeoff for correctly handling conditional logic.
 
-    Returns tuple: (can_render, missing_vars, null_vars)
-    - can_render: True if template can be safely rendered
+    Returns tuple: (rendered_output, missing_vars, null_vars)
+    - rendered_output: the rendered string on success, or None on failure
     - missing_vars: list of variables that are actually needed but not in answers
     - null_vars: list of variables that are actually needed but are None in answers
     """
@@ -689,10 +697,10 @@ def check_template_renderable(template_path, answers, jinja_env, base_dir):
                 render_context[key] = value
 
         # Attempt to render
-        template.render(**render_context)
+        rendered_output = template.render(**render_context)
 
         # If we get here, template rendered successfully
-        return True, [], []
+        return rendered_output, [], []
 
     except UndefinedError as e:
         # Extract variable name from error message
@@ -714,34 +722,58 @@ def check_template_renderable(template_path, answers, jinja_env, base_dir):
             # Fallback: couldn't parse, include raw error
             missing_vars.append(error_msg)
 
-        return False, sorted(missing_vars), sorted(null_vars)
+        return None, sorted(missing_vars), sorted(null_vars)
 
     except TemplateError as e:
         # Other template errors (syntax, etc.) - can't render
         # Return the error message so users can diagnose issues
-        return False, [f"Template error: {str(e)}"], []
+        return None, [f"Template error: {str(e)}"], []
 
 
-def render_step_code(step_path, lang, answers, jinja_env, base_dir):
+def check_template_renderable(template_path, answers, jinja_env, base_dir):
     """
-    Render code template for a step.
-    Returns tuple: (rendered_code, step_id, missing_vars)
-    - rendered_code: the rendered content or None if file doesn't exist
-    - step_id: the step identifier
+    Check if a template can be rendered with the given answers.
+
+    Thin wrapper around try_render_template that returns a boolean instead of
+    the rendered output. Used in render_blueprint_guidance's pre-scan phase
+    where only the renderability check is needed.
+
+    Returns tuple: (can_render, missing_vars, null_vars)
+    - can_render: True if template can be safely rendered
+    - missing_vars: list of variables that are actually needed but not in answers
+    - null_vars: list of variables that are actually needed but are None in answers
+    """
+    output, missing, null = try_render_template(template_path, answers, jinja_env, base_dir)
+    return (output is not None), missing, null
+
+
+def render_step_template(step_path, template_name, answers, jinja_env, base_dir):
+    """
+    Render a single template file within a step directory.
+
+    Args:
+        step_path: Path to the step directory
+        template_name: Name of the template file (e.g., "code.sql.jinja", "dynamic.md.jinja")
+        answers: Dictionary of user-provided answers
+        jinja_env: Configured Jinja2 Environment
+        base_dir: Base directory for template loading
+
+    Returns tuple: (rendered_content, step_id, missing_vars)
+    - rendered_content: the rendered string, or None if file doesn't exist or can't render
+    - step_id: the step identifier (step_path.name)
     - missing_vars: list of missing/null variable names (empty if successful)
     """
     step_id = step_path.name
-    code_file = step_path / f"code.{lang}.jinja"
+    template_file = step_path / template_name
 
-    if not code_file.exists():
+    if not template_file.exists():
         return None, step_id, []
 
-    # Check if template can be rendered by attempting actual rendering
-    # This correctly handles conditional logic - variables only used in inactive branches won't cause skips
-    can_render, missing_vars, null_vars = check_template_renderable(
-        code_file, answers, jinja_env, base_dir
+    rendered, missing_vars, null_vars = try_render_template(
+        template_file, answers, jinja_env, base_dir
     )
-    if not can_render:
+
+    if rendered is None:
         all_issues = missing_vars + null_vars
         issue_details = []
         if missing_vars:
@@ -749,65 +781,11 @@ def render_step_code(step_path, lang, answers, jinja_env, base_dir):
         if null_vars:
             issue_details.append(f"null values {null_vars}")
         sys.stderr.write(
-            f"  Skipping {step_id}/code.{lang}.jinja: {', '.join(issue_details)}\n"
+            f"  Skipping {step_id}/{template_name}: {', '.join(issue_details)}\n"
         )
         return None, step_id, all_issues
 
-    try:
-        # Load template using the shared Jinja2 environment
-        template = jinja_env.get_template(str(code_file.relative_to(base_dir)))
-
-        # Render the template (pre-check should have caught issues)
-        rendered = template.render(**answers)
-        return rendered, step_id, []
-
-    except TemplateError as e:
-        sys.stderr.write(f"Warning: Template error in {code_file}: {e}\n")
-        return None, step_id, []
-
-
-def render_step_guidance(step_path, answers, jinja_env, base_dir):
-    """
-    Render dynamic guidance markdown for a step from dynamic.md.jinja.
-    Returns tuple: (rendered_content, step_id, missing_vars)
-    - rendered_content: the rendered content or None if file doesn't exist
-    - step_id: the step identifier
-    - missing_vars: list of missing variable names (empty if successful)
-    """
-    step_id = step_path.name
-    dynamic_file = step_path / "dynamic.md.jinja"
-
-    if not dynamic_file.exists():
-        return None, step_id, []
-
-    # Check if template can be rendered by attempting actual rendering
-    # This correctly handles conditional logic - variables only used in inactive branches won't cause skips
-    can_render, missing_vars, null_vars = check_template_renderable(
-        dynamic_file, answers, jinja_env, base_dir
-    )
-    if not can_render:
-        all_issues = missing_vars + null_vars
-        issue_details = []
-        if missing_vars:
-            issue_details.append(f"missing {missing_vars}")
-        if null_vars:
-            issue_details.append(f"null values {null_vars}")
-        sys.stderr.write(
-            f"  Skipping {step_id}/dynamic.md.jinja: {', '.join(issue_details)}\n"
-        )
-        return None, step_id, all_issues
-
-    try:
-        # Load template using the shared Jinja2 environment
-        template = jinja_env.get_template(str(dynamic_file.relative_to(base_dir)))
-
-        # Render the template (pre-check should have caught issues)
-        rendered = template.render(**answers)
-        return rendered, step_id, []
-
-    except TemplateError as e:
-        sys.stderr.write(f"Warning: Template error in {dynamic_file}: {e}\n")
-        return None, step_id, []
+    return rendered, step_id, []
 
 
 def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=None):
@@ -846,11 +824,7 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
     step_order = blueprint_meta.get("steps", [])
 
     # Create Jinja2 environment once for all steps
-    jinja_env = Environment(
-        loader=FileSystemLoader(base_dir),
-        undefined=StrictUndefined,
-        keep_trailing_newline=True,
-    )
+    jinja_env = create_jinja_env(base_dir)
 
     comment_char = get_comment_syntax(lang)
     rendered_sections = []
@@ -927,8 +901,8 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, task_context=N
             sys.stderr.write(f"Warning: Step directory not found: {step_path}\n")
             continue
 
-        rendered_code, _, missing_vars = render_step_code(
-            step_path, lang, answers, jinja_env, base_dir
+        rendered_code, _, missing_vars = render_step_template(
+            step_path, f"code.{lang}.jinja", answers, jinja_env, base_dir
         )
 
         # Determine step numbering (hierarchical if task context available, flat otherwise)
@@ -1042,11 +1016,7 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
     step_order = blueprint_meta.get("steps", [])
 
     # Create Jinja2 environment with strict undefined checking
-    jinja_env = Environment(
-        loader=FileSystemLoader(base_dir),
-        undefined=StrictUndefined,
-        keep_trailing_newline=True,
-    )
+    jinja_env = create_jinja_env(base_dir)
 
     # Extract task context if provided
     step_mapping = task_context.get("step_mapping", {}) if task_context else {}
@@ -1172,8 +1142,8 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, task_context=Non
             sys.stderr.write(f"Warning: Step directory not found: {step_path}\n")
             continue
 
-        rendered_guidance, _, missing_vars = render_step_guidance(
-            step_path, answers, jinja_env, base_dir
+        rendered_guidance, _, missing_vars = render_step_template(
+            step_path, "dynamic.md.jinja", answers, jinja_env, base_dir
         )
 
         # Determine step numbering (hierarchical if task context available, flat otherwise)

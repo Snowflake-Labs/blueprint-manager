@@ -18,12 +18,11 @@ from pathlib import Path
 from unittest import TestCase, main
 
 import yaml
-from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 # Add the scripts directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from render_journey import check_template_renderable
+from render_journey import check_template_renderable, create_jinja_env
 
 
 class TestConditionalVariableHandling(TestCase):
@@ -33,11 +32,7 @@ class TestConditionalVariableHandling(TestCase):
         """Create a temporary directory structure for test templates."""
         self.temp_dir = tempfile.mkdtemp()
         self.base_dir = Path(self.temp_dir)
-        self.jinja_env = Environment(
-            loader=FileSystemLoader(self.base_dir),
-            undefined=StrictUndefined,
-            keep_trailing_newline=True,
-        )
+        self.jinja_env = create_jinja_env(self.base_dir)
 
     def tearDown(self):
         """Clean up temporary directories."""
@@ -269,11 +264,7 @@ class TestMultipleConditionalPatterns(TestCase):
         """Create a temporary directory structure for test templates."""
         self.temp_dir = tempfile.mkdtemp()
         self.base_dir = Path(self.temp_dir)
-        self.jinja_env = Environment(
-            loader=FileSystemLoader(self.base_dir),
-            undefined=StrictUndefined,
-            keep_trailing_newline=True,
-        )
+        self.jinja_env = create_jinja_env(self.base_dir)
 
     def tearDown(self):
         """Clean up temporary directories."""
@@ -362,11 +353,7 @@ class TestNullTrackerEdgeCases(TestCase):
         """Create a temporary directory structure for test templates."""
         self.temp_dir = tempfile.mkdtemp()
         self.base_dir = Path(self.temp_dir)
-        self.jinja_env = Environment(
-            loader=FileSystemLoader(self.base_dir),
-            undefined=StrictUndefined,
-            keep_trailing_newline=True,
-        )
+        self.jinja_env = create_jinja_env(self.base_dir)
 
     def tearDown(self):
         """Clean up temporary directories."""
@@ -506,11 +493,7 @@ class TestNullTrackerComparisonOperators(TestCase):
         """Create a temporary directory structure for test templates."""
         self.temp_dir = tempfile.mkdtemp()
         self.base_dir = Path(self.temp_dir)
-        self.jinja_env = Environment(
-            loader=FileSystemLoader(self.base_dir),
-            undefined=StrictUndefined,
-            keep_trailing_newline=True,
-        )
+        self.jinja_env = create_jinja_env(self.base_dir)
 
     def tearDown(self):
         """Clean up temporary directories."""
@@ -1622,6 +1605,102 @@ class TestGetTaskProgress(TestCase):
         self.assertEqual(progress["current_task"]["total_steps"], 1)
         self.assertEqual(progress["current_task"]["completion_percentage"], 100.0)
         self.assertEqual(progress["blueprint"]["completion_percentage"], 100.0)
+
+
+class TestRenderStepTemplate(TestCase):
+    """Test render_step_template() unified step rendering (CXE-14504)."""
+
+    def setUp(self):
+        """Create a temporary directory structure for test templates."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.base_dir = Path(self.temp_dir)
+        self.jinja_env = create_jinja_env(self.base_dir)
+
+        # Create a step directory
+        self.step_path = self.base_dir / "test-step"
+        self.step_path.mkdir(parents=True)
+
+    def tearDown(self):
+        """Clean up temporary directories."""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def create_template(self, name, content):
+        """Create a test template file inside the step directory."""
+        template_path = self.step_path / name
+        template_path.write_text(content)
+        return template_path
+
+    def test_template_not_exists_returns_none(self):
+        """Non-existent template file should return (None, step_id, [])."""
+        from render_journey import render_step_template
+
+        rendered, step_id, missing = render_step_template(
+            self.step_path, "code.sql.jinja", {}, self.jinja_env, self.base_dir
+        )
+
+        self.assertIsNone(rendered)
+        self.assertEqual(step_id, "test-step")
+        self.assertEqual(missing, [])
+
+    def test_successful_render(self):
+        """Template with all variables present should render successfully."""
+        from render_journey import render_step_template
+
+        self.create_template("code.sql.jinja", "SELECT '{{ name }}';")
+        rendered, step_id, missing = render_step_template(
+            self.step_path, "code.sql.jinja", {"name": "Alice"}, self.jinja_env, self.base_dir
+        )
+
+        self.assertEqual(rendered, "SELECT 'Alice';")
+        self.assertEqual(step_id, "test-step")
+        self.assertEqual(missing, [])
+
+    def test_missing_variable_returns_none(self):
+        """Template with missing variable should return (None, step_id, [var])."""
+        from render_journey import render_step_template
+
+        self.create_template("code.sql.jinja", "SELECT '{{ name }}';")
+        rendered, step_id, missing = render_step_template(
+            self.step_path, "code.sql.jinja", {}, self.jinja_env, self.base_dir
+        )
+
+        self.assertIsNone(rendered)
+        self.assertEqual(step_id, "test-step")
+        self.assertIn("name", missing)
+
+    def test_null_variable_in_active_branch_returns_none(self):
+        """Null variable used in active branch should return (None, step_id, [var])."""
+        from render_journey import render_step_template
+
+        self.create_template("dynamic.md.jinja", "Hello {{ user }}!")
+        rendered, step_id, missing = render_step_template(
+            self.step_path, "dynamic.md.jinja", {"user": None}, self.jinja_env, self.base_dir
+        )
+
+        self.assertIsNone(rendered)
+        self.assertEqual(step_id, "test-step")
+        self.assertIn("user", missing)
+
+    def test_null_variable_in_inactive_branch_renders(self):
+        """Null variable in inactive conditional branch should render successfully."""
+        from render_journey import render_step_template
+
+        self.create_template(
+            "dynamic.md.jinja",
+            """{% if use_feature %}Feature: {{ feature_config }}{% else %}No feature{% endif %}""",
+        )
+        rendered, step_id, missing = render_step_template(
+            self.step_path,
+            "dynamic.md.jinja",
+            {"use_feature": False, "feature_config": None},
+            self.jinja_env,
+            self.base_dir,
+        )
+
+        self.assertIsNotNone(rendered)
+        self.assertIn("No feature", rendered)
+        self.assertEqual(step_id, "test-step")
+        self.assertEqual(missing, [])
 
 
 class TestValidateName(TestCase):
