@@ -104,6 +104,25 @@ def load_yaml(file_path):
         return yaml.safe_load(f)
 
 
+def get_step_slug(step):
+    """Extract the slug from a step that may be a dict or a plain string."""
+    return step.get("slug", "") if isinstance(step, dict) else step
+
+
+def _find_step_location(step_slug, tasks):
+    """
+    Find the task and step indices for a given step slug.
+
+    Returns:
+        Tuple of (task_index, step_index) or (None, None) if not found.
+    """
+    for task_index, task in enumerate(tasks):
+        for step_index, step in enumerate(task.get("steps", [])):
+            if get_step_slug(step) == step_slug:
+                return task_index, step_index
+    return None, None
+
+
 def load_task_metadata(blueprint_dir):
     """
     Load task metadata from a blueprint's meta.yaml file.
@@ -244,7 +263,7 @@ def build_task_step_mapping(tasks):
         total_steps = len(task_steps)
         
         for step_index, step in enumerate(task_steps):
-            step_slug = step.get("slug", "") if isinstance(step, dict) else step
+            step_slug = get_step_slug(step)
             if step_slug:
                 step_mapping[step_slug] = {
                     "task_slug": task_slug,
@@ -322,22 +341,20 @@ def get_current_task(step_slug, tasks):
             "steps": [{"slug": "...", "title": "..."}, ...],
         }
     """
-    for task_index, task in enumerate(tasks):
-        task_steps = task.get("steps", [])
-        for step in task_steps:
-            slug = step.get("slug", "") if isinstance(step, dict) else step
-            if slug == step_slug:
-                return {
-                    "slug": task.get("slug", ""),
-                    "title": task.get("title", ""),
-                    "summary": task.get("summary", ""),
-                    "task_index": task_index,
-                    "external_requirements": task.get("external_requirements", []),
-                    "personas": task.get("personas", []),
-                    "role_requirements": task.get("role_requirements", []),
-                    "steps": task.get("steps", []),
-                }
-    return None
+    task_index, _ = _find_step_location(step_slug, tasks)
+    if task_index is None:
+        return None
+    task = tasks[task_index]
+    return {
+        "slug": task.get("slug", ""),
+        "title": task.get("title", ""),
+        "summary": task.get("summary", ""),
+        "task_index": task_index,
+        "external_requirements": task.get("external_requirements", []),
+        "personas": task.get("personas", []),
+        "role_requirements": task.get("role_requirements", []),
+        "steps": task.get("steps", []),
+    }
 
 
 def get_remaining_steps(step_slug, tasks):
@@ -361,21 +378,19 @@ def get_remaining_steps(step_slug, tasks):
             "step_index": 3,  # 0-based index within the task
         }
     """
-    for task in tasks:
-        task_steps = task.get("steps", [])
-        for i, step in enumerate(task_steps):
-            slug = step.get("slug", "") if isinstance(step, dict) else step
-            if slug == step_slug:
-                remaining = []
-                for j in range(i + 1, len(task_steps)):
-                    s = task_steps[j]
-                    remaining.append({
-                        "slug": s.get("slug", "") if isinstance(s, dict) else s,
-                        "title": s.get("title", "") if isinstance(s, dict) else "",
-                        "step_index": j,
-                    })
-                return remaining
-    return []
+    task_index, step_index = _find_step_location(step_slug, tasks)
+    if task_index is None:
+        return []
+    task_steps = tasks[task_index].get("steps", [])
+    remaining = []
+    for j in range(step_index + 1, len(task_steps)):
+        s = task_steps[j]
+        remaining.append({
+            "slug": get_step_slug(s),
+            "title": s.get("title", "") if isinstance(s, dict) else "",
+            "step_index": j,
+        })
+    return remaining
 
 
 def get_task_progress(step_slug, tasks):
@@ -410,18 +425,7 @@ def get_task_progress(step_slug, tasks):
         }
     """
     # Find which task and step index the current step is in
-    found_task_index = None
-    found_step_index = None
-    for task_index, task in enumerate(tasks):
-        task_steps = task.get("steps", [])
-        for step_index, step in enumerate(task_steps):
-            slug = step.get("slug", "") if isinstance(step, dict) else step
-            if slug == step_slug:
-                found_task_index = task_index
-                found_step_index = step_index
-                break
-        if found_task_index is not None:
-            break
+    found_task_index, found_step_index = _find_step_location(step_slug, tasks)
 
     if found_task_index is None:
         return None
@@ -543,10 +547,7 @@ def generate_table_of_contents(tasks, rendered_steps, depth=2):
         task_steps = task.get("steps", [])
         
         # Check if any steps in this task were rendered
-        task_step_slugs = [
-            s.get("slug", s) if isinstance(s, dict) else s 
-            for s in task_steps
-        ]
+        task_step_slugs = [get_step_slug(s) for s in task_steps]
         rendered_task_steps = [slug for slug in task_step_slugs if slug in rendered_set]
         
         # Skip task entirely if no steps were rendered
@@ -562,18 +563,18 @@ def generate_table_of_contents(tasks, rendered_steps, depth=2):
         if depth >= 2:
             step_num_in_task = 0
             for step in task_steps:
-                step_slug = step.get("slug", step) if isinstance(step, dict) else step
+                slug = get_step_slug(step)
                 step_title = step.get("title", "") if isinstance(step, dict) else ""
                 
                 # Skip steps that weren't rendered
-                if step_slug not in rendered_set:
+                if slug not in rendered_set:
                     continue
                 
                 step_num_in_task += 1
                 step_label = f"{task_num}.{step_num_in_task}"
                 
                 # Use step title if available, otherwise use slug
-                step_display = step_title if step_title else step_slug
+                step_display = step_title if step_title else slug
                 step_heading = f"Step {step_label}: {step_display}"
                 step_anchor = generate_anchor(step_heading)
                 toc_lines.append(f"  - [{step_heading}](#{step_anchor})")
