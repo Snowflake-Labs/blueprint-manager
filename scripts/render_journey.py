@@ -491,6 +491,49 @@ def get_task_progress(step_slug, tasks):
     }
 
 
+def resolve_step_title(step_id, step_path, task_context):
+    """
+    Resolve the display title for a step using a consistent priority order.
+
+    Priority:
+        1. meta.yaml step title (from task_context) — always preferred when available
+        2. dynamic.md.jinja '# ' title (via get_step_title) — fallback
+        3. step_id slug — last resort
+
+    Using meta.yaml as the primary source ensures that both the TOC
+    (generate_table_of_contents) and the document body headings
+    (render_blueprint_guidance / render_blueprint_code) produce identical
+    anchors, fixing broken TOC links.
+
+    Args:
+        step_id: The step slug identifier
+        step_path: Path to the step directory (for get_step_title fallback)
+        task_context: Optional dict with 'tasks' and 'step_mapping' keys
+
+    Returns:
+        The resolved human-readable title string.
+    """
+    # 1. Try meta.yaml title via task_context
+    if task_context:
+        tasks = task_context.get("tasks", [])
+        for task in tasks:
+            for step in task.get("steps", []):
+                slug = step.get("slug", "") if isinstance(step, dict) else step
+                if slug == step_id:
+                    title = step.get("title", "") if isinstance(step, dict) else ""
+                    if title:
+                        return title
+                    break
+
+    # 2. Try dynamic.md.jinja title
+    jinja_title = get_step_title(step_path)
+    if jinja_title:
+        return jinja_title
+
+    # 3. Fall back to slug
+    return step_id
+
+
 def generate_anchor(text):
     """
     Generate a markdown-compatible anchor from heading text.
@@ -938,12 +981,9 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, blueprint_meta
                 # Classify vars as missing vs null
                 missing_only, null_vars = classify_missing_vars(missing_vars, answers)
 
-                # Get step title for better readability
-                step_title = get_step_title(step_path)
-                if step_title:
-                    skip_header = f"SKIPPED Step {step_label}: {step_title}"
-                else:
-                    skip_header = f"SKIPPED Step {step_label}: {step_id}"
+                # Get step title using canonical resolution (meta.yaml first)
+                step_heading = resolve_step_title(step_id, step_path, task_context)
+                skip_header = f"SKIPPED Step {step_label}: {step_heading}"
 
                 # Build skip note
                 skip_note = [
@@ -970,12 +1010,9 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, blueprint_meta
                 skipped_count += 1
             continue
 
-        # Add step header with hierarchical numbering
-        step_title = get_step_title(step_path)
-        if step_title:
-            step_header_text = f"Step {step_label}: {step_title}"
-        else:
-            step_header_text = f"Step {step_label}: {step_id}"
+        # Add step header with hierarchical numbering using canonical title resolution
+        step_heading = resolve_step_title(step_id, step_path, task_context)
+        step_header_text = f"Step {step_label}: {step_heading}"
         
         step_header = [
             "",
@@ -1174,12 +1211,8 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, blueprint_meta, 
                 # Classify vars as missing vs null
                 missing_only, null_vars = classify_missing_vars(missing_vars, answers)
 
-                # Get step title for better readability
-                step_title = get_step_title(step_path)
-                if step_title:
-                    step_heading = step_title
-                else:
-                    step_heading = step_id
+                # Get step title using canonical resolution (meta.yaml first)
+                step_heading = resolve_step_title(step_id, step_path, task_context)
 
                 # Build skip note
                 skip_note = [
@@ -1211,12 +1244,8 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, blueprint_meta, 
                 skipped_count += 1
             continue
 
-        # Add step header with hierarchical numbering
-        step_title = get_step_title(step_path)
-        if step_title:
-            step_heading = step_title
-        else:
-            step_heading = step_id
+        # Add step header with hierarchical numbering using canonical title resolution
+        step_heading = resolve_step_title(step_id, step_path, task_context)
         
         step_header = [
             "",

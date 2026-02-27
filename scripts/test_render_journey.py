@@ -2122,5 +2122,327 @@ class TestRenderStepCodeAndGuidance(BlueprintTestCase):
         self.assertIn("user_name", missing)
 
 
+class TestResolveStepTitle(BlueprintTestCase):
+    """Test resolve_step_title() canonical title resolution (CXE-14541)."""
+
+    def _make_task_context(self, steps_with_titles):
+        """Helper to build task_context from a list of (slug, title) tuples."""
+        steps = [{"slug": s, "title": t} for s, t in steps_with_titles]
+        tasks = [{"slug": "task-1", "title": "Task One", "steps": steps}]
+        return {"tasks": tasks, "step_mapping": {}}
+
+    def test_meta_yaml_title_preferred_over_jinja(self):
+        """meta.yaml title should be used even when dynamic.md.jinja has a different title."""
+        from render_journey import resolve_step_title
+
+        step_dir = self.create_step(
+            "my-step", guidance_content="# Jinja Title\n\nContent."
+        )
+        task_context = self._make_task_context([("my-step", "Meta YAML Title")])
+
+        title = resolve_step_title("my-step", step_dir, task_context)
+
+        self.assertEqual(title, "Meta YAML Title")
+
+    def test_falls_back_to_jinja_title_when_meta_empty(self):
+        """When meta.yaml step title is empty, fall back to dynamic.md.jinja title."""
+        from render_journey import resolve_step_title
+
+        step_dir = self.create_step(
+            "my-step", guidance_content="# Jinja Fallback Title\n\nContent."
+        )
+        task_context = self._make_task_context([("my-step", "")])
+
+        title = resolve_step_title("my-step", step_dir, task_context)
+
+        self.assertEqual(title, "Jinja Fallback Title")
+
+    def test_falls_back_to_slug_when_no_titles(self):
+        """When neither meta.yaml nor jinja have titles, return the slug."""
+        from render_journey import resolve_step_title
+
+        step_dir = self.create_step(
+            "my-step", guidance_content="No heading here, just text."
+        )
+        task_context = self._make_task_context([("my-step", "")])
+
+        title = resolve_step_title("my-step", step_dir, task_context)
+
+        self.assertEqual(title, "my-step")
+
+    def test_no_task_context_uses_jinja_title(self):
+        """Without task_context, should fall back to dynamic.md.jinja title."""
+        from render_journey import resolve_step_title
+
+        step_dir = self.create_step(
+            "my-step", guidance_content="# Jinja Title\n\nContent."
+        )
+
+        title = resolve_step_title("my-step", step_dir, None)
+
+        self.assertEqual(title, "Jinja Title")
+
+    def test_no_task_context_no_jinja_uses_slug(self):
+        """Without task_context and no jinja title, should return slug."""
+        from render_journey import resolve_step_title
+
+        step_dir = self.create_step("my-step", guidance_content="No heading.")
+
+        title = resolve_step_title("my-step", step_dir, None)
+
+        self.assertEqual(title, "my-step")
+
+    def test_step_not_in_task_context_falls_back(self):
+        """Step not found in task_context should fall back to jinja/slug."""
+        from render_journey import resolve_step_title
+
+        step_dir = self.create_step(
+            "other-step", guidance_content="# Other Title\n\nContent."
+        )
+        task_context = self._make_task_context([("different-step", "Different")])
+
+        title = resolve_step_title("other-step", step_dir, task_context)
+
+        self.assertEqual(title, "Other Title")
+
+
+class TestTocToHeadingAnchorConsistency(BlueprintTestCase):
+    """Test that TOC anchors match document body heading anchors (CXE-14541).
+
+    This is the core bug fix verification: when render_blueprint_guidance()
+    generates body headings, the anchors must match those in the TOC generated
+    by generate_table_of_contents(). Both should use the same title string.
+    """
+
+    def _make_meta_and_context(self, task_title, steps):
+        """Helper to create meta dict and task_context from steps list.
+
+        Args:
+            task_title: Title for the single task
+            steps: List of dicts with 'slug' and 'title' keys
+        """
+        from render_journey import load_task_metadata, build_task_step_mapping
+
+        meta = {
+            "name": "Test Blueprint",
+            "steps": [s["slug"] for s in steps],
+            "tasks": [
+                {
+                    "slug": "task-1",
+                    "title": task_title,
+                    "steps": steps,
+                },
+            ],
+        }
+        tasks = load_task_metadata(meta)
+        step_mapping = build_task_step_mapping(tasks)
+        task_context = {"tasks": tasks, "step_mapping": step_mapping}
+        return meta, task_context
+
+    def test_toc_matches_body_when_jinja_title_differs_from_meta(self):
+        """TOC and body anchors match when jinja title differs from meta.yaml title.
+
+        This was Bug 2: e.g., meta.yaml has "Create Organization Account Administrators"
+        but dynamic.md.jinja has "# Create Account Administrators". The fix ensures
+        both TOC and body use the meta.yaml title.
+        """
+        from render_journey import (
+            render_blueprint_guidance, generate_anchor, generate_table_of_contents,
+        )
+
+        steps = [
+            {"slug": "step-1", "title": "Create Organization Account Administrators"},
+        ]
+        meta, task_context = self._make_meta_and_context("Admin Setup", steps)
+
+        # Create step with a DIFFERENT title in jinja
+        step_dir = self.base_dir / "step-1"
+        step_dir.mkdir(parents=True, exist_ok=True)
+        (step_dir / "dynamic.md.jinja").write_text(
+            "# Create Account Administrators\n\nSet up admin accounts."
+        )
+
+        # Render guidance — the body heading should use meta.yaml title
+        rendered, rendered_count, _ = render_blueprint_guidance(
+            self.base_dir, {}, self.base_dir, meta,
+            date_display="2026-01-01 00:00:00", task_context=task_context,
+        )
+
+        self.assertEqual(rendered_count, 1)
+
+        # Generate the TOC independently
+        toc = generate_table_of_contents(
+            task_context["tasks"], {"step-1"}
+        )
+
+        # Extract the anchor from the TOC link
+        import re
+        toc_anchors = re.findall(r'\(#([^)]+)\)', toc)
+        step_toc_anchor = [a for a in toc_anchors if a.startswith("step-")]
+        self.assertTrue(len(step_toc_anchor) > 0, "Should find step anchor in TOC")
+
+        # The body heading should produce the same anchor
+        body_heading = "Step 1.1: Create Organization Account Administrators"
+        body_anchor = generate_anchor(body_heading)
+        self.assertEqual(step_toc_anchor[0], body_anchor)
+
+        # Verify the body actually contains the meta.yaml title, not the jinja title
+        self.assertIn("Create Organization Account Administrators", rendered)
+
+    def test_toc_matches_body_when_jinja_has_no_title(self):
+        """TOC and body anchors match when jinja template has no '# ' title line.
+
+        This was Bug 1: steps without a jinja title would fall back to using the slug,
+        while the TOC used meta.yaml title, causing anchor mismatch.
+        """
+        from render_journey import (
+            render_blueprint_guidance, generate_anchor, generate_table_of_contents,
+        )
+
+        steps = [
+            {"slug": "configure-scim-integration", "title": "Configure SCIM Integration"},
+        ]
+        meta, task_context = self._make_meta_and_context("Security Setup", steps)
+
+        # Create step with NO '# ' title line (starts with ## instead)
+        step_dir = self.base_dir / "configure-scim-integration"
+        step_dir.mkdir(parents=True, exist_ok=True)
+        (step_dir / "dynamic.md.jinja").write_text(
+            "## SCIM Configuration\n\nConfigure your SCIM integration here."
+        )
+
+        rendered, rendered_count, _ = render_blueprint_guidance(
+            self.base_dir, {}, self.base_dir, meta,
+            date_display="2026-01-01 00:00:00", task_context=task_context,
+        )
+
+        self.assertEqual(rendered_count, 1)
+
+        toc = generate_table_of_contents(
+            task_context["tasks"], {"configure-scim-integration"}
+        )
+
+        import re
+        toc_anchors = re.findall(r'\(#([^)]+)\)', toc)
+        step_toc_anchor = [a for a in toc_anchors if a.startswith("step-")]
+        self.assertTrue(len(step_toc_anchor) > 0)
+
+        body_heading = "Step 1.1: Configure SCIM Integration"
+        body_anchor = generate_anchor(body_heading)
+        self.assertEqual(step_toc_anchor[0], body_anchor)
+
+    def test_toc_matches_body_with_ampersand_in_title(self):
+        """TOC and body anchors match for titles containing '&'.
+
+        Bug 3 context: '&' is stripped by generate_anchor(). As long as both
+        TOC and body use the same title string, the anchors will match.
+        """
+        from render_journey import (
+            render_blueprint_guidance, generate_anchor, generate_table_of_contents,
+        )
+
+        steps = [
+            {"slug": "step-1", "title": "Define Domains, Environments & Naming Conventions"},
+        ]
+        meta, task_context = self._make_meta_and_context(
+            "Core Roles & Database Setup", steps
+        )
+
+        step_dir = self.base_dir / "step-1"
+        step_dir.mkdir(parents=True, exist_ok=True)
+        (step_dir / "dynamic.md.jinja").write_text(
+            "# Define Domains, Environments & Naming Conventions\n\nContent here."
+        )
+
+        rendered, rendered_count, _ = render_blueprint_guidance(
+            self.base_dir, {}, self.base_dir, meta,
+            date_display="2026-01-01 00:00:00", task_context=task_context,
+        )
+
+        self.assertEqual(rendered_count, 1)
+
+        toc = generate_table_of_contents(
+            task_context["tasks"], {"step-1"}
+        )
+
+        import re
+        toc_anchors = re.findall(r'\(#([^)]+)\)', toc)
+        step_toc_anchor = [a for a in toc_anchors if a.startswith("step-")]
+        self.assertTrue(len(step_toc_anchor) > 0)
+
+        body_heading = "Step 1.1: Define Domains, Environments & Naming Conventions"
+        body_anchor = generate_anchor(body_heading)
+        self.assertEqual(step_toc_anchor[0], body_anchor)
+
+    def test_toc_matches_body_with_commas_and_special_chars(self):
+        """TOC and body anchors match for titles with commas and other special chars."""
+        from render_journey import (
+            render_blueprint_guidance, generate_anchor, generate_table_of_contents,
+        )
+
+        steps = [
+            {"slug": "step-1", "title": "Configure Tags, Labels & Monitoring (Optional)"},
+        ]
+        meta, task_context = self._make_meta_and_context("Observability", steps)
+
+        step_dir = self.base_dir / "step-1"
+        step_dir.mkdir(parents=True, exist_ok=True)
+        (step_dir / "dynamic.md.jinja").write_text("Content without title heading.")
+
+        rendered, rendered_count, _ = render_blueprint_guidance(
+            self.base_dir, {}, self.base_dir, meta,
+            date_display="2026-01-01 00:00:00", task_context=task_context,
+        )
+
+        self.assertEqual(rendered_count, 1)
+
+        toc = generate_table_of_contents(
+            task_context["tasks"], {"step-1"}
+        )
+
+        import re
+        toc_anchors = re.findall(r'\(#([^)]+)\)', toc)
+        step_toc_anchor = [a for a in toc_anchors if a.startswith("step-")]
+        self.assertTrue(len(step_toc_anchor) > 0)
+
+        body_heading = "Step 1.1: Configure Tags, Labels & Monitoring (Optional)"
+        body_anchor = generate_anchor(body_heading)
+        self.assertEqual(step_toc_anchor[0], body_anchor)
+
+    def test_task_anchor_also_matches_between_toc_and_body(self):
+        """Task-level TOC anchors should also match body task headings."""
+        from render_journey import (
+            render_blueprint_guidance, generate_anchor, generate_table_of_contents,
+        )
+
+        steps = [{"slug": "step-1", "title": "Do Something"}]
+        meta, task_context = self._make_meta_and_context(
+            "Platform Security & Identity", steps
+        )
+
+        step_dir = self.base_dir / "step-1"
+        step_dir.mkdir(parents=True, exist_ok=True)
+        (step_dir / "dynamic.md.jinja").write_text("Content.")
+
+        rendered, _, _ = render_blueprint_guidance(
+            self.base_dir, {}, self.base_dir, meta,
+            date_display="2026-01-01 00:00:00", task_context=task_context,
+        )
+
+        toc = generate_table_of_contents(
+            task_context["tasks"], {"step-1"}
+        )
+
+        import re
+        toc_anchors = re.findall(r'\(#([^)]+)\)', toc)
+        task_toc_anchor = [a for a in toc_anchors if a.startswith("task-")]
+        self.assertTrue(len(task_toc_anchor) > 0)
+
+        # The body renders "# Task 1: Platform Security & Identity"
+        body_task_heading = "Task 1: Platform Security & Identity"
+        body_anchor = generate_anchor(body_task_heading)
+        self.assertEqual(task_toc_anchor[0], body_anchor)
+
+
 if __name__ == "__main__":
     main()
