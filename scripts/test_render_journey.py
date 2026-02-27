@@ -25,25 +25,35 @@ sys.path.insert(0, str(Path(__file__).parent))
 from render_journey import check_template_renderable, create_jinja_env
 
 
-class TestConditionalVariableHandling(TestCase):
-    """Test that conditional variable patterns are handled correctly."""
+class BlueprintTestCase(TestCase):
+    """Base class with common temp-dir + Jinja2 environment setup."""
 
     def setUp(self):
-        """Create a temporary directory structure for test templates."""
         self.temp_dir = tempfile.mkdtemp()
         self.base_dir = Path(self.temp_dir)
         self.jinja_env = create_jinja_env(self.base_dir)
 
     def tearDown(self):
-        """Clean up temporary directories."""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def create_template(self, name, content):
-        """Create a test template file."""
         template_path = self.base_dir / name
         template_path.parent.mkdir(parents=True, exist_ok=True)
         template_path.write_text(content)
         return template_path
+
+    def create_step(self, step_id, code_content=None, guidance_content=None, lang="sql"):
+        step_dir = self.base_dir / step_id
+        step_dir.mkdir(parents=True, exist_ok=True)
+        if code_content:
+            (step_dir / f"code.{lang}.jinja").write_text(code_content)
+        if guidance_content:
+            (step_dir / "dynamic.md.jinja").write_text(guidance_content)
+        return step_dir
+
+
+class TestConditionalVariableHandling(BlueprintTestCase):
+    """Test that conditional variable patterns are handled correctly."""
 
     def test_conditional_scim_not_required_for_manual_idp(self):
         """scim_admin_users should not be required when identity_provider is Manual."""
@@ -257,25 +267,8 @@ class TestConditionalVariableHandling(TestCase):
         )
 
 
-class TestMultipleConditionalPatterns(TestCase):
+class TestMultipleConditionalPatterns(BlueprintTestCase):
     """Test multiple conditional patterns in the same template."""
-
-    def setUp(self):
-        """Create a temporary directory structure for test templates."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.base_dir = Path(self.temp_dir)
-        self.jinja_env = create_jinja_env(self.base_dir)
-
-    def tearDown(self):
-        """Clean up temporary directories."""
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-    def create_template(self, name, content):
-        """Create a test template file."""
-        template_path = self.base_dir / name
-        template_path.parent.mkdir(parents=True, exist_ok=True)
-        template_path.write_text(content)
-        return template_path
 
     def test_multiple_independent_conditionals(self):
         """Multiple independent conditionals should all be respected."""
@@ -340,7 +333,7 @@ Always shown: {{ required_var }}
         )
 
 
-class TestNullTrackerEdgeCases(TestCase):
+class TestNullTrackerEdgeCases(BlueprintTestCase):
     """Test edge cases for NullTracker behavior.
     
     These tests document known behavior patterns for:
@@ -348,23 +341,6 @@ class TestNullTrackerEdgeCases(TestCase):
     - {% if not var %} pattern (intentionally strict)
     - Reversed comparisons {% if 'value' == var %}
     """
-
-    def setUp(self):
-        """Create a temporary directory structure for test templates."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.base_dir = Path(self.temp_dir)
-        self.jinja_env = create_jinja_env(self.base_dir)
-
-    def tearDown(self):
-        """Clean up temporary directories."""
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-    def create_template(self, name, content):
-        """Create a test template file."""
-        template_path = self.base_dir / name
-        template_path.parent.mkdir(parents=True, exist_ok=True)
-        template_path.write_text(content)
-        return template_path
 
     def test_is_none_pattern_known_limitation(self):
         """{% if var is none %} - KNOWN LIMITATION: NullTracker is not actually None.
@@ -481,30 +457,13 @@ class TestNullTrackerEdgeCases(TestCase):
         )
 
 
-class TestNullTrackerComparisonOperators(TestCase):
+class TestNullTrackerComparisonOperators(BlueprintTestCase):
     """Test that comparison operators raise UndefinedError for null variables.
     
     These tests ensure that using comparison operators (<, >, <=, >=) with null
     variables raises UndefinedError instead of TypeError, allowing the exception
     to be properly caught and handled by check_template_renderable().
     """
-
-    def setUp(self):
-        """Create a temporary directory structure for test templates."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.base_dir = Path(self.temp_dir)
-        self.jinja_env = create_jinja_env(self.base_dir)
-
-    def tearDown(self):
-        """Clean up temporary directories."""
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-    def create_template(self, name, content):
-        """Create a test template file."""
-        template_path = self.base_dir / name
-        template_path.parent.mkdir(parents=True, exist_ok=True)
-        template_path.write_text(content)
-        return template_path
 
     def test_greater_than_comparison_with_null(self):
         """{% if var > 0 %} with null var should report as null, not crash."""
@@ -612,19 +571,13 @@ class TestNullTrackerComparisonOperators(TestCase):
         )
 
 
-class TestTaskMetadataLoading(TestCase):
+class TestTaskMetadataLoading(BlueprintTestCase):
     """Test task metadata loading from meta.yaml (CXE-14251)."""
 
     def setUp(self):
-        """Create a temporary directory structure for test blueprints."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.base_dir = Path(self.temp_dir)
+        super().setUp()
         self.blueprint_dir = self.base_dir / "blueprints" / "test-blueprint"
         self.blueprint_dir.mkdir(parents=True)
-
-    def tearDown(self):
-        """Clean up temporary directories."""
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def create_meta_yaml(self, content):
         """Create a test meta.yaml file."""
@@ -745,20 +698,14 @@ class TestTaskMetadataLoading(TestCase):
         self.assertEqual(tasks[0]["steps"], [])
 
 
-class TestTaskOverviewLoading(TestCase):
+class TestTaskOverviewLoading(BlueprintTestCase):
     """Test task overview content loading from markdown files (CXE-14251)."""
 
     def setUp(self):
-        """Create a temporary directory structure for test blueprints."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.base_dir = Path(self.temp_dir)
+        super().setUp()
         self.blueprint_dir = self.base_dir / "blueprints" / "test-blueprint"
         self.tasks_dir = self.blueprint_dir / "tasks"
         self.tasks_dir.mkdir(parents=True)
-
-    def tearDown(self):
-        """Clean up temporary directories."""
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def create_task_overview(self, task_slug, content):
         """Create a test task overview markdown file."""
@@ -900,23 +847,17 @@ class TestTaskStepMapping(TestCase):
         self.assertIsNone(progress)
 
 
-class TestBackwardCompatibility(TestCase):
+class TestBackwardCompatibility(BlueprintTestCase):
     """Test that blueprints without task definitions render normally (CXE-14251)."""
 
     def setUp(self):
-        """Create a temporary directory structure for test blueprints."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.base_dir = Path(self.temp_dir)
+        super().setUp()
         self.blueprint_dir = self.base_dir / "blueprints" / "test-blueprint"
         self.blueprint_dir.mkdir(parents=True)
         
         # Create a step directory with minimal content
         self.step_dir = self.blueprint_dir / "test-step"
         self.step_dir.mkdir()
-
-    def tearDown(self):
-        """Clean up temporary directories."""
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def create_meta_yaml(self, content):
         """Create a test meta.yaml file."""
@@ -1609,22 +1550,14 @@ class TestGetTaskProgress(TestCase):
         self.assertEqual(progress["blueprint"]["completion_percentage"], 100.0)
 
 
-class TestRenderStepTemplate(TestCase):
+class TestRenderStepTemplate(BlueprintTestCase):
     """Test render_step_template() unified step rendering (CXE-14504)."""
 
     def setUp(self):
-        """Create a temporary directory structure for test templates."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.base_dir = Path(self.temp_dir)
-        self.jinja_env = create_jinja_env(self.base_dir)
-
+        super().setUp()
         # Create a step directory
         self.step_path = self.base_dir / "test-step"
         self.step_path.mkdir(parents=True)
-
-    def tearDown(self):
-        """Clean up temporary directories."""
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def create_template(self, name, content):
         """Create a test template file inside the step directory."""
@@ -1741,6 +1674,452 @@ class TestValidateName(TestCase):
 
         with self.assertRaises(ValueError):
             validate_name("")
+
+
+class TestRenderBlueprintGuidance(BlueprintTestCase):
+    """Test render_blueprint_guidance() end-to-end guidance rendering (CXE-14508)."""
+
+    def setUp(self):
+        super().setUp()
+        self.blueprint_dir = self.base_dir / "test-blueprint"
+        self.blueprint_dir.mkdir(parents=True)
+
+    def _create_blueprint(self, steps, meta_extra=None):
+        """Helper to create a minimal blueprint with given steps."""
+        meta = {
+            "name": "Test Blueprint",
+            "steps": list(steps.keys()),
+        }
+        if meta_extra:
+            meta.update(meta_extra)
+        meta_file = self.blueprint_dir / "meta.yaml"
+        with open(meta_file, "w") as f:
+            yaml.dump(meta, f)
+
+        for step_id, templates in steps.items():
+            step_dir = self.blueprint_dir / step_id
+            step_dir.mkdir(parents=True, exist_ok=True)
+            if "guidance" in templates:
+                (step_dir / "dynamic.md.jinja").write_text(templates["guidance"])
+        return meta
+
+    def test_minimal_blueprint_with_two_steps(self):
+        """Renders a minimal blueprint with 2 steps, verifies TOC and content."""
+        from render_journey import render_blueprint_guidance, build_task_step_mapping, load_task_metadata
+
+        meta = self._create_blueprint({
+            "step-1": {"guidance": "# Configure Account\n\nSet up your account."},
+            "step-2": {"guidance": "# Set Up Roles\n\nCreate roles."},
+        }, meta_extra={
+            "tasks": [
+                {
+                    "slug": "task-1",
+                    "title": "Platform Foundation",
+                    "steps": [
+                        {"slug": "step-1", "title": "Configure Account"},
+                        {"slug": "step-2", "title": "Set Up Roles"},
+                    ],
+                },
+            ],
+        })
+
+        tasks = load_task_metadata(meta)
+        step_mapping = build_task_step_mapping(tasks)
+        task_context = {"tasks": tasks, "step_mapping": step_mapping}
+
+        rendered, rendered_count, skipped_count = render_blueprint_guidance(
+            self.blueprint_dir, {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00", task_context=task_context,
+        )
+
+        self.assertEqual(rendered_count, 2)
+        self.assertEqual(skipped_count, 0)
+        # TOC is generated
+        self.assertIn("Table of Contents", rendered)
+        # Step headers are present
+        self.assertIn("Configure Account", rendered)
+        self.assertIn("Set Up Roles", rendered)
+        # Content is rendered
+        self.assertIn("Set up your account.", rendered)
+        self.assertIn("Create roles.", rendered)
+
+    def test_with_task_context_headers(self):
+        """Task headers should appear when task context is provided."""
+        from render_journey import render_blueprint_guidance, build_task_step_mapping, load_task_metadata
+
+        meta = self._create_blueprint({
+            "step-1": {"guidance": "# Step One\n\nContent."},
+        }, meta_extra={
+            "tasks": [
+                {
+                    "slug": "task-1",
+                    "title": "My Task",
+                    "steps": [{"slug": "step-1", "title": "Step One"}],
+                },
+            ],
+        })
+
+        tasks = load_task_metadata(meta)
+        step_mapping = build_task_step_mapping(tasks)
+        task_context = {"tasks": tasks, "step_mapping": step_mapping}
+
+        rendered, _, _ = render_blueprint_guidance(
+            self.blueprint_dir, {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00", task_context=task_context,
+        )
+
+        self.assertIn("Task 1: My Task", rendered)
+
+    def test_skip_note_for_missing_variables(self):
+        """Steps with missing variables should show skip notes."""
+        from render_journey import render_blueprint_guidance
+
+        meta = self._create_blueprint({
+            "step-1": {"guidance": "# Step One\n\nHello {{ missing_var }}!"},
+        })
+
+        rendered, rendered_count, skipped_count = render_blueprint_guidance(
+            self.blueprint_dir, {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00",
+        )
+
+        self.assertEqual(rendered_count, 0)
+        self.assertEqual(skipped_count, 1)
+        self.assertIn("SKIPPED", rendered)
+        self.assertIn("missing_var", rendered)
+
+    def test_overview_section(self):
+        """Overview content from meta.yaml should appear in rendered guidance."""
+        from render_journey import render_blueprint_guidance
+
+        meta = self._create_blueprint({
+            "step-1": {"guidance": "# Step One\n\nContent."},
+        }, meta_extra={
+            "overview": "This blueprint sets up your Snowflake environment.",
+        })
+
+        rendered, _, _ = render_blueprint_guidance(
+            self.blueprint_dir, {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00",
+        )
+
+        self.assertIn("This blueprint sets up your Snowflake environment.", rendered)
+
+
+class TestGetStepTitle(BlueprintTestCase):
+    """Test get_step_title() title extraction from dynamic.md.jinja (CXE-14508)."""
+
+    def test_step_with_title(self):
+        """Step with dynamic.md.jinja starting with '# My Title' returns 'My Title'."""
+        from render_journey import get_step_title
+
+        step_dir = self.create_step("test-step", guidance_content="# My Title\n\nSome content.")
+        title = get_step_title(step_dir)
+        self.assertEqual(title, "My Title")
+
+    def test_step_without_dynamic_file(self):
+        """Step with no dynamic.md.jinja returns None."""
+        from render_journey import get_step_title
+
+        step_dir = self.base_dir / "empty-step"
+        step_dir.mkdir(parents=True, exist_ok=True)
+        title = get_step_title(step_dir)
+        self.assertIsNone(title)
+
+    def test_step_with_no_heading(self):
+        """Step with dynamic.md.jinja that has no '# ' line returns None."""
+        from render_journey import get_step_title
+
+        step_dir = self.create_step("test-step", guidance_content="No heading here\nJust text.")
+        title = get_step_title(step_dir)
+        self.assertIsNone(title)
+
+    def test_step_with_leading_whitespace_heading(self):
+        """Step with leading whitespace before '# ' returns the title."""
+        from render_journey import get_step_title
+
+        step_dir = self.create_step("test-step", guidance_content="  # Indented Title\n\nContent.")
+        # get_step_title strips the line before checking startswith("# ")
+        title = get_step_title(step_dir)
+        self.assertEqual(title, "Indented Title")
+
+    def test_step_with_heading_not_on_first_line(self):
+        """The first '# ' heading should be returned even if not on line 1."""
+        from render_journey import get_step_title
+
+        step_dir = self.create_step(
+            "test-step",
+            guidance_content="Some preamble\n\n# Actual Title\n\nContent.",
+        )
+        title = get_step_title(step_dir)
+        self.assertEqual(title, "Actual Title")
+
+
+class TestSetupProjectDirectories(BlueprintTestCase):
+    """Test setup_project_directories() directory creation (CXE-14508)."""
+
+    def test_creates_expected_directory_structure(self):
+        """Creates the expected directory structure under a temp dir."""
+        from render_journey import setup_project_directories
+
+        project_dir = setup_project_directories(self.base_dir, "my-project", "my-blueprint")
+
+        self.assertTrue(project_dir.exists())
+        self.assertTrue((project_dir / "answers" / "my-blueprint").is_dir())
+        self.assertTrue((project_dir / "output" / "iac" / "sql").is_dir())
+        self.assertTrue((project_dir / "output" / "documentation").is_dir())
+
+    def test_idempotent_calls(self):
+        """Repeated calls are idempotent (exist_ok=True) - no error on second call."""
+        from render_journey import setup_project_directories
+
+        setup_project_directories(self.base_dir, "my-project", "my-blueprint")
+        # Should not raise
+        project_dir = setup_project_directories(self.base_dir, "my-project", "my-blueprint")
+        self.assertTrue(project_dir.exists())
+
+    def test_invalid_project_name_raises_value_error(self):
+        """Invalid project names should raise ValueError."""
+        from render_journey import setup_project_directories
+
+        with self.assertRaises(ValueError):
+            setup_project_directories(self.base_dir, "../bad-name", "my-blueprint")
+
+    def test_invalid_blueprint_id_raises_value_error(self):
+        """Invalid blueprint IDs should raise ValueError."""
+        from render_journey import setup_project_directories
+
+        with self.assertRaises(ValueError):
+            setup_project_directories(self.base_dir, "my-project", "bad/blueprint")
+
+    def test_returns_correct_project_path(self):
+        """Return value should be the project directory path."""
+        from render_journey import setup_project_directories
+
+        project_dir = setup_project_directories(self.base_dir, "test-proj", "bp-1")
+        expected = self.base_dir / "projects" / "test-proj"
+        self.assertEqual(project_dir, expected)
+
+
+class TestUtilityFunctions(TestCase):
+    """Test get_language_extension() and get_comment_syntax() utilities (CXE-14508)."""
+
+    def test_get_language_extension_sql(self):
+        from render_journey import get_language_extension
+        self.assertEqual(get_language_extension("sql"), "sql")
+
+    def test_get_language_extension_terraform(self):
+        from render_journey import get_language_extension
+        self.assertEqual(get_language_extension("terraform"), "tf")
+
+    def test_get_language_extension_unknown_passthrough(self):
+        from render_journey import get_language_extension
+        self.assertEqual(get_language_extension("unknown"), "unknown")
+
+    def test_get_comment_syntax_sql(self):
+        from render_journey import get_comment_syntax
+        self.assertEqual(get_comment_syntax("sql"), "--")
+
+    def test_get_comment_syntax_terraform(self):
+        from render_journey import get_comment_syntax
+        self.assertEqual(get_comment_syntax("terraform"), "#")
+
+    def test_get_comment_syntax_unknown_defaults_to_hash(self):
+        from render_journey import get_comment_syntax
+        self.assertEqual(get_comment_syntax("unknown"), "#")
+
+
+class TestCheckTemplateRenderableSyntaxError(BlueprintTestCase):
+    """Test check_template_renderable with syntax-error templates (CXE-14508)."""
+
+    def test_syntax_error_template_returns_false(self):
+        """Template with Jinja2 syntax error returns (False, ['Template error: ...'], [])."""
+        template = self.create_template(
+            "bad_syntax.jinja",
+            "{% if %}This is broken{% endif %}",
+        )
+        can_render, missing_vars, null_vars = check_template_renderable(
+            template, {}, self.jinja_env, self.base_dir
+        )
+        self.assertFalse(can_render)
+        self.assertTrue(len(missing_vars) > 0)
+        self.assertTrue(missing_vars[0].startswith("Template error:"))
+        self.assertEqual(null_vars, [])
+
+    def test_unclosed_block_returns_false(self):
+        """Template with unclosed block returns failure."""
+        template = self.create_template(
+            "unclosed_block.jinja",
+            "{% for item in items %}{{ item }}",
+        )
+        can_render, missing_vars, null_vars = check_template_renderable(
+            template, {"items": ["a", "b"]}, self.jinja_env, self.base_dir
+        )
+        self.assertFalse(can_render)
+        self.assertTrue(len(missing_vars) > 0)
+        self.assertTrue(missing_vars[0].startswith("Template error:"))
+
+
+class TestLoadTaskMetadataNonDictEntry(BlueprintTestCase):
+    """Test load_task_metadata with non-dict entries in tasks list (CXE-14508)."""
+
+    def setUp(self):
+        super().setUp()
+        self.blueprint_dir = self.base_dir / "blueprints" / "test-blueprint"
+        self.blueprint_dir.mkdir(parents=True)
+
+    def test_non_dict_entries_are_skipped(self):
+        """Non-dict entries in tasks list should be skipped."""
+        from render_journey import load_task_metadata
+
+        meta = {
+            "name": "Test Blueprint",
+            "tasks": [
+                "this-is-a-string",
+                {
+                    "slug": "valid-task",
+                    "title": "Valid Task",
+                    "steps": [{"slug": "step-1", "title": "Step One"}],
+                },
+                42,
+                None,
+            ],
+        }
+
+        tasks = load_task_metadata(meta)
+
+        self.assertEqual(len(tasks), 1)
+        self.assertEqual(tasks[0]["slug"], "valid-task")
+
+
+class TestRenderBlueprintCodeTaskContext(BlueprintTestCase):
+    """Test render_blueprint_code with task-context headers (CXE-14508)."""
+
+    def setUp(self):
+        super().setUp()
+        self.blueprint_dir = self.base_dir / "test-blueprint"
+        self.blueprint_dir.mkdir(parents=True)
+
+    def test_task_context_headers_appear_in_output(self):
+        """Rendered code with task context should include TASK headers."""
+        from render_journey import (
+            render_blueprint_code, build_task_step_mapping, load_task_metadata,
+        )
+
+        # Create step directories with code templates
+        step_dir = self.blueprint_dir / "step-1"
+        step_dir.mkdir(parents=True)
+        (step_dir / "code.sql.jinja").write_text("-- Step 1 SQL\nSELECT 1;")
+
+        meta = {
+            "name": "Test Blueprint",
+            "steps": ["step-1"],
+            "tasks": [
+                {
+                    "slug": "task-1",
+                    "title": "Platform Foundation",
+                    "steps": [{"slug": "step-1", "title": "Configure Account"}],
+                },
+            ],
+        }
+        meta_file = self.blueprint_dir / "meta.yaml"
+        with open(meta_file, "w") as f:
+            yaml.dump(meta, f)
+
+        tasks = load_task_metadata(meta)
+        step_mapping = build_task_step_mapping(tasks)
+        task_context = {"tasks": tasks, "step_mapping": step_mapping}
+
+        rendered, rendered_count, skipped_count = render_blueprint_code(
+            self.blueprint_dir, "sql", {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00", task_context=task_context,
+        )
+
+        self.assertEqual(rendered_count, 1)
+        self.assertIn("TASK 1: Platform Foundation", rendered)
+        self.assertIn("SELECT 1", rendered)
+
+
+class TestRenderStepCodeAndGuidance(BlueprintTestCase):
+    """Test render_step_code/render_step_guidance via render_step_template (CXE-14508)."""
+
+    def setUp(self):
+        super().setUp()
+        self.step_path = self.base_dir / "test-step"
+        self.step_path.mkdir(parents=True)
+
+    def test_render_code_with_valid_template(self):
+        """Valid code template with all variables renders successfully."""
+        from render_journey import render_step_template
+
+        (self.step_path / "code.sql.jinja").write_text(
+            "CREATE DATABASE {{ db_name }};"
+        )
+        rendered, step_id, missing = render_step_template(
+            self.step_path, "code.sql.jinja",
+            {"db_name": "MY_DB"}, self.jinja_env, self.base_dir,
+        )
+
+        self.assertEqual(rendered, "CREATE DATABASE MY_DB;")
+        self.assertEqual(step_id, "test-step")
+        self.assertEqual(missing, [])
+
+    def test_render_code_with_missing_variables(self):
+        """Code template with missing variables returns info about missing vars."""
+        from render_journey import render_step_template
+
+        (self.step_path / "code.sql.jinja").write_text(
+            "CREATE DATABASE {{ db_name }};"
+        )
+        rendered, step_id, missing = render_step_template(
+            self.step_path, "code.sql.jinja", {}, self.jinja_env, self.base_dir,
+        )
+
+        self.assertIsNone(rendered)
+        self.assertEqual(step_id, "test-step")
+        self.assertIn("db_name", missing)
+
+    def test_render_code_no_template_file(self):
+        """Missing code template file returns gracefully."""
+        from render_journey import render_step_template
+
+        rendered, step_id, missing = render_step_template(
+            self.step_path, "code.sql.jinja", {}, self.jinja_env, self.base_dir,
+        )
+
+        self.assertIsNone(rendered)
+        self.assertEqual(step_id, "test-step")
+        self.assertEqual(missing, [])
+
+    def test_render_guidance_with_valid_template(self):
+        """Valid guidance template renders successfully."""
+        from render_journey import render_step_template
+
+        (self.step_path / "dynamic.md.jinja").write_text(
+            "# Welcome\n\nHello {{ user_name }}!"
+        )
+        rendered, step_id, missing = render_step_template(
+            self.step_path, "dynamic.md.jinja",
+            {"user_name": "Alice"}, self.jinja_env, self.base_dir,
+        )
+
+        self.assertIn("Hello Alice!", rendered)
+        self.assertEqual(step_id, "test-step")
+        self.assertEqual(missing, [])
+
+    def test_render_guidance_with_missing_variables(self):
+        """Guidance template with missing variables returns missing var info."""
+        from render_journey import render_step_template
+
+        (self.step_path / "dynamic.md.jinja").write_text(
+            "# Welcome\n\nHello {{ user_name }}!"
+        )
+        rendered, step_id, missing = render_step_template(
+            self.step_path, "dynamic.md.jinja", {}, self.jinja_env, self.base_dir,
+        )
+
+        self.assertIsNone(rendered)
+        self.assertIn("user_name", missing)
 
 
 if __name__ == "__main__":
