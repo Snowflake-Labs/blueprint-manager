@@ -991,7 +991,7 @@ class TestGenerateTableOfContents(TestCase):
         self.assertIn("  - [Step 1.2: Set Up Roles](#step-12-set-up-roles)", toc)
 
     def test_generate_toc_respects_skipped_steps(self):
-        """Skipped steps should not appear in TOC."""
+        """Steps without templates should not appear in TOC but numbering should be positional."""
         from render_journey import generate_table_of_contents
 
         tasks = [
@@ -1000,19 +1000,47 @@ class TestGenerateTableOfContents(TestCase):
                 "title": "Platform Foundation",
                 "steps": [
                     {"slug": "step-1", "title": "Configure Account"},
-                    {"slug": "step-2", "title": "Skipped Step"},
+                    {"slug": "step-2", "title": "No Template Step"},
                     {"slug": "step-3", "title": "Set Up Roles"},
                 ],
             },
         ]
-        # Only step-1 and step-3 were rendered
+        # step-1 and step-3 have templates; step-2 does not
         rendered_steps = {"step-1", "step-3"}
 
         toc = generate_table_of_contents(tasks, rendered_steps)
 
         self.assertIn("Step 1.1: Configure Account", toc)
-        self.assertIn("Step 1.2: Set Up Roles", toc)  # Note: numbered 1.2, not 1.3
-        self.assertNotIn("Skipped Step", toc)
+        self.assertIn("Step 1.3: Set Up Roles", toc)  # Positional numbering preserved
+        self.assertNotIn("No Template Step", toc)
+
+    def test_generate_toc_includes_skipped_steps_with_templates(self):
+        """Steps with templates but missing vars (skipped) should appear in the TOC.
+
+        The document body renders a 'SKIPPED' note for these steps, so the TOC
+        must include them to keep numbering aligned with the body.
+        """
+        from render_journey import generate_table_of_contents
+
+        tasks = [
+            {
+                "slug": "task-1",
+                "title": "Platform Foundation",
+                "steps": [
+                    {"slug": "step-1", "title": "Configure Account"},
+                    {"slug": "step-2", "title": "Set Up Network"},
+                    {"slug": "step-3", "title": "Set Up Roles"},
+                ],
+            },
+        ]
+        # All three steps have templates (renderable or skipped)
+        rendered_steps = {"step-1", "step-2", "step-3"}
+
+        toc = generate_table_of_contents(tasks, rendered_steps)
+
+        self.assertIn("Step 1.1: Configure Account", toc)
+        self.assertIn("Step 1.2: Set Up Network", toc)
+        self.assertIn("Step 1.3: Set Up Roles", toc)
 
     def test_generate_toc_skips_empty_tasks(self):
         """Tasks with no rendered steps should be skipped entirely."""
@@ -2498,6 +2526,63 @@ class TestTocToHeadingAnchorConsistency(BlueprintTestCase):
         # Verify the rendered body uses the jinja title, not the slug
         self.assertIn("Set Up VPC Networking", rendered)
         self.assertNotIn("setup-networking", rendered.split("Set Up VPC Networking")[0].split("Step")[-1])
+
+    def test_toc_includes_skipped_steps_and_numbering_matches_body(self):
+        """TOC must include skipped steps so numbering stays aligned with the body.
+
+        When step 1 is skipped (missing vars) and step 2 renders successfully,
+        the TOC should list both steps with correct positional numbering (1.1, 1.2)
+        and the anchors must match the body headings.
+        """
+        from render_journey import (
+            render_blueprint_guidance, generate_anchor,
+        )
+
+        steps = [
+            {"slug": "step-1", "title": "Configure Network"},
+            {"slug": "step-2", "title": "Set Up Roles"},
+        ]
+        meta, task_context = self._make_meta_and_context("Platform Setup", steps)
+
+        # step-1 requires a variable (will be skipped)
+        step_dir_1 = self.base_dir / "step-1"
+        step_dir_1.mkdir(parents=True, exist_ok=True)
+        (step_dir_1 / "dynamic.md.jinja").write_text(
+            "# Configure Network\n\nNetwork: {{ network_id }}"
+        )
+
+        # step-2 has no variables (will render)
+        step_dir_2 = self.base_dir / "step-2"
+        step_dir_2.mkdir(parents=True, exist_ok=True)
+        (step_dir_2 / "dynamic.md.jinja").write_text(
+            "# Set Up Roles\n\nRoles configured."
+        )
+
+        # Render with no answers — step-1 skipped, step-2 renders
+        rendered, rendered_count, skipped_count = render_blueprint_guidance(
+            self.base_dir, {}, self.base_dir, meta,
+            date_display="2026-01-01 00:00:00", task_context=task_context,
+        )
+
+        self.assertEqual(rendered_count, 1)
+        self.assertEqual(skipped_count, 1)
+
+        # The TOC should include BOTH steps
+        self.assertIn("Step 1.1: Configure Network", rendered)
+        self.assertIn("Step 1.2: Set Up Roles", rendered)
+
+        # The body should have the skipped step heading
+        self.assertIn("SKIPPED", rendered)
+
+        # TOC anchors for both steps should match body headings
+        import re
+        toc_anchors = re.findall(r'\(#([^)]+)\)', rendered)
+        step_anchors = [a for a in toc_anchors if a.startswith("step-")]
+        self.assertEqual(len(step_anchors), 2)
+
+        # Verify anchor values match what the body headings produce
+        self.assertEqual(step_anchors[0], generate_anchor("Step 1.1: Configure Network"))
+        self.assertEqual(step_anchors[1], generate_anchor("Step 1.2: Set Up Roles"))
 
 
 if __name__ == "__main__":

@@ -568,13 +568,16 @@ def generate_table_of_contents(tasks, rendered_steps, depth=2, blueprint_dir=Non
     Generate a hierarchical Table of Contents for rendered blueprint documentation.
     
     Creates a markdown-formatted TOC from the task→step hierarchy with proper
-    anchor links. Only includes steps that were actually rendered (not skipped).
+    anchor links. Includes both rendered and skipped steps so that TOC numbering
+    stays consistent with the document body (where skipped steps still appear
+    with a "SKIPPED" note). Steps without template files are excluded entirely.
     
     Args:
         tasks: List of task metadata dictionaries from load_task_metadata().
                Each task should have 'slug', 'title', and 'steps' keys.
-        rendered_steps: Set or list of step slugs that were successfully rendered.
-                       Steps not in this collection are excluded from the TOC.
+        rendered_steps: Set or list of step slugs that have template files.
+                       Steps not in this collection are excluded from the TOC
+                       (these are steps with no template that produce no body output).
         depth: Controls nesting levels in TOC (default: 2)
                - depth=1: Only tasks (no steps)
                - depth=2: Tasks and steps (default)
@@ -628,16 +631,17 @@ def generate_table_of_contents(tasks, rendered_steps, depth=2, blueprint_dir=Non
         
         # Add step entries if depth >= 2
         if depth >= 2:
-            step_num_in_task = 0
-            for step in task_steps:
+            for step_index, step in enumerate(task_steps):
                 slug = get_step_slug(step)
                 
-                # Skip steps that weren't rendered
+                # Skip steps that don't have templates (these produce
+                # no output in the document body at all)
                 if slug not in rendered_set:
                     continue
                 
-                step_num_in_task += 1
-                step_label = f"{task_num}.{step_num_in_task}"
+                # Use position-based numbering so TOC labels match
+                # the body headings (which use step_mapping step_index)
+                step_label = f"{task_num}.{step_index + 1}"
                 
                 # Use resolve_step_title for consistent fallback with body headings
                 if blueprint_dir is not None:
@@ -1078,9 +1082,11 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, blueprint_meta, 
     step_mapping = task_context.get("step_mapping", {}) if task_context else {}
     tasks = task_context.get("tasks", []) if task_context else []
 
-    # PHASE 1: Pre-scan to determine which steps can be rendered
-    # This is needed to generate an accurate TOC that respects skipped steps
-    renderable_steps = set()
+    # PHASE 1: Pre-scan to determine which steps have templates
+    # The TOC includes ALL steps that have a template file (both renderable
+    # and skipped), so that numbering stays consistent with the document body
+    # where skipped steps still appear with a "SKIPPED" note.
+    toc_steps = set()
     for step_id in step_order:
         step_path = blueprint_dir / step_id
         if not step_path.exists():
@@ -1090,12 +1096,7 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, blueprint_meta, 
         if not dynamic_file.exists():
             continue
         
-        # Check if this step can be rendered
-        can_render, _, _ = check_template_renderable(
-            dynamic_file, answers, jinja_env, base_dir
-        )
-        if can_render:
-            renderable_steps.add(step_id)
+        toc_steps.add(step_id)
 
     # PHASE 2: Build header with task-aware TOC
     rendered_sections = []
@@ -1125,9 +1126,9 @@ def render_blueprint_guidance(blueprint_dir, answers, base_dir, blueprint_meta, 
 
     rendered_sections.append("\n".join(header))
 
-    # Generate and add hierarchical table of contents (only includes rendered steps)
+    # Generate and add hierarchical table of contents (includes all steps with templates)
     if tasks:
-        toc = generate_table_of_contents(tasks, renderable_steps, depth=toc_depth, blueprint_dir=blueprint_dir, task_context=task_context)
+        toc = generate_table_of_contents(tasks, toc_steps, depth=toc_depth, blueprint_dir=blueprint_dir, task_context=task_context)
         if toc:
             rendered_sections.append(toc)
 
