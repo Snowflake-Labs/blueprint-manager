@@ -1,0 +1,48 @@
+{%- set log_val = account_log_level | upper %}
+{%- set metric_val = account_metric_level | upper %}
+{%- set trace_val = account_trace_level | upper | replace(' ', '_') %}
+{%- set sql_trace_val = account_sql_trace_query_text | upper %}
+
+## Telemetry Configuration Summary
+
+| Parameter | Value |
+|-----------|-------|
+{%- if log_val == 'OFF' and metric_val == 'NONE' and trace_val == 'OFF' and sql_trace_val == 'OFF' %}
+| Event Table | _(not set — all telemetry disabled)_ |
+{%- else %}
+| Event Table | `SNOWFLAKE.TELEMETRY.EVENTS` |
+{%- endif %}
+| Log Level | `{{ log_val }}` |
+| Metric Level | `{{ metric_val }}` |
+| Trace Level | `{{ trace_val }}` |
+| SQL Trace Query Text | `{{ sql_trace_val }}` |
+
+{%- if log_val == 'OFF' and trace_val != 'OFF' %}
+
+> **Warning**: You have selected `TRACE_LEVEL = {{ trace_val }}` but `LOG_LEVEL = OFF`. Traces will **not** be captured until `LOG_LEVEL` is set to a value other than `OFF`.
+{%- endif %}
+
+### What Will Be Captured
+
+{%- if log_val != 'OFF' %}
+- **Logs**: Messages at `{{ log_val }}` severity and above from handler code
+{%- else %}
+- **Logs**: Disabled — no log messages will be captured
+{%- endif %}
+{%- if metric_val == 'ALL' %}
+- **Metrics**: Execution metrics (CPU, memory, duration) from handler code
+{%- else %}
+- **Metrics**: Disabled — no execution metrics will be collected
+{%- endif %}
+{%- if trace_val != 'OFF' and log_val != 'OFF' %}
+- **Traces**: Execution spans with start/end timestamps, status, and query context
+{%- elif trace_val != 'OFF' and log_val == 'OFF' %}
+- **Traces**: Configured as `{{ trace_val }}` but **blocked** because `LOG_LEVEL` is `OFF`
+{%- else %}
+- **Traces**: Disabled — no trace spans will be captured
+{%- endif %}
+{%- if sql_trace_val == 'ON' %}
+- **SQL Text**: SQL statements (up to 1024 chars) will be included in trace data
+{%- else %}
+- **SQL Text**: SQL statements will not be included in trace data
+{%- endif %}

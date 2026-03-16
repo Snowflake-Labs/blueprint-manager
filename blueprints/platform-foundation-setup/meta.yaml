@@ -32,6 +32,7 @@ steps:
 - configure-resource-monitors
 - enable-cost-allocation-tags
 - configure-cost-allocation-tags
+- configure-telemetry-parameters
 tasks:
 - slug: platform-foundation
   title: Platform Foundation
@@ -140,3 +141,23 @@ tasks:
     title: Enable Cost Allocation Tags
   - slug: configure-cost-allocation-tags
     title: Configure Cost Allocation Tags
+- slug: platform-observability
+  title: Platform Observability
+  summary: 'Configure account-level telemetry parameters to enable logging, metrics,
+
+    and tracing for stored procedures, UDFs, and handler code in the
+
+    Organization Account.
+
+    '
+  external_requirements:
+  - Task 1 (Platform Foundation) completed
+  - Task 2 (Security & Identity Configuration) completed
+  personas:
+  - Platform Administrator
+  - SRE / Observability Team
+  role_requirements:
+  - ACCOUNTADMIN role access
+  steps:
+  - slug: configure-telemetry-parameters
+    title: Configure Telemetry Parameters

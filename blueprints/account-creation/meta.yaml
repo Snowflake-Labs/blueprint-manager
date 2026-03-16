@@ -55,6 +55,7 @@ steps:
 - configure-account-budget
 - configure-account-resource-monitor
 - apply-cost-allocation-tags
+- configure-telemetry-parameters
 tasks:
 - slug: account-provisioning
   title: Account Provisioning
@@ -163,3 +164,22 @@ tasks:
     title: Configure Account Resource Monitor
   - slug: apply-cost-allocation-tags
     title: Apply Cost Allocation Tags
+- slug: account-observability
+  title: Account Observability
+  summary: 'Configure account-level telemetry parameters to enable logging, metrics,
+
+    and tracing for stored procedures, UDFs, and handler code in the newly
+
+    created account.
+
+    '
+  external_requirements:
+  - Security & Identity Configuration complete (Task 2)
+  personas:
+  - Platform Administrator
+  - SRE / Observability Team
+  role_requirements:
+  - ACCOUNTADMIN role access
+  steps:
+  - slug: configure-telemetry-parameters
+    title: Configure Telemetry Parameters

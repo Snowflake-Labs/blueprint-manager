@@ -1,0 +1,92 @@
+-- ============================================================================
+-- STEP: Configure Telemetry Parameters
+-- ============================================================================
+-- Sets account-level telemetry parameters to enable logging, metrics, and
+-- tracing for stored procedures, UDFs, and other handler code. Telemetry
+-- data is written to the default event table (SNOWFLAKE.TELEMETRY.EVENTS).
+-- ============================================================================
+
+{%- set log_val = account_log_level | upper %}
+{%- set metric_val = account_metric_level | upper %}
+{%- set trace_val = account_trace_level | upper | replace(' ', '_')%}
+{%- set sql_trace_val = account_sql_trace_query_text | upper %}
+
+-- ----------------------------------------------------------------------------
+-- Set execution context
+-- ----------------------------------------------------------------------------
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- Set Event Table
+-- ----------------------------------------------------------------------------
+-- Every Snowflake account contains a pre-existing event table at
+-- SNOWFLAKE.TELEMETRY.EVENTS. The EVENT_TABLE parameter has no default value,
+-- so it must be explicitly set for telemetry data to be collected.
+
+{%- if log_val == 'OFF' and metric_val == 'NONE' and trace_val == 'OFF' and sql_trace_val == 'OFF' %}
+-- Your configuration explicitly disables telemetry collection by setting all
+-- telemetry levels to 'OFF'/'NONE', so we will not set an active event table
+-- at this time. If you later enable any telemetry parameter, re-run this step
+-- to activate the event table.
+{%- else %}
+ALTER ACCOUNT SET EVENT_TABLE = 'SNOWFLAKE.TELEMETRY.EVENTS';
+{%- endif %}
+
+-- ----------------------------------------------------------------------------
+-- Configure Log Level
+-- ----------------------------------------------------------------------------
+-- Controls which severity of log messages are captured from handler code.
+-- Values (most to least verbose): TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF
+-- When set at multiple levels, the more verbose level wins.
+
+ALTER ACCOUNT SET LOG_LEVEL = '{{ log_val }}';
+
+-- ----------------------------------------------------------------------------
+-- Configure Metric Level
+-- ----------------------------------------------------------------------------
+-- Controls whether execution metrics are collected from handler code.
+-- Values: ALL (collect metrics), NONE (disabled)
+
+ALTER ACCOUNT SET METRIC_LEVEL = '{{ metric_val }}';
+
+-- ----------------------------------------------------------------------------
+-- Configure Trace Level
+-- ----------------------------------------------------------------------------
+-- Controls whether trace spans are captured from handler code execution.
+-- Values: ALWAYS (always capture), ON_EVENT (capture when events added), OFF
+-- IMPORTANT: Requires LOG_LEVEL to not be OFF.
+
+{%- if log_val == 'OFF' and trace_val != 'OFF' %}
+-- WARNING: LOG_LEVEL is OFF — traces will not be captured until LOG_LEVEL is
+-- set to a value other than OFF.
+{%- endif %}
+
+ALTER ACCOUNT SET TRACE_LEVEL = '{{ trace_val }}';
+
+-- ----------------------------------------------------------------------------
+-- Configure SQL Trace Query Text
+-- ----------------------------------------------------------------------------
+-- Controls whether SQL text of traced statements is captured in the event table.
+-- Values: ON (capture up to 1024 chars), OFF (do not capture)
+-- Disable if SQL may contain sensitive information.
+
+ALTER ACCOUNT SET SQL_TRACE_QUERY_TEXT = '{{ sql_trace_val }}';
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify all telemetry parameters are set correctly
+SHOW PARAMETERS LIKE 'EVENT_TABLE' IN ACCOUNT;
+SHOW PARAMETERS LIKE 'LOG_LEVEL' IN ACCOUNT;
+SHOW PARAMETERS LIKE 'METRIC_LEVEL' IN ACCOUNT;
+SHOW PARAMETERS LIKE 'TRACE_LEVEL' IN ACCOUNT;
+SHOW PARAMETERS LIKE 'SQL_TRACE_QUERY_TEXT' IN ACCOUNT;
+{%- if not (log_val == 'OFF' and metric_val == 'NONE' and trace_val == 'OFF' and sql_trace_val == 'OFF') %}
+
+-- Check for recent telemetry data (may take a few minutes to populate)
+SELECT RECORD_TYPE, COUNT(*) AS record_count
+FROM SNOWFLAKE.TELEMETRY.EVENTS
+WHERE TIMESTAMP > DATEADD('hour', -1, CURRENT_TIMESTAMP())
+GROUP BY RECORD_TYPE;
+{%- endif %}

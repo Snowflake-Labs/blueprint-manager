@@ -4138,3 +4138,118 @@
     \ named `<PREFIX>_PROVISIONER`.\nFor example: `AAD_PROVISIONER`, `OKTA_PROVISIONER`\n\n**Enter `NONE`\
     \ if:**\n- Not using SCIM integration\n- Managing users manually\n- Using a different identity provisioning\
     \ approach\n\n**More Information:**\n* [SCIM Provisioning](https://docs.snowflake.com/en/user-guide/scim)\n"
+- answer_title: account_log_level
+  question_text: What log level should be set for this account?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+    - text: Trace
+    - text: Debug
+    - text: Info
+    - text: Warn
+    - text: Error
+    - text: Fatal
+    - text: 'Off'
+  guidance: |
+    **What is this asking?**
+    Select the minimum severity level for log messages captured from stored
+    procedures, UDFs, and other handler code.
+
+    **Options (least to most verbose):**
+    - **Off**: Logging disabled — no messages captured
+    - **Fatal**: Captures FATAL only
+    - **Error**: Captures ERROR and FATAL
+    - **Warn**: Captures WARN, ERROR, and FATAL
+    - **Info**: Captures INFO, WARN, ERROR, and FATAL — **recommended for production**
+    - **Debug**: Captures DEBUG, INFO, WARN, ERROR, and FATAL
+    - **Trace**: Captures everything — TRACE, DEBUG, INFO, WARN, ERROR, and FATAL
+
+    **Precedence:** When set at multiple levels (account, object, session),
+    the more verbose level wins. For example, if the account is set to Error
+    but a specific function is set to Debug, Debug is used for that function.
+
+    **Recommendation:** Use `Info` for production accounts and `Debug` for
+    development or test accounts.
+
+    **More Information:**
+    * [LOG_LEVEL Parameter](https://docs.snowflake.com/en/sql-reference/parameters#log-level)
+    * [How Snowflake determines the level in effect](https://docs.snowflake.com/en/developer-guide/logging-tracing/telemetry-levels#label-telemetry-level-effective)
+- answer_title: account_metric_level
+  question_text: Should execution metrics be collected for this account?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+    - text: All
+    - text: None
+  guidance: |
+    **What is this asking?**
+    Choose whether to collect execution metrics (CPU, memory, duration) from
+    stored procedures, UDFs, and other handler code.
+
+    **Options explained:**
+    - **All**: Collect all execution metrics — recommended
+    - **None**: No metrics collected (disabled)
+
+    **Recommendation:** Use `All` for all accounts. Metrics have minimal
+    performance impact and provide valuable insight into handler code
+    execution performance.
+
+    **More Information:**
+    * [METRIC_LEVEL Parameter](https://docs.snowflake.com/en/sql-reference/parameters#label-metric-level)
+- answer_title: account_trace_level
+  question_text: What trace level should be set for this account?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+    - text: Always
+    - text: On_Event
+    - text: 'Off'
+  guidance: |
+    **What is this asking?**
+    Choose whether trace spans are captured from handler code execution.
+    Traces record start/end timestamps, execution status, and query context
+    for each handler invocation.
+
+    **Options explained:**
+    - **Always**: Always capture trace spans — recommended
+    - **On Event**: Only capture traces when custom events are added in code
+    - **Off**: No tracing (disabled)
+
+    **Important:** Tracing requires the `LOG_LEVEL` parameter 
+    (`account_log_level` in this document) to be set to a value other
+    than `Off`. If `LOG_LEVEL` is `Off`, traces will not be captured
+    regardless of this setting.
+
+    **Recommendation:** Use `Always` to get full observability for both 
+    auto-instrumented and explicitly instrumented code. Use `On Event`
+    if you only want traces for explicitly instrumented code.
+
+    **More Information:**
+    * [TRACE_LEVEL Parameter](https://docs.snowflake.com/en/sql-reference/parameters#trace-level)
+- answer_title: account_sql_trace_query_text
+  question_text: Should SQL statement text be captured in trace data?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+    - text: 'On'
+    - text: 'Off'
+  guidance: |
+    **What is this asking?**
+    Choose whether the SQL text of traced statements is included in the
+    event table. When enabled, up to 1024 characters of each SQL statement
+    are captured alongside trace data.
+
+    **Options explained:**
+    - **On**: Capture SQL text — useful for debugging
+    - **Off**: Do not capture SQL text — recommended for production
+
+    **Security consideration:** Disable this if your SQL statements may
+    contain sensitive information such as PII, credentials, or other
+    confidential data.
+
+    **Recommendation:** Use `Off` for production accounts. Use `On` for
+    development or debugging scenarios where you need to correlate traces
+    with specific SQL statements.
+
+    **More Information:**
+    * [SQL_TRACE_QUERY_TEXT Parameter](https://docs.snowflake.com/en/sql-reference/parameters#sql-trace-query-text)
