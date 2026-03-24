@@ -40,12 +40,6 @@ ALTER ACCOUNT SET RESOURCE_MONITOR = account_resource_monitor;
 SHOW RESOURCE MONITORS LIKE 'account_resource_monitor';
 SHOW PARAMETERS LIKE 'RESOURCE_MONITOR' IN ACCOUNT;
 
-SELECT 
-  name,
-  credit_quota,
-  used_credits,
-  remaining_credits,
-  ROUND(used_credits / credit_quota * 100, 2) AS percentage_used,
-  frequency
-FROM TABLE(INFORMATION_SCHEMA.RESOURCE_MONITORS())
-WHERE name = 'ACCOUNT_RESOURCE_MONITOR';
+-- To view detailed credit usage, query the Account Usage view:
+-- SELECT * FROM SNOWFLAKE.ACCOUNT_USAGE.RESOURCE_MONITORS
+--   WHERE name = 'ACCOUNT_RESOURCE_MONITOR';

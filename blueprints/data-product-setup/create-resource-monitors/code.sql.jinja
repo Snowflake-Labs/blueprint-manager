@@ -33,7 +33,6 @@ CREATE RESOURCE MONITOR IF NOT EXISTS {{ prefix }}_MONITOR
     CREDIT_QUOTA = {{ resource_monitor_credits }}
     FREQUENCY = {{ resource_monitor_frequency }}
     START_TIMESTAMP = IMMEDIATELY
-    END_TIMESTAMP = NULL
     -- Notification thresholds
     TRIGGERS
       ON 50 PERCENT DO NOTIFY
@@ -45,11 +44,8 @@ CREATE RESOURCE MONITOR IF NOT EXISTS {{ prefix }}_MONITOR
 -- VERIFICATION
 -- ============================================================================
 
--- Show resource monitor
+-- Verify resource monitor
 SHOW RESOURCE MONITORS LIKE '{{ prefix }}_MONITOR';
-
--- View monitor details
-DESCRIBE RESOURCE MONITOR {{ prefix }}_MONITOR;
 
 /*
 RESOURCE MONITOR CREATED

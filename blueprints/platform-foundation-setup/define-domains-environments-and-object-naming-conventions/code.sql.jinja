@@ -16,22 +16,22 @@ USE SCHEMA {{ governance_name | upper }};
 
 -- DOMAIN tag - identifies business unit ownership
 CREATE TAG IF NOT EXISTS domain
-  ALLOWED_VALUES = (
+  ALLOWED_VALUES
 {%- for domain in domain_list %}
     '{{ domain | upper }}'{% if not loop.last %},{% endif %}
 
 {%- endfor %}
-  )
+
   COMMENT = 'Business domain/unit for cost allocation and governance';
 
 -- ENVIRONMENT tag - identifies SDLC stage
 CREATE TAG IF NOT EXISTS environment
-  ALLOWED_VALUES = (
+  ALLOWED_VALUES
 {%- for env in environment_list %}
     '{{ env | upper }}'{% if not loop.last %},{% endif %}
 
 {%- endfor %}
-  )
+
   COMMENT = 'Environment/SDLC stage for cost allocation and governance';
 
 -- ============================================================================
@@ -112,10 +112,10 @@ SELECT
 SHOW TAGS IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
 
 -- View DOMAIN tag allowed values
-DESC TAG domain;
+SHOW TAGS LIKE 'domain' IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
 
 -- View ENVIRONMENT tag allowed values
-DESC TAG environment;
+SHOW TAGS LIKE 'environment' IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
 
 -- View naming convention reference
 SELECT * FROM naming_convention_reference;

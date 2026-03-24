@@ -46,7 +46,7 @@ ALTER ACCOUNT SET RESOURCE_MONITOR = {{ new_account_name | upper }}_RESOURCE_MON
 SHOW RESOURCE MONITORS;
 
 -- Check resource monitor details
-DESCRIBE RESOURCE MONITOR {{ new_account_name | upper }}_RESOURCE_MONITOR;
+SHOW RESOURCE MONITORS LIKE '{{ new_account_name | upper }}_RESOURCE_MONITOR';
 
 -- Verify account-level assignment
 SHOW PARAMETERS LIKE 'RESOURCE_MONITOR' IN ACCOUNT;
