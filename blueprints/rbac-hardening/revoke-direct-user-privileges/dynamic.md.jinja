@@ -1,0 +1,37 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# Revoke Direct User Privileges
+
+## Approach
+
+Direct user-level grants are migrated to role-based access. This ensures all access flows through the RBAC hierarchy defined in Data Product Setup.
+
+## Discovery Queries
+
+The following queries are generated to identify direct user grants:
+
+| # | Query | Purpose |
+|---|-------|---------|
+| 1 | Direct Object Grants | Privileges (SELECT, INSERT, etc.) granted to users on objects |
+| 2 | Migration Template | REVOKE + GRANT pattern for each finding |
+| 3 | Summary | Count of direct grants by user and object type |
+
+## Migration Process
+
+For each direct user grant found:
+
+1. **Identify the target role** — Which functional role (READ, WRITE, CREATE) should provide this access?
+2. **Verify role coverage** — Does the role already have the required privilege?
+3. **Revoke direct grant** — Remove the user-level privilege
+4. **Grant role to user** — If the user doesn't already have the functional role
+
+## Verification
+
+After migration, confirm:
+- No direct user grants remain (re-run discovery query)
+- Users can still access required objects via their roles
+- Audit logs show role-based access patterns
+
+## Next Steps
+
+After revoking direct user privileges:
+- Proceed to **Step 2.4: Enforce Managed Access Schemas**

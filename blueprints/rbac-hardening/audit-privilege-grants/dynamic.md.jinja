@@ -1,0 +1,42 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# Privilege Grant Audit
+
+## Audit Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Audit Scope** | {{ rbac_audit_scope }} |
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+| **Target Prefixes** | {{ rbac_target_prefixes | join(', ') }} |
+{%- endif %}
+| **Required Role** | ACCOUNTADMIN |
+
+## Queries Generated
+
+| # | Query | Purpose | Severity |
+|---|-------|---------|----------|
+| 1 | Direct User Grants | Privileges granted to users instead of roles | High |
+| 2 | PUBLIC Role Grants | Privileges inherited by all users | High |
+| 3 | ACCOUNTADMIN Holders | Users with the most powerful role | Critical |
+| 4 | Powerful Privileges | Non-system roles with account-level privileges | Medium |
+| 5 | Summary Statistics | Aggregate grant health metrics | Info |
+
+## Risk Assessment Guide
+
+### Direct User Grants (High)
+Any result indicates privileges that bypass your role hierarchy. Each direct grant must be migrated to a role in Task 2 (Revoke Direct User Privileges).
+
+### PUBLIC Role Grants (High)
+Each grant is effectively given to every user. Review each and either:
+- Confirm it is intentional and add to exceptions list
+- Mark for revocation in Task 2 (Restrict PUBLIC Role)
+
+### ACCOUNTADMIN Holders (Critical)
+Best practice is 2-3 break-glass users maximum. Compare results against `rbac_accountadmin_users` list in Task 2 (Enforce Admin Separation).
+
+## Next Steps
+
+After reviewing findings:
+- Document exceptions for PUBLIC grants
+- Compile authorized ACCOUNTADMIN user list
+- Proceed to **Step 1.3: Audit Stale Access** before starting remediation

@@ -1,0 +1,86 @@
+# =============================================================================
+# RBAC Hardening - TechCorp
+# Blueprint: blueprint_e2a16d54
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# RBAC Assessment — Audit Scope
+# -----------------------------------------------------------------------------
+rbac_audit_scope: Specific Data Products
+
+rbac_target_prefixes:
+  - SECURITY_PROD_OBSERVABILITY
+  - FINANCE_DEV_REPORTING
+
+# -----------------------------------------------------------------------------
+# Privilege Hardening — Restrict PUBLIC Role
+# -----------------------------------------------------------------------------
+rbac_restrict_public: 'Yes'
+
+rbac_public_exceptions:
+  - SNOWFLAKE_SAMPLE_DATA
+
+# -----------------------------------------------------------------------------
+# Privilege Hardening — Enforce Admin Separation
+# -----------------------------------------------------------------------------
+rbac_accountadmin_users:
+  - CASEY_DEMO
+  - BREAKGLASS_ADMIN
+
+# -----------------------------------------------------------------------------
+# Privilege Hardening — Enforce Managed Access Schemas
+# -----------------------------------------------------------------------------
+rbac_enforce_managed_access: 'Yes'
+
+# -----------------------------------------------------------------------------
+# User & Service Account Provisioning — Assign Functional Roles
+# -----------------------------------------------------------------------------
+rbac_user_role_assignments:
+  - user_name: MORGAN_PLACEHOLDER
+    role_level: ADMIN
+    data_product_prefix: SECURITY_PROD_OBSERVABILITY
+  - user_name: RILEY_TEST
+    role_level: CREATE
+    data_product_prefix: SECURITY_PROD_OBSERVABILITY
+  - user_name: TAYLOR_SPECIMEN
+    role_level: ADMIN
+    data_product_prefix: FINANCE_DEV_REPORTING
+  - user_name: CASEY_DEMO
+    role_level: READ
+    data_product_prefix: FINANCE_DEV_REPORTING
+
+# -----------------------------------------------------------------------------
+# User & Service Account Provisioning — Provision Service Accounts
+# -----------------------------------------------------------------------------
+rbac_service_accounts:
+  - account_name: SVC_SIEM_INGEST
+    purpose: SIEM log ingestion pipeline for security observability
+    role_level: WRITE
+    data_product_prefix: SECURITY_PROD_OBSERVABILITY
+    warehouse: SECURITY_PROD_OBSERVABILITY_WH_INGEST
+  - account_name: SVC_GRAFANA_SECURITY
+    purpose: Grafana dashboards for security metrics and threat monitoring
+    role_level: READ
+    data_product_prefix: SECURITY_PROD_OBSERVABILITY
+    warehouse: SECURITY_PROD_OBSERVABILITY_WH_REPORT
+  - account_name: SVC_DBT_FINANCE
+    purpose: dbt transformations for financial reporting
+    role_level: CREATE
+    data_product_prefix: FINANCE_DEV_REPORTING
+    warehouse: FINANCE_DEV_REPORTING_WH_COMPUTE
+
+# -----------------------------------------------------------------------------
+# Monitoring & Compliance — RBAC Monitoring Views
+# -----------------------------------------------------------------------------
+rbac_monitoring_warehouse: PLAT_INFRA_WH_ADMIN
+
+# -----------------------------------------------------------------------------
+# Monitoring & Compliance — Privilege Change Alerts
+# -----------------------------------------------------------------------------
+rbac_enable_alerts: 'Yes'
+rbac_alert_notification_integration: EMAIL_SECURITY_ALERTS
+
+# -----------------------------------------------------------------------------
+# Monitoring & Compliance — Access Review Report
+# -----------------------------------------------------------------------------
+rbac_review_frequency: Monthly

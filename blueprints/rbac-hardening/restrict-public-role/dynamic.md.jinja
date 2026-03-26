@@ -1,0 +1,57 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# Restrict PUBLIC Role Grants
+
+## Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Restrict PUBLIC** | {{ rbac_restrict_public }} |
+{%- if rbac_restrict_public == 'Yes' %}
+| **Required Role** | SECURITYADMIN |
+{%- endif %}
+
+{%- if rbac_restrict_public == 'Yes' %}
+
+## Actions
+
+| # | Action | Scope |
+|---|--------|-------|
+| 1 | Revoke warehouse USAGE | All warehouses in account |
+| 2 | Revoke database USAGE | All databases in account |
+| 3 | Re-grant exceptions | Listed below |
+
+## Exceptions
+
+The following objects will retain PUBLIC access:
+
+{%- if rbac_public_exceptions | length > 0 %}
+| Object | Reason |
+|--------|--------|
+{%- for exception in rbac_public_exceptions %}
+| `{{ exception | upper }}` | Configured exception |
+{%- endfor %}
+{%- else %}
+
+No exceptions configured. All PUBLIC grants will be revoked.
+{%- endif %}
+
+## Impact
+
+After applying these changes:
+- Users with only the PUBLIC role will have no warehouse, database, or schema access
+- All data access must flow through explicitly granted functional roles (READ, WRITE, CREATE, ADMIN)
+- Service accounts must have dedicated role grants
+- BI tools and applications must authenticate with role-assigned users
+
+## Verification
+
+Run `SHOW GRANTS TO ROLE PUBLIC;` after applying to confirm only exceptions remain.
+
+{%- else %}
+
+## Skipped
+
+PUBLIC role restriction is disabled. No changes will be made to PUBLIC grants.
+
+To enable, set `rbac_restrict_public` to `Yes` in your answer file.
+{%- endif %}

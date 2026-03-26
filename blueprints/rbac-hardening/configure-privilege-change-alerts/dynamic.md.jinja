@@ -1,0 +1,58 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# Configure Privilege Change Alerts
+
+## Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Enable Alerts** | {{ rbac_enable_alerts }} |
+{%- if rbac_enable_alerts == 'Yes' %}
+| **Notification Integration** | `{{ rbac_alert_notification_integration }}` |
+| **Monitoring Warehouse** | `{{ rbac_monitoring_warehouse | upper }}` |
+{%- endif %}
+
+{%- if rbac_enable_alerts == 'Yes' %}
+
+## Alerts
+
+| # | Alert | Frequency | Severity | Trigger |
+|---|-------|-----------|----------|---------|
+| 1 | `ALERT_NEW_ACCOUNTADMIN_GRANT` | Hourly | Critical | New ACCOUNTADMIN grant detected |
+| 2 | `ALERT_DIRECT_USER_GRANT` | Every 6 hours | High | Privilege granted to user (not role) |
+| 3 | `ALERT_PUBLIC_ROLE_GRANT` | Every 6 hours | High | New grant to PUBLIC role |
+| 4 | `ALERT_DORMANT_USERS` | Weekly (Monday 8 AM) | Medium | Users inactive 90+ days with roles |
+
+## Notification Flow
+
+1. Alert condition checked on schedule
+2. If condition is true → notification sent via `{{ rbac_alert_notification_integration }}`
+3. Security team reviews and takes action
+4. Resolution documented in access review
+
+## Monitoring
+
+View alert history:
+```sql
+SELECT * FROM TABLE(INFORMATION_SCHEMA.ALERT_HISTORY(
+  SCHEDULED_TIME_RANGE_START => DATEADD('day', -7, CURRENT_TIMESTAMP())
+)) ORDER BY SCHEDULED_TIME DESC;
+```
+
+{%- else %}
+
+## Skipped
+
+Alerts are disabled. No Snowflake Alerts will be created.
+
+To enable, set `rbac_enable_alerts` to `Yes` and provide:
+- `rbac_alert_notification_integration` — Your notification integration name
+- `rbac_monitoring_warehouse` — Warehouse for alert execution
+
+Use the monitoring views from Step 4.1 for manual review.
+
+{%- endif %}
+
+## Next Steps
+
+- Verify alert notifications reach your team
+- Proceed to **Step 4.3: Generate Access Review Report**

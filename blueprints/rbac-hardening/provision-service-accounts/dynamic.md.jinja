@@ -1,0 +1,49 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# Provision Service Accounts
+
+## Service Accounts
+
+The following service accounts will be created:
+
+| # | Account Name | Purpose | Role | Data Product | Warehouse |
+|---|-------------|---------|------|-------------|-----------|
+{%- for svc in rbac_service_accounts %}
+| {{ loop.index }} | `{{ svc.account_name | upper }}` | {{ svc.purpose }} | {{ svc.role_level | upper }} | {{ svc.data_product_prefix | upper }} | `{{ svc.warehouse | upper }}` |
+{%- endfor %}
+
+## Actions Generated
+
+| # | Action | Details |
+|---|--------|---------|
+| 1 | CREATE USER | {{ rbac_service_accounts | length }} service account(s) |
+| 2 | GRANT ROLE | Assign functional role to each service account |
+| 3 | GRANT WAREHOUSE | Grant USAGE on designated warehouse |
+
+## Authentication
+
+Each service account uses **key-pair authentication** (RSA). You will need to:
+
+1. Generate an RSA key pair for each service account
+2. Set the public key on the user object
+3. Store the private key in your secrets manager
+
+```bash
+# Generate key pair per service account
+openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt
+openssl rsa -in rsa_key.p8 -pubout -out rsa_key.pub
+```
+
+## Post-Creation Checklist
+
+For each service account:
+- [ ] RSA public key set on user object
+- [ ] Private key stored in secrets manager
+- [ ] Connection tested with key-pair auth
+- [ ] Default role activates automatically
+- [ ] Default warehouse is used
+- [ ] Service account cannot access objects outside its role
+
+## Next Steps
+
+- Complete service account setup with RSA keys
+- Proceed to **Task 4: Monitoring & Compliance**

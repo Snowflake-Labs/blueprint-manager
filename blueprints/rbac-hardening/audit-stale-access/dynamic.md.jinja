@@ -1,0 +1,48 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# Stale Access Audit
+
+## Audit Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Audit Scope** | {{ rbac_audit_scope }} |
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+| **Target Prefixes** | {{ rbac_target_prefixes | join(', ') }} |
+{%- endif %}
+| **Required Role** | ACCOUNTADMIN |
+
+## Queries Generated
+
+| # | Query | Purpose | Risk Level |
+|---|-------|---------|------------|
+| 1 | Dormant Users | Users inactive >90 days with active grants | High |
+| 2 | Never Logged In | Users with grants who have never authenticated | High |
+| 3 | Unused Roles | Roles with no user assignments | Medium |
+| 4 | Health Summary | User activity buckets (Active/Stale/Dormant/Never) | Info |
+
+## Activity Thresholds
+
+| Status | Days Since Login | Action |
+|--------|-----------------|--------|
+| **Active** | < 30 | No action needed |
+| **Stale** | 30 - 90 | Review access, confirm still needed |
+| **Dormant** | > 90 | Revoke grants, disable user |
+| **Never** | No login record | Investigate — pending onboarding or orphaned |
+
+## Remediation Guide
+
+### For Dormant Users
+1. Revoke all role grants: `REVOKE ROLE <role> FROM USER <user>;`
+2. Disable the user: `ALTER USER <user> SET DISABLED = TRUE;`
+3. After 30-90 day retention period, drop: `DROP USER <user>;`
+
+### For Unused Roles
+1. Verify the role is not part of an active hierarchy (check Step 1.1 results)
+2. Confirm no automated processes depend on the role
+3. Drop the role: `DROP ROLE <role>;`
+
+## Next Steps
+
+After reviewing stale access findings:
+- Compile the list of users and roles to remediate
+- Proceed to **Task 2: Privilege Hardening** for remediation steps

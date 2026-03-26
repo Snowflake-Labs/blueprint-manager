@@ -1,0 +1,63 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# Generate Access Review Report
+
+## Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Review Frequency** | {{ rbac_review_frequency }} |
+| **Monitoring Warehouse** | `{{ rbac_monitoring_warehouse | upper }}` |
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+| **Scope** | Specific Data Products |
+| **Target Prefixes** | {{ rbac_target_prefixes | join(', ') }} |
+{%- else %}
+| **Scope** | Full Account |
+{%- endif %}
+
+## Report Sections
+
+| # | Section | Health Check |
+|---|---------|-------------|
+| 1 | Executive Summary | User counts, bypass totals |
+| 2 | ACCOUNTADMIN Holders | Match against authorized list |
+| 3 | RBAC Bypasses | Direct user grants (expect: **0**) |
+| 4 | Role Hierarchy Health | Depth violations (expect: all HEALTHY) |
+| 5 | Dormant Users | Inactive 90+ days with roles |
+| 6 | Recent Privilege Changes | Last {{ rbac_review_frequency | lower }} period |
+| 7 | PUBLIC Role Grants | Should be minimal |
+| 8 | MFA Status | Privileged users without MFA |
+
+## Review Cadence
+
+{%- if rbac_review_frequency == 'Weekly' %}
+Run this report **every week**. Review lookback period: **7 days**.
+{%- elif rbac_review_frequency == 'Monthly' %}
+Run this report **every month**. Review lookback period: **30 days**.
+{%- else %}
+Run this report **every quarter**. Review lookback period: **90 days**.
+{%- endif %}
+
+## Action Items Template
+
+After each review, complete these actions:
+
+- [ ] Verify ACCOUNTADMIN holders match authorized list (Section 2)
+- [ ] Remediate any RBAC bypasses found (Section 3)
+- [ ] Fix role hierarchy depth issues (Section 4)
+- [ ] Disable or remove dormant user access (Section 5)
+- [ ] Review and approve recent privilege changes (Section 6)
+- [ ] Revoke unauthorized PUBLIC grants (Section 7)
+- [ ] Enable MFA for flagged users (Section 8)
+
+## Blueprint Complete
+
+All four tasks of the RBAC Hardening blueprint have been executed:
+
+| Task | Status |
+|------|--------|
+| 1. RBAC Assessment | Complete |
+| 2. Privilege Hardening | Complete |
+| 3. User & Service Account Provisioning | Complete |
+| 4. Monitoring & Compliance | Complete |
+
+Schedule this report to run on your {{ rbac_review_frequency | lower }} cadence.

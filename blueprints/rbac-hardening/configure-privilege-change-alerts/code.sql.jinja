@@ -1,0 +1,165 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- CONFIGURE PRIVILEGE CHANGE ALERTS
+-- ============================================================================
+-- Enable Alerts: {{ rbac_enable_alerts }}
+{%- if rbac_enable_alerts == 'Yes' %}
+-- Notification Integration: {{ rbac_alert_notification_integration }}
+-- Monitoring Warehouse: {{ rbac_monitoring_warehouse | upper }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: SYSADMIN
+-- ============================================================================
+
+{%- if rbac_enable_alerts == 'Yes' %}
+
+USE ROLE SYSADMIN;
+USE SCHEMA RBAC_MONITORING.VIEWS;
+USE WAREHOUSE {{ rbac_monitoring_warehouse | upper }};
+
+-- ============================================================================
+-- STEP 1: ALERT — NEW ACCOUNTADMIN GRANT
+-- ============================================================================
+-- Fires when a new user is granted ACCOUNTADMIN.
+-- This is a critical security event that should always trigger review.
+
+CREATE OR REPLACE ALERT RBAC_MONITORING.VIEWS.ALERT_NEW_ACCOUNTADMIN_GRANT
+  WAREHOUSE = {{ rbac_monitoring_warehouse | upper }}
+  SCHEDULE = 'USING CRON 0 */1 * * * America/Los_Angeles'
+  IF (EXISTS (
+    SELECT 1
+    FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+    WHERE name = 'ACCOUNTADMIN'
+      AND granted_on = 'ROLE'
+      AND privilege = 'USAGE'
+      AND deleted_on IS NULL
+      AND created_on > DATEADD('hour', -1, CURRENT_TIMESTAMP())
+  ))
+  THEN
+    CALL SYSTEM$SEND_NOTIFICATION(
+      '{{ rbac_alert_notification_integration }}',
+      'RBAC Alert: New ACCOUNTADMIN Grant',
+      'A new ACCOUNTADMIN role grant was detected. Review immediately.'
+    );
+
+ALTER ALERT RBAC_MONITORING.VIEWS.ALERT_NEW_ACCOUNTADMIN_GRANT RESUME;
+
+-- ============================================================================
+-- STEP 2: ALERT — DIRECT USER GRANT DETECTED
+-- ============================================================================
+-- Fires when a privilege is granted directly to a user (bypassing roles).
+
+CREATE OR REPLACE ALERT RBAC_MONITORING.VIEWS.ALERT_DIRECT_USER_GRANT
+  WAREHOUSE = {{ rbac_monitoring_warehouse | upper }}
+  SCHEDULE = 'USING CRON 0 */6 * * * America/Los_Angeles'
+  IF (EXISTS (
+    SELECT 1
+    FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+    WHERE deleted_on IS NULL
+      AND granted_on NOT IN ('ROLE')
+      AND created_on > DATEADD('hour', -6, CURRENT_TIMESTAMP())
+  ))
+  THEN
+    CALL SYSTEM$SEND_NOTIFICATION(
+      '{{ rbac_alert_notification_integration }}',
+      'RBAC Alert: Direct User Grant Detected',
+      'A privilege was granted directly to a user instead of a role. Review V_DIRECT_USER_GRANTS.'
+    );
+
+ALTER ALERT RBAC_MONITORING.VIEWS.ALERT_DIRECT_USER_GRANT RESUME;
+
+-- ============================================================================
+-- STEP 3: ALERT — PUBLIC ROLE GRANT DETECTED
+-- ============================================================================
+-- Fires when a new grant is added to the PUBLIC role.
+
+CREATE OR REPLACE ALERT RBAC_MONITORING.VIEWS.ALERT_PUBLIC_ROLE_GRANT
+  WAREHOUSE = {{ rbac_monitoring_warehouse | upper }}
+  SCHEDULE = 'USING CRON 0 */6 * * * America/Los_Angeles'
+  IF (EXISTS (
+    SELECT 1
+    FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+    WHERE grantee_name = 'PUBLIC'
+      AND deleted_on IS NULL
+      AND created_on > DATEADD('hour', -6, CURRENT_TIMESTAMP())
+  ))
+  THEN
+    CALL SYSTEM$SEND_NOTIFICATION(
+      '{{ rbac_alert_notification_integration }}',
+      'RBAC Alert: New PUBLIC Role Grant',
+      'A new privilege was granted to the PUBLIC role. Review and revoke if unintended.'
+    );
+
+ALTER ALERT RBAC_MONITORING.VIEWS.ALERT_PUBLIC_ROLE_GRANT RESUME;
+
+-- ============================================================================
+-- STEP 4: ALERT — DORMANT USER WITH ACTIVE ROLES
+-- ============================================================================
+-- Weekly check for users who haven't logged in for 90+ days but still have roles.
+
+CREATE OR REPLACE ALERT RBAC_MONITORING.VIEWS.ALERT_DORMANT_USERS
+  WAREHOUSE = {{ rbac_monitoring_warehouse | upper }}
+  SCHEDULE = 'USING CRON 0 8 * * 1 America/Los_Angeles'
+  IF (EXISTS (
+    SELECT 1
+    FROM RBAC_MONITORING.VIEWS.V_USER_ACTIVITY
+    WHERE activity_status = 'DORMANT'
+  ))
+  THEN
+    CALL SYSTEM$SEND_NOTIFICATION(
+      '{{ rbac_alert_notification_integration }}',
+      'RBAC Alert: Dormant Users Detected',
+      'Users inactive for 90+ days still have active roles. Review V_USER_ACTIVITY.'
+    );
+
+ALTER ALERT RBAC_MONITORING.VIEWS.ALERT_DORMANT_USERS RESUME;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- List all RBAC alerts
+SHOW ALERTS IN SCHEMA RBAC_MONITORING.VIEWS;
+
+-- Check alert history
+SELECT *
+FROM TABLE(INFORMATION_SCHEMA.ALERT_HISTORY(
+  SCHEDULED_TIME_RANGE_START => DATEADD('hour', -24, CURRENT_TIMESTAMP())
+))
+ORDER BY SCHEDULED_TIME DESC;
+
+{%- else %}
+
+-- ============================================================================
+-- PRIVILEGE CHANGE ALERTS: SKIPPED
+-- ============================================================================
+-- rbac_enable_alerts is set to 'No'. No alerts will be created.
+-- To enable, set rbac_enable_alerts to 'Yes' and provide a notification integration.
+
+-- Manual monitoring: query the RBAC_MONITORING.VIEWS views periodically.
+SELECT 'Alerts disabled. Use monitoring views for manual review.' AS status;
+
+{%- endif %}
+
+/*
+PRIVILEGE CHANGE ALERTS {{ 'CONFIGURED' if rbac_enable_alerts == 'Yes' else 'SKIPPED' }}
+==========================================
+
+{%- if rbac_enable_alerts == 'Yes' %}
+Alerts created:
+1. ALERT_NEW_ACCOUNTADMIN_GRANT — Hourly check for new ACCOUNTADMIN grants
+2. ALERT_DIRECT_USER_GRANT — Every 6 hours, checks for RBAC bypasses
+3. ALERT_PUBLIC_ROLE_GRANT — Every 6 hours, checks for PUBLIC grants
+4. ALERT_DORMANT_USERS — Weekly check for inactive users with roles
+
+Notification integration: {{ rbac_alert_notification_integration }}
+Warehouse: {{ rbac_monitoring_warehouse | upper }}
+{%- else %}
+No alerts created. Use RBAC_MONITORING views for manual review.
+{%- endif %}
+
+NEXT STEPS:
+- Verify alert notifications reach your team
+- Proceed to Step 4.3: Generate Access Review Report
+*/

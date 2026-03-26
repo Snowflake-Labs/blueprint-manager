@@ -1,0 +1,209 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- GENERATE ACCESS REVIEW REPORT
+-- ============================================================================
+-- Review Frequency: {{ rbac_review_frequency }}
+-- Audit Scope: {{ rbac_audit_scope }}
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+-- Target Prefixes: {{ rbac_target_prefixes | join(', ') }}
+{%- endif %}
+-- Monitoring Warehouse: {{ rbac_monitoring_warehouse | upper }}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: SECURITYADMIN
+-- ============================================================================
+
+USE ROLE SECURITYADMIN;
+USE WAREHOUSE {{ rbac_monitoring_warehouse | upper }};
+
+-- ============================================================================
+-- ACCESS REVIEW REPORT
+-- Generated: Run this query set on a {{ rbac_review_frequency }} basis
+-- ============================================================================
+
+-- ============================================================================
+-- SECTION 1: EXECUTIVE SUMMARY
+-- ============================================================================
+
+-- 1a. Total users and role assignments
+SELECT
+  'Total Users' AS metric,
+  COUNT(DISTINCT user_name) AS value
+FROM RBAC_MONITORING.VIEWS.V_USER_ACTIVITY
+UNION ALL
+SELECT
+  'Active Users (last 30 days)',
+  COUNT(DISTINCT user_name)
+FROM RBAC_MONITORING.VIEWS.V_USER_ACTIVITY
+WHERE activity_status = 'ACTIVE'
+UNION ALL
+SELECT
+  'Dormant Users (90+ days)',
+  COUNT(DISTINCT user_name)
+FROM RBAC_MONITORING.VIEWS.V_USER_ACTIVITY
+WHERE activity_status = 'DORMANT'
+UNION ALL
+SELECT
+  'Never Logged In',
+  COUNT(DISTINCT user_name)
+FROM RBAC_MONITORING.VIEWS.V_USER_ACTIVITY
+WHERE activity_status = 'NEVER_LOGGED_IN'
+UNION ALL
+SELECT
+  'Direct User Grants (bypasses)',
+  COUNT(*)
+FROM RBAC_MONITORING.VIEWS.V_DIRECT_USER_GRANTS;
+
+-- ============================================================================
+-- SECTION 2: ACCOUNTADMIN HOLDERS
+-- ============================================================================
+-- List all users with ACCOUNTADMIN. Should match your authorized list.
+
+SELECT
+  user_name,
+  granted_on
+FROM RBAC_MONITORING.VIEWS.V_ROLE_MEMBERSHIP
+WHERE role_name = 'ACCOUNTADMIN'
+ORDER BY user_name;
+
+-- ============================================================================
+-- SECTION 3: RBAC BYPASSES
+-- ============================================================================
+-- Direct user grants that bypass the role hierarchy.
+-- Expected: zero rows.
+
+SELECT
+  user_name,
+  privilege,
+  object_type,
+  object_name,
+  granted_by,
+  created_on
+FROM RBAC_MONITORING.VIEWS.V_DIRECT_USER_GRANTS
+ORDER BY created_on DESC;
+
+-- ============================================================================
+-- SECTION 4: ROLE HIERARCHY HEALTH
+-- ============================================================================
+-- Roles with depth exceeding recommended limits.
+
+SELECT
+  role_name,
+  max_depth,
+  health_status,
+  longest_path
+FROM RBAC_MONITORING.VIEWS.V_ROLE_HIERARCHY_DEPTH
+WHERE health_status != 'HEALTHY'
+ORDER BY max_depth DESC;
+
+-- ============================================================================
+-- SECTION 5: DORMANT USERS WITH ACTIVE ROLES
+-- ============================================================================
+-- Users inactive for 90+ days who still have role assignments.
+-- Recommendation: disable or remove role assignments.
+
+SELECT
+  ua.user_name,
+  ua.days_since_login,
+  ua.activity_status,
+  rm.role_name
+FROM RBAC_MONITORING.VIEWS.V_USER_ACTIVITY ua
+JOIN RBAC_MONITORING.VIEWS.V_ROLE_MEMBERSHIP rm
+  ON ua.user_name = rm.user_name
+WHERE ua.activity_status IN ('DORMANT', 'NEVER_LOGGED_IN')
+ORDER BY ua.days_since_login DESC, ua.user_name;
+
+-- ============================================================================
+-- SECTION 6: RECENT PRIVILEGE CHANGES
+-- ============================================================================
+-- All privilege grants and revocations since last review.
+{%- if rbac_review_frequency == 'Weekly' %}
+{%- set review_days = 7 %}
+{%- elif rbac_review_frequency == 'Monthly' %}
+{%- set review_days = 30 %}
+{%- else %}
+{%- set review_days = 90 %}
+{%- endif %}
+
+SELECT
+  object_type,
+  object_name,
+  privilege,
+  grantee_name,
+  granted_by,
+  change_date,
+  status
+FROM RBAC_MONITORING.VIEWS.V_PRIVILEGE_CHANGES
+WHERE change_date > DATEADD('day', -{{ review_days }}, CURRENT_TIMESTAMP())
+   OR (revoked_date IS NOT NULL AND revoked_date > DATEADD('day', -{{ review_days }}, CURRENT_TIMESTAMP()))
+ORDER BY change_date DESC;
+
+-- ============================================================================
+-- SECTION 7: PUBLIC ROLE GRANTS
+-- ============================================================================
+-- Current grants on the PUBLIC role. Should be minimal or empty.
+
+SELECT
+  privilege,
+  granted_on AS object_type,
+  name AS object_name,
+  granted_by,
+  created_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE grantee_name = 'PUBLIC'
+  AND deleted_on IS NULL
+ORDER BY created_on DESC;
+
+-- ============================================================================
+-- SECTION 8: MFA STATUS
+-- ============================================================================
+-- Users without MFA enabled (especially important for privileged roles).
+
+SELECT
+  ua.user_name,
+  ua.has_mfa,
+  rm.role_name,
+  CASE
+    WHEN rm.role_name IN ('ACCOUNTADMIN', 'SECURITYADMIN', 'SYSADMIN') THEN 'CRITICAL'
+    WHEN rm.role_name LIKE '%ADMIN%' THEN 'HIGH'
+    ELSE 'MEDIUM'
+  END AS mfa_priority
+FROM RBAC_MONITORING.VIEWS.V_USER_ACTIVITY ua
+JOIN RBAC_MONITORING.VIEWS.V_ROLE_MEMBERSHIP rm
+  ON ua.user_name = rm.user_name
+WHERE ua.has_mfa = 'false'
+  AND ua.activity_status = 'ACTIVE'
+ORDER BY mfa_priority, ua.user_name;
+
+/*
+ACCESS REVIEW REPORT GENERATED
+=================================
+
+Review Frequency: {{ rbac_review_frequency }}
+Report Sections:
+1. Executive Summary — User counts and bypass totals
+2. ACCOUNTADMIN Holders — Verify against authorized list
+3. RBAC Bypasses — Direct user grants (should be zero)
+4. Role Hierarchy Health — Depth violations
+5. Dormant Users — Inactive users with active roles
+6. Recent Privilege Changes — Changes in last {{ review_days }} days
+7. PUBLIC Role Grants — Should be minimal
+8. MFA Status — Users without MFA on privileged roles
+
+ACTION ITEMS (complete before next review):
+- Disable dormant users (Section 5)
+- Revoke any RBAC bypasses (Section 3)
+- Fix role hierarchy depth issues (Section 4)
+- Enable MFA for flagged users (Section 8)
+- Revoke unauthorized ACCOUNTADMIN (Section 2)
+
+RBAC HARDENING BLUEPRINT COMPLETE
+====================================
+All 4 tasks have been executed:
+  Task 1: RBAC Assessment ✓
+  Task 2: Privilege Hardening ✓
+  Task 3: User & Service Account Provisioning ✓
+  Task 4: Monitoring & Compliance ✓
+
+Schedule this report to run {{ rbac_review_frequency | lower }}.
+*/

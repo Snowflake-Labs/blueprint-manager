@@ -1,0 +1,207 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- CREATE RBAC MONITORING VIEWS
+-- ============================================================================
+-- Monitoring Warehouse: {{ rbac_monitoring_warehouse | upper }}
+-- Audit Scope: {{ rbac_audit_scope }}
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+-- Target Prefixes: {{ rbac_target_prefixes | join(', ') }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: SYSADMIN (view creation), SECURITYADMIN (grants)
+-- ============================================================================
+
+USE ROLE SYSADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE MONITORING DATABASE AND SCHEMA
+-- ============================================================================
+-- A dedicated schema for RBAC monitoring views and procedures.
+
+CREATE DATABASE IF NOT EXISTS RBAC_MONITORING;
+CREATE SCHEMA IF NOT EXISTS RBAC_MONITORING.VIEWS WITH MANAGED ACCESS;
+
+USE SCHEMA RBAC_MONITORING.VIEWS;
+
+-- ============================================================================
+-- STEP 2: ROLE MEMBERSHIP SNAPSHOT VIEW
+-- ============================================================================
+-- Current role assignments for all users, including inherited roles.
+
+CREATE OR REPLACE VIEW RBAC_MONITORING.VIEWS.V_ROLE_MEMBERSHIP AS
+SELECT
+  grantee_name AS user_name,
+  name AS role_name,
+  granted_by,
+  created_on AS granted_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE granted_on = 'ROLE'
+  AND privilege = 'USAGE'
+  AND deleted_on IS NULL
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+    OR name IN ('ACCOUNTADMIN', 'SECURITYADMIN', 'SYSADMIN', 'USERADMIN', 'PUBLIC')
+  )
+{%- endif %}
+;
+
+-- ============================================================================
+-- STEP 3: PRIVILEGE CHANGE HISTORY VIEW
+-- ============================================================================
+-- Track all privilege grants and revocations over time.
+
+CREATE OR REPLACE VIEW RBAC_MONITORING.VIEWS.V_PRIVILEGE_CHANGES AS
+SELECT
+  granted_on AS object_type,
+  name AS object_name,
+  privilege,
+  grantee_name,
+  grant_option,
+  granted_by,
+  created_on AS change_date,
+  deleted_on AS revoked_date,
+  CASE WHEN deleted_on IS NULL THEN 'ACTIVE' ELSE 'REVOKED' END AS status
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE TRUE
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+;
+
+-- ============================================================================
+-- STEP 4: DIRECT USER GRANTS MONITOR VIEW
+-- ============================================================================
+-- Surfaces any direct user grants that bypass the RBAC hierarchy.
+-- This should return zero rows if Step 2.3 was completed.
+
+CREATE OR REPLACE VIEW RBAC_MONITORING.VIEWS.V_DIRECT_USER_GRANTS AS
+SELECT
+  grantee_name AS user_name,
+  privilege,
+  granted_on AS object_type,
+  name AS object_name,
+  granted_by,
+  created_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE deleted_on IS NULL
+  AND granted_on NOT IN ('ROLE')
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+;
+
+-- ============================================================================
+-- STEP 5: ROLE HIERARCHY DEPTH VIEW
+-- ============================================================================
+-- Detect role chains that exceed recommended depth (4 levels).
+
+CREATE OR REPLACE VIEW RBAC_MONITORING.VIEWS.V_ROLE_HIERARCHY_DEPTH AS
+WITH RECURSIVE role_tree AS (
+  SELECT
+    name AS role_name,
+    grantee_name AS parent_role,
+    1 AS depth,
+    name || ' → ' || grantee_name AS path
+  FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+  WHERE granted_on = 'ROLE'
+    AND privilege = 'USAGE'
+    AND deleted_on IS NULL
+
+  UNION ALL
+
+  SELECT
+    rt.role_name,
+    g.grantee_name AS parent_role,
+    rt.depth + 1,
+    rt.path || ' → ' || g.grantee_name
+  FROM role_tree rt
+  JOIN SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES g
+    ON rt.parent_role = g.name
+    AND g.granted_on = 'ROLE'
+    AND g.privilege = 'USAGE'
+    AND g.deleted_on IS NULL
+  WHERE rt.depth < 10
+)
+SELECT
+  role_name,
+  MAX(depth) AS max_depth,
+  MAX(path) AS longest_path,
+  CASE
+    WHEN MAX(depth) <= 4 THEN 'HEALTHY'
+    WHEN MAX(depth) <= 6 THEN 'WARNING'
+    ELSE 'CRITICAL'
+  END AS health_status
+FROM role_tree
+GROUP BY role_name
+HAVING MAX(depth) > 2
+;
+
+-- ============================================================================
+-- STEP 6: USER ACTIVITY MONITOR VIEW
+-- ============================================================================
+-- Track user login activity for dormancy detection.
+
+CREATE OR REPLACE VIEW RBAC_MONITORING.VIEWS.V_USER_ACTIVITY AS
+SELECT
+  u.name AS user_name,
+  u.login_name,
+  u.created_on,
+  u.last_success_login,
+  u.disabled,
+  u.has_mfa,
+  DATEDIFF('day', u.last_success_login, CURRENT_TIMESTAMP()) AS days_since_login,
+  CASE
+    WHEN u.disabled = 'true' THEN 'DISABLED'
+    WHEN u.last_success_login IS NULL THEN 'NEVER_LOGGED_IN'
+    WHEN DATEDIFF('day', u.last_success_login, CURRENT_TIMESTAMP()) > 90 THEN 'DORMANT'
+    WHEN DATEDIFF('day', u.last_success_login, CURRENT_TIMESTAMP()) > 30 THEN 'INACTIVE'
+    ELSE 'ACTIVE'
+  END AS activity_status
+FROM SNOWFLAKE.ACCOUNT_USAGE.USERS u
+WHERE u.deleted_on IS NULL
+;
+
+-- ============================================================================
+-- STEP 7: GRANT READ ACCESS ON MONITORING VIEWS
+-- ============================================================================
+-- Grant access to security team or monitoring role.
+
+USE ROLE SECURITYADMIN;
+
+-- Grant usage on the monitoring database and schema
+GRANT USAGE ON DATABASE RBAC_MONITORING TO ROLE SECURITYADMIN;
+GRANT USAGE ON SCHEMA RBAC_MONITORING.VIEWS TO ROLE SECURITYADMIN;
+GRANT SELECT ON ALL VIEWS IN SCHEMA RBAC_MONITORING.VIEWS TO ROLE SECURITYADMIN;
+
+-- Grant warehouse usage for monitoring queries
+GRANT USAGE ON WAREHOUSE {{ rbac_monitoring_warehouse | upper }} TO ROLE SECURITYADMIN;
+
+/*
+RBAC MONITORING VIEWS CREATED
+================================
+
+Views created in RBAC_MONITORING.VIEWS:
+1. V_ROLE_MEMBERSHIP — Current role assignments
+2. V_PRIVILEGE_CHANGES — Grant/revoke history
+3. V_DIRECT_USER_GRANTS — Bypass detection (should be empty)
+4. V_ROLE_HIERARCHY_DEPTH — Depth analysis with health status
+5. V_USER_ACTIVITY — Login activity and dormancy detection
+
+Monitoring warehouse: {{ rbac_monitoring_warehouse | upper }}
+
+NEXT STEPS:
+- Query these views periodically to track RBAC health
+- Proceed to Step 4.2: Configure Privilege Change Alerts
+*/

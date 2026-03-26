@@ -1,0 +1,124 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- PROVISION SERVICE ACCOUNTS
+-- ============================================================================
+-- Service Accounts:
+{%- for svc in rbac_service_accounts %}
+--   {{ loop.index }}. {{ svc.account_name | upper }} ({{ svc.purpose }}) → {{ svc.data_product_prefix | upper }}_{{ svc.role_level | upper }}
+{%- endfor %}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLES: USERADMIN (create user), SECURITYADMIN (grant roles)
+-- ============================================================================
+
+-- ============================================================================
+-- STEP 1: CREATE SERVICE ACCOUNT USERS
+-- ============================================================================
+-- Each service account is created with TYPE = SERVICE and key-pair auth.
+-- NOTE: Replace <RSA_PUBLIC_KEY> with the actual base64-encoded public key.
+
+USE ROLE USERADMIN;
+
+{%- for svc in rbac_service_accounts %}
+
+-- Service Account {{ loop.index }}: {{ svc.account_name | upper }}
+-- Purpose: {{ svc.purpose }}
+CREATE USER IF NOT EXISTS {{ svc.account_name | upper }}
+  TYPE = SERVICE
+  DEFAULT_ROLE = '{{ svc.data_product_prefix | upper }}_{{ svc.role_level | upper }}'
+  DEFAULT_WAREHOUSE = '{{ svc.warehouse | upper }}'
+  COMMENT = '{{ svc.purpose }}'
+  MUST_CHANGE_PASSWORD = FALSE;
+  -- RSA_PUBLIC_KEY = '<paste base64-encoded public key here>';
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 2: GRANT FUNCTIONAL ROLES TO SERVICE ACCOUNTS
+-- ============================================================================
+
+USE ROLE SECURITYADMIN;
+
+{%- for svc in rbac_service_accounts %}
+
+-- Grant {{ svc.data_product_prefix | upper }}_{{ svc.role_level | upper }} to {{ svc.account_name | upper }}
+GRANT ROLE {{ svc.data_product_prefix | upper }}_{{ svc.role_level | upper }}
+  TO USER {{ svc.account_name | upper }};
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 3: GRANT WAREHOUSE USAGE TO SERVICE ACCOUNT ROLES
+-- ============================================================================
+-- Ensure each service account's role can use its designated warehouse.
+
+{%- for svc in rbac_service_accounts %}
+
+-- Warehouse for {{ svc.account_name | upper }}
+GRANT USAGE ON WAREHOUSE {{ svc.warehouse | upper }}
+  TO ROLE {{ svc.data_product_prefix | upper }}_{{ svc.role_level | upper }};
+GRANT OPERATE ON WAREHOUSE {{ svc.warehouse | upper }}
+  TO ROLE {{ svc.data_product_prefix | upper }}_{{ svc.role_level | upper }};
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 4: SET RSA PUBLIC KEYS
+-- ============================================================================
+-- IMPORTANT: Generate RSA key pairs and set the public key for each account.
+-- This is required for key-pair authentication.
+
+USE ROLE SECURITYADMIN;
+
+{%- for svc in rbac_service_accounts %}
+
+-- Set RSA key for {{ svc.account_name | upper }}
+-- Uncomment and replace with actual public key:
+-- ALTER USER {{ svc.account_name | upper }} SET RSA_PUBLIC_KEY = '<base64-encoded-public-key>';
+{%- endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Confirm service accounts were created
+{%- for svc in rbac_service_accounts %}
+DESCRIBE USER {{ svc.account_name | upper }};
+{%- endfor %}
+
+-- Verify role assignments
+SELECT
+  grantee_name AS service_account,
+  name AS role_name,
+  granted_by,
+  created_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE granted_on = 'ROLE'
+  AND privilege = 'USAGE'
+  AND deleted_on IS NULL
+  AND grantee_name IN (
+{%- for svc in rbac_service_accounts %}
+    '{{ svc.account_name | upper }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+  )
+ORDER BY grantee_name, name;
+
+/*
+SERVICE ACCOUNT PROVISIONING COMPLETE
+=======================================
+
+Service accounts created:
+{%- for svc in rbac_service_accounts %}
+  {{ loop.index }}. {{ svc.account_name | upper }}
+     Purpose: {{ svc.purpose }}
+     Role: {{ svc.data_product_prefix | upper }}_{{ svc.role_level | upper }}
+     Warehouse: {{ svc.warehouse | upper }}
+{%- endfor %}
+
+REMAINING MANUAL STEPS:
+1. Generate RSA key pair for each service account
+2. Set RSA_PUBLIC_KEY (uncomment Step 4 statements)
+3. Store private keys in your secrets manager
+4. Test connections using key-pair authentication
+
+NEXT STEPS:
+- Complete RSA key setup
+- Proceed to Task 4: Monitoring & Compliance
+*/

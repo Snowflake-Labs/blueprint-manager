@@ -1,0 +1,78 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- ASSIGN FUNCTIONAL ROLES
+-- ============================================================================
+-- User Role Assignments:
+{%- for assignment in rbac_user_role_assignments %}
+--   {{ loop.index }}. {{ assignment.user_name | upper }} → {{ assignment.data_product_prefix | upper }}_{{ assignment.role_level | upper }}
+{%- endfor %}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: SECURITYADMIN
+-- ============================================================================
+
+USE ROLE SECURITYADMIN;
+
+-- ============================================================================
+-- STEP 1: GRANT FUNCTIONAL ROLES TO USERS
+-- ============================================================================
+-- Each user is granted their designated role level for the specified
+-- data product. Role hierarchy ensures inherited access (e.g., WRITE
+-- inherits READ automatically).
+
+{%- for assignment in rbac_user_role_assignments %}
+
+-- Assignment {{ loop.index }}: {{ assignment.user_name | upper }} → {{ assignment.role_level | upper }} on {{ assignment.data_product_prefix | upper }}
+GRANT ROLE {{ assignment.data_product_prefix | upper }}_{{ assignment.role_level | upper }}
+  TO USER {{ assignment.user_name | upper }};
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 2: VERIFY ROLE ASSIGNMENTS
+-- ============================================================================
+-- Confirm that all assignments were applied successfully.
+
+{%- for assignment in rbac_user_role_assignments %}
+
+-- Verify {{ assignment.user_name | upper }}
+SHOW GRANTS TO USER {{ assignment.user_name | upper }};
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 3: ROLE MEMBERSHIP SUMMARY
+-- ============================================================================
+-- Cross-reference assigned roles with what the system reports.
+
+SELECT
+  grantee_name AS user_name,
+  name AS role_name,
+  granted_by,
+  created_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE granted_on = 'ROLE'
+  AND privilege = 'USAGE'
+  AND deleted_on IS NULL
+  AND grantee_name IN (
+{%- for assignment in rbac_user_role_assignments %}
+    '{{ assignment.user_name | upper }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+  )
+ORDER BY grantee_name, name;
+
+/*
+FUNCTIONAL ROLE ASSIGNMENT COMPLETE
+=====================================
+
+Assignments applied:
+{%- for assignment in rbac_user_role_assignments %}
+  {{ loop.index }}. {{ assignment.user_name | upper }} → {{ assignment.data_product_prefix | upper }}_{{ assignment.role_level | upper }}
+{%- endfor %}
+
+IMPORTANT:
+- Verify each user can access their data product at the correct level
+- Remove any legacy direct grants (completed in Step 2.3)
+- For SCIM environments, map IDP groups to these roles
+
+NEXT STEPS:
+- Proceed to Step 3.2: Provision Service Accounts
+*/

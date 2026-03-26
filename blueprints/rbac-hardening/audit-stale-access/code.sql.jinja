@@ -1,0 +1,169 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- AUDIT STALE ACCESS
+-- ============================================================================
+-- Audit Scope: {{ rbac_audit_scope }}
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+-- Target Prefixes: {{ rbac_target_prefixes | join(', ') }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: DORMANT USERS WITH ACTIVE ROLE GRANTS
+-- ============================================================================
+-- Find users who haven't logged in for 90+ days but still have role grants.
+-- These are high-priority candidates for access revocation.
+
+SELECT
+  u.name AS user_name,
+  u.login_name,
+  u.email,
+  u.disabled,
+  u.last_success_login,
+  u.created_on,
+  DATEDIFF('day', u.last_success_login, CURRENT_TIMESTAMP()) AS days_since_login,
+  COUNT(g.name) AS active_role_grants
+FROM SNOWFLAKE.ACCOUNT_USAGE.USERS u
+LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS g
+  ON g.grantee_name = u.name
+  AND g.granted_on = 'ROLE'
+  AND g.privilege = 'USAGE'
+  AND g.deleted_on IS NULL
+WHERE u.deleted_on IS NULL
+  AND u.disabled = 'false'
+  AND (
+    u.last_success_login IS NULL
+    OR DATEDIFF('day', u.last_success_login, CURRENT_TIMESTAMP()) > 90
+  )
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND g.name IN (
+{%- for prefix in rbac_target_prefixes %}
+    SELECT name FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+    WHERE name LIKE '{{ prefix | upper }}%'
+    AND deleted_on IS NULL{% if not loop.last %} UNION{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+GROUP BY u.name, u.login_name, u.email, u.disabled, u.last_success_login, u.created_on
+HAVING COUNT(g.name) > 0
+ORDER BY days_since_login DESC NULLS FIRST;
+
+-- ============================================================================
+-- STEP 2: USERS WHO HAVE NEVER LOGGED IN
+-- ============================================================================
+-- Find users with no login history who still have active role grants.
+-- These may be pre-provisioned accounts, forgotten test users, or orphaned records.
+
+SELECT
+  u.name AS user_name,
+  u.login_name,
+  u.email,
+  u.created_on,
+  u.owner,
+  DATEDIFF('day', u.created_on, CURRENT_TIMESTAMP()) AS days_since_creation,
+  LISTAGG(g.name, ', ') WITHIN GROUP (ORDER BY g.name) AS granted_roles
+FROM SNOWFLAKE.ACCOUNT_USAGE.USERS u
+LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS g
+  ON g.grantee_name = u.name
+  AND g.granted_on = 'ROLE'
+  AND g.privilege = 'USAGE'
+  AND g.deleted_on IS NULL
+WHERE u.deleted_on IS NULL
+  AND u.last_success_login IS NULL
+  AND u.disabled = 'false'
+GROUP BY u.name, u.login_name, u.email, u.created_on, u.owner
+HAVING COUNT(g.name) > 0
+ORDER BY u.created_on;
+
+-- ============================================================================
+-- STEP 3: UNUSED ROLES (NO ACTIVE USER ASSIGNMENTS)
+-- ============================================================================
+-- Find roles that are not granted to any user (directly or indirectly).
+-- These roles may be orphaned from decommissioned projects.
+
+SELECT
+  r.name AS role_name,
+  r.created_on,
+  r.owner,
+  r.comment,
+  COUNT(DISTINCT g.grantee_name) AS user_count
+FROM SNOWFLAKE.ACCOUNT_USAGE.ROLES r
+LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS g
+  ON g.name = r.name
+  AND g.granted_on = 'ROLE'
+  AND g.privilege = 'USAGE'
+  AND g.deleted_on IS NULL
+WHERE r.deleted_on IS NULL
+  AND r.name NOT IN ('ACCOUNTADMIN', 'SECURITYADMIN', 'SYSADMIN', 'USERADMIN', 'PUBLIC', 'ORGADMIN')
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    r.name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+GROUP BY r.name, r.created_on, r.owner, r.comment
+HAVING COUNT(DISTINCT g.grantee_name) = 0
+ORDER BY r.created_on;
+
+-- ============================================================================
+-- STEP 4: USER ACCESS HEALTH SUMMARY
+-- ============================================================================
+-- Bucket all users by their last login activity for a quick health overview.
+
+SELECT
+  CASE
+    WHEN u.last_success_login IS NULL THEN 'Never Logged In'
+    WHEN DATEDIFF('day', u.last_success_login, CURRENT_TIMESTAMP()) <= 30 THEN 'Active (< 30 days)'
+    WHEN DATEDIFF('day', u.last_success_login, CURRENT_TIMESTAMP()) <= 90 THEN 'Stale (30-90 days)'
+    ELSE 'Dormant (> 90 days)'
+  END AS login_status,
+  COUNT(*) AS user_count,
+  SUM(CASE WHEN g.grant_count > 0 THEN 1 ELSE 0 END) AS users_with_grants
+FROM SNOWFLAKE.ACCOUNT_USAGE.USERS u
+LEFT JOIN (
+  SELECT grantee_name, COUNT(*) AS grant_count
+  FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+  WHERE granted_on = 'ROLE' AND privilege = 'USAGE' AND deleted_on IS NULL
+  GROUP BY grantee_name
+) g ON g.grantee_name = u.name
+WHERE u.deleted_on IS NULL
+  AND u.disabled = 'false'
+GROUP BY login_status
+ORDER BY user_count DESC;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Quick sanity check: total users and their status
+SELECT
+  COUNT(*) AS total_users,
+  SUM(CASE WHEN disabled = 'true' THEN 1 ELSE 0 END) AS disabled_users,
+  SUM(CASE WHEN disabled = 'false' THEN 1 ELSE 0 END) AS active_users
+FROM SNOWFLAKE.ACCOUNT_USAGE.USERS
+WHERE deleted_on IS NULL;
+
+/*
+STALE ACCESS AUDIT COMPLETE
+============================
+
+Queries generated:
+1. Dormant users with active role grants (>90 days since login)
+2. Users who have never logged in but have role grants
+3. Unused roles (no direct user assignments)
+4. User access health summary by login activity bucket
+
+Audit Scope: {{ rbac_audit_scope }}
+
+NEXT STEPS:
+- Disable dormant users and revoke their role grants
+- Investigate never-logged-in users (pending onboarding vs. orphaned)
+- Drop or reassign unused roles
+- Proceed to Task 2: Privilege Hardening
+*/

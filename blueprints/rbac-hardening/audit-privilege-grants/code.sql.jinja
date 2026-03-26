@@ -1,0 +1,166 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- AUDIT PRIVILEGE GRANTS
+-- ============================================================================
+-- Audit Scope: {{ rbac_audit_scope }}
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+-- Target Prefixes: {{ rbac_target_prefixes | join(', ') }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: DIRECT USER GRANTS (ANTI-PATTERN)
+-- ============================================================================
+-- Find privileges granted directly to users instead of to roles.
+-- All access should flow through the role hierarchy.
+
+SELECT
+  grantee_name AS user_name,
+  privilege,
+  granted_on AS object_type,
+  name AS object_name,
+  granted_by,
+  created_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE deleted_on IS NULL
+  AND privilege != 'USAGE'  -- Exclude role USAGE grants (those are role assignments)
+  AND granted_on != 'ROLE'  -- Exclude role grants
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+ORDER BY grantee_name, granted_on, name;
+
+-- ============================================================================
+-- STEP 2: PUBLIC ROLE GRANTS
+-- ============================================================================
+-- Find all privileges granted to the PUBLIC role.
+-- Every user inherits PUBLIC privileges automatically.
+
+SELECT
+  privilege,
+  granted_on AS object_type,
+  name AS object_name,
+  granted_by,
+  created_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE grantee_name = 'PUBLIC'
+  AND deleted_on IS NULL
+  AND privilege != 'USAGE'   -- USAGE on ROLE is a role grant, not an object privilege
+  AND granted_on != 'ROLE'
+ORDER BY granted_on, name;
+
+-- ============================================================================
+-- STEP 3: ACCOUNTADMIN ROLE HOLDERS
+-- ============================================================================
+-- Find all users currently granted the ACCOUNTADMIN role.
+-- Best practice: limit to 2-3 break-glass users.
+
+SELECT
+  grantee_name AS user_name,
+  granted_by,
+  created_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE name = 'ACCOUNTADMIN'
+  AND granted_on = 'ROLE'
+  AND privilege = 'USAGE'
+  AND deleted_on IS NULL
+ORDER BY created_on;
+
+-- ============================================================================
+-- STEP 4: ROLES WITH POWERFUL ACCOUNT-LEVEL PRIVILEGES
+-- ============================================================================
+-- Find roles with high-risk privileges like MANAGE GRANTS, CREATE ROLE,
+-- CREATE USER, or OWNERSHIP on account-level objects.
+
+SELECT
+  grantee_name AS role_name,
+  privilege,
+  granted_on AS object_type,
+  name AS object_name,
+  granted_by
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE deleted_on IS NULL
+  AND (
+    privilege IN ('MANAGE GRANTS', 'CREATE ROLE', 'CREATE USER', 'CREATE ACCOUNT',
+                  'MONITOR USAGE', 'MANAGE ACCOUNT SUPPORT CASES')
+    OR (privilege = 'OWNERSHIP' AND granted_on = 'ACCOUNT')
+  )
+  AND grantee_name NOT IN ('ACCOUNTADMIN', 'SECURITYADMIN', 'USERADMIN')
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    grantee_name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+ORDER BY privilege, grantee_name;
+
+-- ============================================================================
+-- STEP 5: PRIVILEGE GRANT SUMMARY
+-- ============================================================================
+-- High-level summary of grant health across the account.
+
+SELECT 'Direct User Grants' AS finding,
+       COUNT(*) AS count
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE deleted_on IS NULL
+  AND privilege != 'USAGE'
+  AND granted_on != 'ROLE'
+
+UNION ALL
+
+SELECT 'PUBLIC Role Grants' AS finding,
+       COUNT(*) AS count
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE grantee_name = 'PUBLIC'
+  AND deleted_on IS NULL
+  AND privilege != 'USAGE'
+  AND granted_on != 'ROLE'
+
+UNION ALL
+
+SELECT 'ACCOUNTADMIN Holders' AS finding,
+       COUNT(*) AS count
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE name = 'ACCOUNTADMIN'
+  AND granted_on = 'ROLE'
+  AND privilege = 'USAGE'
+  AND deleted_on IS NULL;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Quick check: total privilege grants in account
+SELECT COUNT(*) AS total_grants
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE deleted_on IS NULL;
+
+/*
+PRIVILEGE GRANT AUDIT COMPLETE
+===============================
+
+Queries generated:
+1. Direct user grants (anti-pattern - should be on roles)
+2. PUBLIC role grants (exposure to all users)
+3. ACCOUNTADMIN holders (should be 2-3 break-glass users)
+4. Roles with powerful account-level privileges
+5. Summary statistics
+
+Audit Scope: {{ rbac_audit_scope }}
+
+NEXT STEPS:
+- Review direct user grants and plan migration to roles (Step 2.3)
+- Review PUBLIC grants and plan revocation with exceptions (Step 2.1)
+- Confirm ACCOUNTADMIN holders match break-glass policy (Step 2.2)
+- Proceed to Step 1.3: Audit Stale Access
+*/

@@ -1,0 +1,129 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- ENFORCE ADMIN SEPARATION OF DUTIES
+-- ============================================================================
+-- Authorized ACCOUNTADMIN users:
+{%- for user in rbac_accountadmin_users %}
+--   {{ loop.index }}. {{ user | upper }}
+{%- endfor %}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: SECURITYADMIN
+-- ============================================================================
+
+USE ROLE SECURITYADMIN;
+
+-- ============================================================================
+-- STEP 1: DISCOVER CURRENT ACCOUNTADMIN HOLDERS
+-- ============================================================================
+-- Run this first to see who currently has ACCOUNTADMIN.
+-- Compare this list against the authorized users below.
+
+SELECT
+  grantee_name AS user_name,
+  granted_by,
+  created_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE name = 'ACCOUNTADMIN'
+  AND granted_on = 'ROLE'
+  AND privilege = 'USAGE'
+  AND deleted_on IS NULL
+ORDER BY created_on;
+
+-- ============================================================================
+-- STEP 2: ENSURE AUTHORIZED USERS HAVE ACCOUNTADMIN
+-- ============================================================================
+-- Grant ACCOUNTADMIN to all authorized break-glass users.
+-- This is idempotent — no harm if they already have it.
+
+{%- for user in rbac_accountadmin_users %}
+
+-- Authorized break-glass user {{ loop.index }}: {{ user | upper }}
+GRANT ROLE ACCOUNTADMIN TO USER {{ user | upper }};
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 3: REVOKE ACCOUNTADMIN FROM UNAUTHORIZED USERS
+-- ============================================================================
+-- IMPORTANT: Review the output of Step 1 before running these statements.
+-- For each user in Step 1 that is NOT in the authorized list above,
+-- uncomment and run the corresponding REVOKE statement.
+--
+-- The authorized users are:
+{%- for user in rbac_accountadmin_users %}
+--   {{ user | upper }}
+{%- endfor %}
+--
+-- Template (uncomment and replace <USERNAME> for each unauthorized user):
+-- REVOKE ROLE ACCOUNTADMIN FROM USER <USERNAME>;
+
+-- Automated discovery and revocation:
+-- Run this query to generate REVOKE statements for unauthorized users.
+SELECT
+  'REVOKE ROLE ACCOUNTADMIN FROM USER ' || grantee_name || ';' AS revoke_statement,
+  grantee_name AS unauthorized_user,
+  granted_by,
+  created_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE name = 'ACCOUNTADMIN'
+  AND granted_on = 'ROLE'
+  AND privilege = 'USAGE'
+  AND deleted_on IS NULL
+  AND grantee_name NOT IN (
+{%- for user in rbac_accountadmin_users %}
+    '{{ user | upper }}'{% if not loop.last %},{% endif %}
+{%- endfor %}
+  )
+ORDER BY grantee_name;
+
+-- ============================================================================
+-- STEP 4: ENSURE AUTHORIZED USERS ALSO HAVE SECURITYADMIN AND SYSADMIN
+-- ============================================================================
+-- Break-glass users should also have SECURITYADMIN and SYSADMIN
+-- for administrative operations that don't require ACCOUNTADMIN.
+
+{%- for user in rbac_accountadmin_users %}
+
+GRANT ROLE SECURITYADMIN TO USER {{ user | upper }};
+GRANT ROLE SYSADMIN TO USER {{ user | upper }};
+{%- endfor %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Confirm ACCOUNTADMIN is now limited to authorized users
+SELECT
+  grantee_name AS user_name,
+  granted_by,
+  created_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE name = 'ACCOUNTADMIN'
+  AND granted_on = 'ROLE'
+  AND privilege = 'USAGE'
+  AND deleted_on IS NULL
+ORDER BY grantee_name;
+
+/*
+ADMIN SEPARATION OF DUTIES ENFORCED
+=====================================
+
+Authorized ACCOUNTADMIN users:
+{%- for user in rbac_accountadmin_users %}
+  {{ loop.index }}. {{ user | upper }}
+{%- endfor %}
+
+Actions:
+1. Granted ACCOUNTADMIN to authorized users (idempotent)
+2. Generated REVOKE statements for unauthorized users (review Step 3 output)
+3. Ensured authorized users also have SECURITYADMIN and SYSADMIN
+
+IMPORTANT: Run the REVOKE statements from Step 3 manually after review.
+These are not auto-executed to prevent accidental lockout.
+
+NEXT STEPS:
+- Execute REVOKE statements for unauthorized ACCOUNTADMIN holders
+- Enable MFA for all authorized ACCOUNTADMIN users
+- Configure ACCOUNTADMIN usage alerts (Task 4)
+- Proceed to Step 2.3: Revoke Direct User Privileges
+*/

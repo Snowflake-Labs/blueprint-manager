@@ -1,0 +1,169 @@
+blueprint_id: blueprint_e2a16d54
+name: RBAC Hardening
+summary: Audit, harden, and monitor role-based access controls across your Snowflake
+  account
+overview: 'This repeatable workflow guides you through auditing, hardening, and monitoring
+  role-based access controls (RBAC) in your Snowflake account. It complements the
+  initial role hierarchy created by Data Product Setup by filling operational gaps:
+  assigning users to functional roles, restricting over-privileged system roles, revoking
+  stale access, and establishing ongoing monitoring.
+
+
+  **What You Will Do:**
+
+  - **Audit**: Visualize your role hierarchy, discover PUBLIC exposure, find over-privileged
+  users, and detect stale access
+
+  - **Harden**: Revoke unnecessary PUBLIC grants, restrict ACCOUNTADMIN to break-glass
+  only, eliminate direct user privileges, and enforce managed access schemas
+
+  - **Provision**: Assign end users to functional roles and configure least-privilege
+  service accounts
+
+  - **Monitor**: Create governance views, privilege-change alerts, and compliance
+  review documentation
+
+
+  **Key Features:**
+
+  - Works with existing Data Product Setup role hierarchies
+
+  - Generates review-before-execute SQL (safe dry-run pattern)
+
+  - Supports both full-account and per-data-product scope
+
+  - SCIM-aware for environments using identity provider integration
+
+
+  Run this workflow periodically to maintain RBAC hygiene as your account evolves.
+
+  '
+is_repeatable: true
+steps:
+- audit-role-hierarchy
+- audit-privilege-grants
+- audit-stale-access
+- restrict-public-role
+- enforce-admin-separation
+- revoke-direct-user-privileges
+- enforce-managed-access-schemas
+- assign-functional-roles
+- provision-service-accounts
+- create-rbac-monitoring-views
+- configure-privilege-change-alerts
+- generate-access-review-report
+tasks:
+- slug: rbac-assessment
+  title: RBAC Assessment
+  summary: 'Discover the current state of role-based access controls in your Snowflake
+
+    account by auditing the role hierarchy, privilege grants, and stale access
+
+    patterns. All queries are read-only diagnostics.
+
+    '
+  external_requirements:
+  - Account accessible with SECURITYADMIN or ACCOUNTADMIN role
+  - SNOWFLAKE database IMPORTED PRIVILEGES granted (for Account Usage views)
+  - Data Product Setup completed (if auditing data product roles)
+  personas:
+  - Security Administrator
+  - Compliance Team
+  - Platform Administrator
+  role_requirements:
+  - SECURITYADMIN
+  - ACCOUNTADMIN
+  steps:
+  - slug: audit-role-hierarchy
+    title: Audit Role Hierarchy
+  - slug: audit-privilege-grants
+    title: Audit Privilege Grants
+  - slug: audit-stale-access
+    title: Audit Stale Access
+- slug: privilege-hardening
+  title: Privilege Hardening
+  summary: 'Tighten access controls based on RBAC Assessment findings by revoking
+
+    unnecessary PUBLIC grants, restricting ACCOUNTADMIN to break-glass users,
+
+    eliminating direct user-level privileges, and enforcing managed access schemas.
+
+    '
+  external_requirements:
+  - Task 1 (RBAC Assessment) completed and findings reviewed
+  - Agreement on which PUBLIC grants to revoke (exceptions documented)
+  - Agreement on authorized ACCOUNTADMIN users (break-glass list)
+  - Understanding of which users have direct privileges that need migration
+  personas:
+  - Security Administrator
+  - Platform Administrator
+  role_requirements:
+  - SECURITYADMIN
+  - ACCOUNTADMIN
+  steps:
+  - slug: restrict-public-role
+    title: Restrict PUBLIC Role Grants
+  - slug: enforce-admin-separation
+    title: Enforce Admin Separation of Duties
+  - slug: revoke-direct-user-privileges
+    title: Revoke Direct User Privileges
+  - slug: enforce-managed-access-schemas
+    title: Enforce Managed Access Schemas
+- slug: user-service-account-provisioning
+  title: User & Service Account Provisioning
+  summary: 'Bridge the gap between role creation and actual usage by assigning end
+    users
+
+    to data product functional roles and provisioning dedicated service account
+
+    users with least-privilege roles, key-pair authentication, and warehouse
+
+    restrictions.
+
+    '
+  external_requirements:
+  - Data Product Setup completed (functional roles exist)
+  - User roster with required access levels documented
+  - Service account requirements documented (name, purpose, access level)
+  - SCIM prefix configured (if using SCIM for role assignment)
+  personas:
+  - Security Administrator
+  - Identity Team
+  - Data Product Owner
+  role_requirements:
+  - USERADMIN
+  - SECURITYADMIN
+  steps:
+  - slug: assign-functional-roles
+    title: Assign Functional Roles to Users
+  - slug: provision-service-accounts
+    title: Provision Service Accounts
+- slug: monitoring-compliance
+  title: Monitoring & Compliance
+  summary: 'Establish ongoing RBAC monitoring by creating governance views for access
+
+    review, configuring Snowflake alerts on suspicious privilege changes, and
+
+    generating documentation for periodic compliance reviews.
+
+    '
+  external_requirements:
+  - Platform Infrastructure Database and Governance schema exist (from Platform Foundation
+    Setup)
+  - SNOWFLAKE database IMPORTED PRIVILEGES granted
+  - Notification integration configured (for alerts)
+  - Warehouse available for alert execution
+  personas:
+  - Security Administrator
+  - Compliance Team
+  - Platform Administrator
+  role_requirements:
+  - SYSADMIN
+  - ACCOUNTADMIN
+  steps:
+  - slug: create-rbac-monitoring-views
+    title: Create RBAC Monitoring Views
+  - slug: configure-privilege-change-alerts
+    title: Configure Privilege Change Alerts
+  - slug: generate-access-review-report
+    title: Generate Access Review Report

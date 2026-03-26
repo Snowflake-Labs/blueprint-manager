@@ -1,0 +1,42 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# Assign Functional Roles
+
+## User Role Assignments
+
+The following users will be assigned to functional roles:
+
+| # | User | Role Level | Data Product | Resulting Role |
+|---|------|-----------|--------------|----------------|
+{%- for assignment in rbac_user_role_assignments %}
+| {{ loop.index }} | `{{ assignment.user_name | upper }}` | {{ assignment.role_level | upper }} | {{ assignment.data_product_prefix | upper }} | `{{ assignment.data_product_prefix | upper }}_{{ assignment.role_level | upper }}` |
+{%- endfor %}
+
+## Actions Generated
+
+| # | Action | Count |
+|---|--------|-------|
+| 1 | GRANT ROLE statements | {{ rbac_user_role_assignments | length }} |
+| 2 | Verification queries | 1 per user |
+
+## Role Hierarchy Reference
+
+Each role level inherits from the level below:
+
+```
+ADMIN → CREATE → WRITE → READ
+                            ↑
+RBAC ────────────────────────┘ (separate branch)
+```
+
+Granting a user `WRITE` also provides `READ` access automatically.
+
+## Verification
+
+After applying grants, run the verification query to confirm:
+- Each user has their assigned role
+- No users have roles above their authorized level
+- Inherited roles are visible in the hierarchy
+
+## Next Steps
+
+- Proceed to **Step 3.2: Provision Service Accounts**

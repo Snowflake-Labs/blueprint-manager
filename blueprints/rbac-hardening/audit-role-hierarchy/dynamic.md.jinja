@@ -1,0 +1,56 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# Role Hierarchy Audit
+
+## Audit Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Audit Scope** | {{ rbac_audit_scope }} |
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+| **Target Prefixes** | {{ rbac_target_prefixes | join(', ') }} |
+{%- endif %}
+| **Required Role** | ACCOUNTADMIN |
+
+## Queries Generated
+
+| # | Query | Purpose |
+|---|-------|---------|
+| 1 | Complete Role Hierarchy | Recursive tree of all role-to-role grants |
+| 2 | Orphaned Roles | Roles not granted to any parent (unreachable) |
+| 3 | Excessive Depth | Roles with hierarchy depth > 5 levels |
+| 4 | Role Grant Summary | Aggregate health statistics |
+
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+
+## Scoped Prefixes
+
+The audit queries are filtered to roles matching these data product prefixes:
+
+{%- for prefix in rbac_target_prefixes %}
+- `{{ prefix | upper }}`
+{%- endfor %}
+
+> **Note:** System roles (SYSADMIN, SECURITYADMIN, ACCOUNTADMIN, USERADMIN) are always included as hierarchy anchors.
+{%- else %}
+
+## Full Account Scope
+
+All roles in the account are included in the audit. This provides the most complete picture but may produce a large number of results on accounts with many data products.
+{%- endif %}
+
+## What to Look For
+
+### Orphaned Roles
+Roles with no parent grant are unreachable from the standard hierarchy. Common causes:
+- Data Product Setup was interrupted before wiring the hierarchy
+- Roles created manually outside of the blueprint process
+- Roles left over from deleted data products
+
+### Excessive Depth
+Hierarchies deeper than 5 levels make it difficult to reason about effective privileges. The standard Data Product Setup hierarchy is 4 levels deep: READ → WRITE → CREATE → ADMIN → SYSADMIN.
+
+## Next Steps
+
+After reviewing findings:
+- Wire orphaned roles into the hierarchy or drop them (Task 2)
+- Proceed to **Step 1.2: Audit Privilege Grants** for grant-level analysis

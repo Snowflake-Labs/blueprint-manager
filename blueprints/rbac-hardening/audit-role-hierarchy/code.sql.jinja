@@ -1,0 +1,178 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- AUDIT ROLE HIERARCHY
+-- ============================================================================
+-- Audit Scope: {{ rbac_audit_scope }}
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+-- Target Prefixes: {{ rbac_target_prefixes | join(', ') }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: ACCOUNTADMIN (for Account Usage views)
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: COMPLETE ROLE HIERARCHY
+-- ============================================================================
+-- Recursive query showing the full role-to-role grant tree.
+-- Each row represents a parent-child relationship between roles.
+
+WITH RECURSIVE role_hierarchy AS (
+  -- Base: all direct role-to-role grants
+  SELECT
+    name AS child_role,
+    grantee_name AS parent_role,
+    1 AS depth
+  FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+  WHERE granted_on = 'ROLE'
+    AND privilege = 'USAGE'
+    AND deleted_on IS NULL
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+    AND (
+{%- for prefix in rbac_target_prefixes %}
+      name LIKE '{{ prefix | upper }}%' OR grantee_name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+      OR grantee_name IN ('SYSADMIN', 'SECURITYADMIN', 'ACCOUNTADMIN', 'USERADMIN')
+    )
+{%- endif %}
+
+  UNION ALL
+
+  -- Recursive: walk up the tree
+  SELECT
+    rh.child_role,
+    g.grantee_name AS parent_role,
+    rh.depth + 1
+  FROM role_hierarchy rh
+  JOIN SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES g
+    ON g.name = rh.parent_role
+    AND g.granted_on = 'ROLE'
+    AND g.privilege = 'USAGE'
+    AND g.deleted_on IS NULL
+  WHERE rh.depth < 10
+)
+SELECT
+  child_role,
+  parent_role,
+  depth
+FROM role_hierarchy
+ORDER BY depth, parent_role, child_role;
+
+-- ============================================================================
+-- STEP 2: ORPHANED ROLES
+-- ============================================================================
+-- Find roles that are not granted to any parent role.
+-- These roles are unreachable from the standard hierarchy and may indicate
+-- incomplete setup or manual role creation.
+
+SELECT r.name AS orphaned_role,
+       r.created_on,
+       r.owner,
+       r.comment
+FROM SNOWFLAKE.ACCOUNT_USAGE.ROLES r
+WHERE r.deleted_on IS NULL
+  AND r.name NOT IN ('ACCOUNTADMIN', 'SECURITYADMIN', 'SYSADMIN', 'USERADMIN', 'PUBLIC', 'ORGADMIN')
+  AND r.name NOT IN (
+    SELECT DISTINCT name
+    FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+    WHERE granted_on = 'ROLE'
+      AND privilege = 'USAGE'
+      AND deleted_on IS NULL
+  )
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    r.name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+ORDER BY r.created_on DESC;
+
+-- ============================================================================
+-- STEP 3: EXCESSIVE HIERARCHY DEPTH
+-- ============================================================================
+-- Find roles with hierarchy depth greater than 5 levels.
+-- Deep hierarchies are harder to audit and may indicate design issues.
+
+WITH RECURSIVE role_depth AS (
+  SELECT
+    name AS role_name,
+    grantee_name AS parent_role,
+    1 AS depth
+  FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+  WHERE granted_on = 'ROLE'
+    AND privilege = 'USAGE'
+    AND deleted_on IS NULL
+
+  UNION ALL
+
+  SELECT
+    rd.role_name,
+    g.grantee_name AS parent_role,
+    rd.depth + 1
+  FROM role_depth rd
+  JOIN SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES g
+    ON g.name = rd.parent_role
+    AND g.granted_on = 'ROLE'
+    AND g.privilege = 'USAGE'
+    AND g.deleted_on IS NULL
+  WHERE rd.depth < 15
+)
+SELECT
+  role_name,
+  MAX(depth) AS max_depth
+FROM role_depth
+GROUP BY role_name
+HAVING MAX(depth) > 5
+ORDER BY max_depth DESC;
+
+-- ============================================================================
+-- STEP 4: ROLE GRANT SUMMARY
+-- ============================================================================
+-- Overview of role hierarchy health: total roles, orphaned count, max depth.
+
+SELECT
+  (SELECT COUNT(*) FROM SNOWFLAKE.ACCOUNT_USAGE.ROLES WHERE deleted_on IS NULL) AS total_roles,
+  (SELECT COUNT(*) FROM SNOWFLAKE.ACCOUNT_USAGE.ROLES r
+   WHERE r.deleted_on IS NULL
+     AND r.name NOT IN ('ACCOUNTADMIN','SECURITYADMIN','SYSADMIN','USERADMIN','PUBLIC','ORGADMIN')
+     AND r.name NOT IN (
+       SELECT DISTINCT name FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+       WHERE granted_on = 'ROLE' AND privilege = 'USAGE' AND deleted_on IS NULL
+     )
+  ) AS orphaned_roles;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Confirm Account Usage access is working
+SELECT COUNT(*) AS grant_records
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE deleted_on IS NULL;
+
+/*
+ROLE HIERARCHY AUDIT COMPLETE
+==============================
+
+Queries generated:
+1. Complete role hierarchy tree (recursive)
+2. Orphaned roles (no parent grant)
+3. Excessive hierarchy depth (>5 levels)
+4. Role grant summary statistics
+
+Audit Scope: {{ rbac_audit_scope }}
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+Target Prefixes:
+{%- for prefix in rbac_target_prefixes %}
+  - {{ prefix | upper }}
+{%- endfor %}
+{%- endif %}
+
+NEXT STEPS:
+- Review orphaned roles and wire them into the hierarchy or drop them
+- Investigate any roles with depth > 5
+- Proceed to Step 1.2: Audit Privilege Grants
+*/

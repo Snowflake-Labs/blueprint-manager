@@ -1,0 +1,128 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- REVOKE DIRECT USER PRIVILEGES
+-- ============================================================================
+-- Audit Scope: {{ rbac_audit_scope }}
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+-- Target Prefixes: {{ rbac_target_prefixes | join(', ') }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: SECURITYADMIN
+-- ============================================================================
+
+USE ROLE SECURITYADMIN;
+
+-- ============================================================================
+-- STEP 1: DISCOVER DIRECT USER GRANTS
+-- ============================================================================
+-- Find all object-level privileges granted directly to users.
+-- These should be migrated to roles.
+
+SELECT
+  grantee_name AS user_name,
+  privilege,
+  granted_on AS object_type,
+  name AS object_name,
+  granted_by,
+  created_on
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE deleted_on IS NULL
+  AND granted_on NOT IN ('ROLE')  -- Exclude role grants (those are role assignments)
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+ORDER BY grantee_name, granted_on, name;
+
+-- ============================================================================
+-- STEP 2: GENERATE REVOKE STATEMENTS
+-- ============================================================================
+-- This query generates REVOKE statements for each direct user grant found.
+-- IMPORTANT: Review each statement before executing.
+-- Ensure the user has an equivalent role-based grant before revoking.
+
+SELECT
+  'REVOKE ' || privilege || ' ON ' || granted_on || ' ' || name
+    || ' FROM USER ' || grantee_name || ';' AS revoke_statement,
+  grantee_name AS user_name,
+  privilege,
+  granted_on AS object_type,
+  name AS object_name,
+  '-- Migrate to: GRANT ROLE <appropriate_role> TO USER '
+    || grantee_name || ';' AS migration_note
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE deleted_on IS NULL
+  AND granted_on NOT IN ('ROLE')
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+ORDER BY grantee_name, granted_on, name;
+
+-- ============================================================================
+-- STEP 3: DIRECT GRANT SUMMARY
+-- ============================================================================
+-- Count of direct user grants by type for prioritization.
+
+SELECT
+  granted_on AS object_type,
+  privilege,
+  COUNT(DISTINCT grantee_name) AS affected_users,
+  COUNT(*) AS total_grants
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE deleted_on IS NULL
+  AND granted_on NOT IN ('ROLE')
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+GROUP BY granted_on, privilege
+ORDER BY total_grants DESC;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- After executing REVOKE statements, re-run the discovery query.
+-- Expected result: zero rows.
+
+SELECT COUNT(*) AS remaining_direct_grants
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE deleted_on IS NULL
+  AND granted_on NOT IN ('ROLE');
+
+/*
+DIRECT USER PRIVILEGE REVOCATION
+==================================
+
+Queries generated:
+1. Discovery: all direct user grants (excluding role assignments)
+2. REVOKE statement generator (review before executing)
+3. Summary by object type and privilege
+
+IMPORTANT:
+- Run discovery (Step 1) first
+- For each direct grant, identify the correct functional role
+- Verify the role has equivalent privileges
+- Execute REVOKE statements only after confirming role coverage
+
+Migration pattern:
+  1. GRANT ROLE <prefix>_READ TO USER <user>;     -- For SELECT grants
+  2. GRANT ROLE <prefix>_WRITE TO USER <user>;    -- For INSERT/UPDATE/DELETE
+  3. GRANT ROLE <prefix>_CREATE TO USER <user>;   -- For CREATE privileges
+  4. REVOKE <privilege> ON <object> FROM USER <user>;
+
+NEXT STEPS:
+- Execute migration for each direct user grant
+- Proceed to Step 2.4: Enforce Managed Access Schemas
+*/

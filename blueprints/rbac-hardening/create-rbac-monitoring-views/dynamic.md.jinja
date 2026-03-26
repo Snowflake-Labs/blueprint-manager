@@ -1,0 +1,46 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# RBAC Monitoring Views
+
+## Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Monitoring Warehouse** | `{{ rbac_monitoring_warehouse | upper }}` |
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+| **Scope** | Specific Data Products |
+| **Target Prefixes** | {{ rbac_target_prefixes | join(', ') }} |
+{%- else %}
+| **Scope** | Full Account |
+{%- endif %}
+
+## Views Created
+
+All views are created in `RBAC_MONITORING.VIEWS`:
+
+| # | View | Purpose |
+|---|------|---------|
+| 1 | `V_ROLE_MEMBERSHIP` | Current role assignments for all users |
+| 2 | `V_PRIVILEGE_CHANGES` | Grant and revoke history over time |
+| 3 | `V_DIRECT_USER_GRANTS` | Direct user grants (RBAC bypasses — should be empty) |
+| 4 | `V_ROLE_HIERARCHY_DEPTH` | Role chain depth with health status |
+| 5 | `V_USER_ACTIVITY` | User login activity and dormancy detection |
+
+## Health Checks
+
+After creating the views, verify these health indicators:
+
+| View | Healthy State |
+|------|--------------|
+| V_DIRECT_USER_GRANTS | **Zero rows** |
+| V_ROLE_HIERARCHY_DEPTH | All roles at **HEALTHY** (depth ≤ 4) |
+| V_USER_ACTIVITY | No **DORMANT** users with active roles |
+
+## Access
+
+- Views are readable by SECURITYADMIN
+- Monitoring queries use warehouse `{{ rbac_monitoring_warehouse | upper }}`
+
+## Next Steps
+
+- Query the views to verify RBAC health
+- Proceed to **Step 4.2: Configure Privilege Change Alerts**

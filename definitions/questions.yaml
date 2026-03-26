@@ -4253,3 +4253,427 @@
 
     **More Information:**
     * [SQL_TRACE_QUERY_TEXT Parameter](https://docs.snowflake.com/en/sql-reference/parameters#sql-trace-query-text)
+
+# ============================================================================
+# RBAC Hardening Questions
+# Author: Richie Bachala (richie.bachala@snowflake.com)
+# ============================================================================
+
+- answer_title: rbac_audit_scope
+  question_text: What scope should the RBAC audit cover?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+    - text: Full Account
+    - text: Specific Data Products
+  guidance: |
+    **What is this asking?**
+    Choose whether to audit role-based access controls across the entire Snowflake
+    account or limit the audit to specific data product role hierarchies.
+
+    **Why does this matter?**
+    A full account audit examines every role, grant, and user assignment in the
+    account. This is thorough but may produce a large volume of findings. Scoping
+    to specific data products focuses the audit on the role hierarchies created by
+    Data Product Setup (ADMIN, CREATE, WRITE, RBAC, READ and their database roles).
+
+    **Options explained:**
+    - **Full Account**: Audit all roles, grants, and user assignments. Recommended
+      for initial hardening or compliance reviews.
+    - **Specific Data Products**: Audit only the role hierarchies matching the
+      provided data product prefixes. Useful for targeted reviews after changes.
+
+    **Recommendation:** Use "Full Account" for your first RBAC hardening pass,
+    then switch to "Specific Data Products" for periodic maintenance reviews.
+
+    **More Information:**
+    * [Access Control Overview](https://docs.snowflake.com/en/user-guide/security-access-control-overview)
+
+- answer_title: rbac_target_prefixes
+  question_text: Which data product prefixes should the RBAC audit cover?
+  answer_type: list
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    Provide the role name prefixes for the data products you want to audit. These
+    are the prefixes used when creating data product roles (e.g., SALES_ANALYTICS_PROD,
+    FINANCE_REPORTING_DEV).
+
+    **Why does this matter?**
+    When the audit scope is set to "Specific Data Products", these prefixes filter
+    the audit queries to only examine roles matching these patterns. This keeps
+    findings focused and actionable.
+
+    **How to find your prefixes:**
+    Run `SHOW ROLES LIKE '%_ADMIN';` and look for your data product ADMIN roles.
+    The prefix is everything before `_ADMIN`.
+
+    **Examples:**
+    - `SALES_ANALYTICS_PROD` (Single Account: domain_name_env)
+    - `FINANCE_REPORTING` (Multi-Account Environment-based: domain_name)
+    - `CLAIMS_DEV` (Multi-Account Domain-based: name_env)
+    - `INVENTORY` (Multi-Account Domain+Env: name)
+
+    **Recommendation:** Include all data products that were set up using the
+    Data Product Setup blueprint.
+
+- answer_title: rbac_restrict_public
+  question_text: Do you want to revoke unnecessary grants from the PUBLIC role?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+    - text: 'Yes'
+    - text: 'No'
+  guidance: |
+    **What is this asking?**
+    Choose whether to generate REVOKE statements that remove unnecessary privileges
+    from the PUBLIC role. The PUBLIC role is automatically granted to every user in
+    the account.
+
+    **Why does this matter?**
+    Any privilege granted to PUBLIC is effectively granted to every user. This is
+    one of the most common RBAC misconfigurations. Common issues include:
+    - Warehouse USAGE on PUBLIC (all users can consume compute)
+    - Database/schema USAGE on PUBLIC (all users can see object metadata)
+    - SELECT on tables/views via PUBLIC (data exposed to everyone)
+
+    **Options explained:**
+    - **Yes**: Generate REVOKE statements for PUBLIC role grants (with exceptions
+      you configure). Review the generated SQL carefully before executing.
+    - **No**: Skip PUBLIC role restriction. Choose this if your PUBLIC grants
+      are intentional and reviewed.
+
+    **Recommendation:** Yes. Even if some PUBLIC grants are intentional, this step
+    helps you review and confirm each one explicitly.
+
+    **More Information:**
+    * [PUBLIC Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#public-role)
+
+- answer_title: rbac_public_exceptions
+  question_text: Which databases or schemas should remain accessible via the PUBLIC role?
+  answer_type: list
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    List any databases or schemas that should keep their PUBLIC role grants.
+    These are excluded from the REVOKE statements generated in the
+    "Restrict PUBLIC Role" step.
+
+    **Why does this matter?**
+    Some PUBLIC grants are intentional — for example, a shared reference database
+    that all users need to query, or the SNOWFLAKE_SAMPLE_DATA database. Listing
+    exceptions prevents accidentally revoking access that is by design.
+
+    **Examples:**
+    - `SNOWFLAKE_SAMPLE_DATA` — Sample data database
+    - `REFERENCE_DATA` — Shared lookup tables
+    - `UTIL_DB.PUBLIC` — Shared utility functions
+
+    **Recommendation:** Keep exceptions to a minimum. Each exception is a surface
+    area that all users can access. Document the business reason for each exception.
+
+- answer_title: rbac_accountadmin_users
+  question_text: Which users should retain ACCOUNTADMIN access (break-glass only)?
+  answer_type: list
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    List the login names of users who are authorized to hold the ACCOUNTADMIN role.
+    All other users will have ACCOUNTADMIN revoked.
+
+    **Why does this matter?**
+    ACCOUNTADMIN is the most powerful role in a Snowflake account. It can:
+    - Create and drop any object
+    - Grant any privilege
+    - Manage billing and resource monitors
+    - Access all data
+
+    Best practice is to restrict ACCOUNTADMIN to 2-3 break-glass users and require
+    all other administration through SECURITYADMIN, SYSADMIN, or USERADMIN.
+
+    **Examples:**
+    - `BREAK_GLASS_USER_1`
+    - `BREAK_GLASS_USER_2`
+    - `PLATFORM_ADMIN`
+
+    **Recommendation:** Limit to 2-3 users maximum. These should be emergency
+    access accounts, not daily-use accounts. Ensure MFA is enabled for all
+    ACCOUNTADMIN users.
+
+    **More Information:**
+    * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#accountadmin-role)
+
+- answer_title: rbac_enforce_managed_access
+  question_text: Do you want to convert existing schemas to managed access?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+    - text: 'Yes'
+    - text: 'No'
+  guidance: |
+    **What is this asking?**
+    Choose whether to generate ALTER SCHEMA statements that enable WITH MANAGED ACCESS
+    on existing schemas.
+
+    **Why does this matter?**
+    In a standard schema, the object owner can grant privileges on their objects to
+    any role. This creates "shadow security" where access is granted outside of
+    centralized control. Managed access schemas restrict grant authority to the
+    schema owner and SECURITYADMIN, ensuring all access goes through the approved
+    RBAC hierarchy.
+
+    **Options explained:**
+    - **Yes**: Generate ALTER SCHEMA ... ENABLE MANAGED ACCESS for all schemas
+      (excluding INFORMATION_SCHEMA and system schemas).
+    - **No**: Skip managed access enforcement. Choose this if your schemas already
+      use managed access or if object owners intentionally manage their own grants.
+
+    **Recommendation:** Yes. Managed access is a Snowflake best practice for
+    production environments. It ensures the RBAC hierarchy defined in Data Product
+    Setup is the only path to data access.
+
+    **More Information:**
+    * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)
+    * [ALTER SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/alter-schema)
+
+- answer_title: rbac_user_role_assignments
+  question_text: Which users should be assigned to data product functional roles?
+  answer_type: object-list
+  is_org_scope: false
+  object_name: User Role Assignment
+  keys:
+    - user_name
+    - role_level
+    - data_product_prefix
+  guidance: |
+    **What is this asking?**
+    Define which end users should be granted which data product functional roles.
+    For each assignment, specify the user's login name, the data product role prefix,
+    and the access level (READ, WRITE, CREATE, or ADMIN).
+
+    **Why does this matter?**
+    Data Product Setup creates the role hierarchy (ADMIN, CREATE, WRITE, READ) but
+    does not assign any end users. Without this step, the roles exist but nobody
+    can use them. This is the bridge between infrastructure and actual access.
+
+    **Fields:**
+    - **user_name**: The Snowflake login name of the user
+    - **role_level**: One of READ, WRITE, CREATE, or ADMIN
+    - **data_product_prefix**: The role prefix (e.g., SALES_ANALYTICS_PROD)
+
+    **Access Level Guide:**
+    | Level | Can Do | Typical Users |
+    |-------|--------|---------------|
+    | READ | Query all data in the data product | Analysts, BI tools, data consumers |
+    | WRITE | READ + insert/update/delete data | Data engineers, ETL processes |
+    | CREATE | WRITE + create objects, apply policies | Senior engineers, data architects |
+    | ADMIN | CREATE + own infrastructure, manage RBAC | Data product owners, platform team |
+
+    **Examples:**
+    ```yaml
+    - user_name: JSMITH
+      role_level: READ
+      data_product_prefix: SALES_ANALYTICS_PROD
+    - user_name: JDOE
+      role_level: WRITE
+      data_product_prefix: SALES_ANALYTICS_PROD
+    ```
+
+    **Recommendation:** Follow the principle of least privilege — assign the
+    minimum access level each user needs. Most users should be READ; ADMIN should
+    be limited to 1-2 data product owners.
+
+    **More Information:**
+    * [GRANT ROLE](https://docs.snowflake.com/en/sql-reference/sql/grant-role)
+
+- answer_title: rbac_service_accounts
+  question_text: What service accounts need to be provisioned?
+  answer_type: object-list
+  is_org_scope: false
+  object_name: Service Account
+  keys:
+    - account_name
+    - purpose
+    - role_level
+    - data_product_prefix
+    - warehouse
+  guidance: |
+    **What is this asking?**
+    Define service accounts (non-human users) that need Snowflake access for
+    automated workloads like ETL pipelines, BI tool connections, or application
+    integrations.
+
+    **Why does this matter?**
+    Service accounts should:
+    - Have dedicated users (not shared human accounts)
+    - Use key-pair authentication (not passwords)
+    - Be granted the minimum required functional role
+    - Be restricted to specific warehouses
+    - Have descriptive names for auditability
+
+    **Fields:**
+    - **account_name**: Service account user name (e.g., SVC_AIRFLOW_SALES)
+    - **purpose**: Brief description of what this account does
+    - **role_level**: One of READ, WRITE, CREATE (avoid ADMIN for service accounts)
+    - **data_product_prefix**: The data product role prefix for access
+    - **warehouse**: The warehouse this account should use
+
+    **Naming Convention:**
+    Use `SVC_<TOOL>_<DATAPRODUCT>` format:
+    - `SVC_AIRFLOW_SALES` — Airflow pipeline for sales data product
+    - `SVC_DBT_FINANCE` — dbt transformations for finance
+    - `SVC_TABLEAU_ANALYTICS` — Tableau reporting connection
+
+    **Examples:**
+    ```yaml
+    - account_name: SVC_AIRFLOW_SALES
+      purpose: Airflow ETL pipeline for sales ingestion
+      role_level: WRITE
+      data_product_prefix: SALES_ANALYTICS_PROD
+      warehouse: SALES_ANALYTICS_PROD_WH_INGEST
+    - account_name: SVC_TABLEAU_SALES
+      purpose: Tableau reporting dashboard connection
+      role_level: READ
+      data_product_prefix: SALES_ANALYTICS_PROD
+      warehouse: SALES_ANALYTICS_PROD_WH_BI
+    ```
+
+    **Recommendation:** Every automated process should have its own service account.
+    Never share service accounts across tools or data products. Use WRITE level for
+    ETL tools and READ level for BI/reporting tools.
+
+    **More Information:**
+    * [Key Pair Authentication](https://docs.snowflake.com/en/user-guide/key-pair-auth)
+    * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)
+
+- answer_title: rbac_monitoring_warehouse
+  question_text: Which warehouse should be used for RBAC monitoring tasks and alerts?
+  answer_type: text
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    Specify the warehouse that will execute RBAC monitoring queries and alert
+    checks. This warehouse runs the scheduled monitoring views and alert
+    conditions.
+
+    **Why does this matter?**
+    RBAC monitoring queries run against Account Usage views and can be
+    resource-intensive on large accounts. Using a dedicated or shared platform
+    warehouse keeps monitoring costs separate from data product workloads.
+
+    **Examples:**
+    - `PLAT_INFRA_WH_ADMIN` — Platform administration warehouse
+    - `MONITORING_WH` — Dedicated monitoring warehouse
+    - `COMPUTE_WH` — General-purpose warehouse (for smaller accounts)
+
+    **Recommendation:** Use your platform administration warehouse if one exists.
+    For cost efficiency, an X-Small warehouse with AUTO_SUSPEND = 60 is sufficient
+    for monitoring workloads.
+
+    **More Information:**
+    * [CREATE WAREHOUSE](https://docs.snowflake.com/en/sql-reference/sql/create-warehouse)
+
+- answer_title: rbac_enable_alerts
+  question_text: Do you want to configure alerts for privilege changes?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+    - text: 'Yes'
+    - text: 'No'
+  guidance: |
+    **What is this asking?**
+    Choose whether to create Snowflake alerts that monitor for suspicious
+    GRANT and REVOKE activity and notify your security team.
+
+    **Why does this matter?**
+    Privilege escalation is a common attack vector. Alerts can detect:
+    - New ACCOUNTADMIN grants
+    - Grants to/from PUBLIC role
+    - Bulk privilege changes (potential automation errors)
+    - Role hierarchy modifications
+
+    **Options explained:**
+    - **Yes**: Create alerts that check Account Usage views on a schedule
+      and send notifications via your configured integration.
+    - **No**: Skip alert creation. Choose this if you use external SIEM
+      tools for Snowflake monitoring.
+
+    **Prerequisites for Yes:**
+    - A notification integration must exist (email, Slack, webhook, etc.)
+    - A warehouse must be available for alert execution
+
+    **Recommendation:** Yes, unless you already have external monitoring
+    (e.g., Splunk, Datadog) consuming Snowflake audit logs.
+
+    **More Information:**
+    * [Snowflake Alerts](https://docs.snowflake.com/en/user-guide/alerts)
+    * [Notification Integrations](https://docs.snowflake.com/en/sql-reference/sql/create-notification-integration)
+
+- answer_title: rbac_alert_notification_integration
+  question_text: What is the name of the notification integration for RBAC alerts?
+  answer_type: text
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    Provide the name of an existing Snowflake notification integration that
+    will receive RBAC alert notifications.
+
+    **Why does this matter?**
+    Snowflake alerts use notification integrations to deliver messages when
+    alert conditions are met. The integration must already exist before
+    creating alerts.
+
+    **How to find your integration:**
+    Run `SHOW NOTIFICATION INTEGRATIONS;` to list available integrations.
+
+    **Examples:**
+    - `EMAIL_NOTIFICATION` — Email-based alerts
+    - `SLACK_SECURITY_ALERTS` — Slack channel integration
+    - `PAGERDUTY_INTEGRATION` — PagerDuty for on-call alerts
+
+    **If no integration exists:**
+    Create one before running this blueprint:
+    ```sql
+    CREATE NOTIFICATION INTEGRATION my_email_int
+      TYPE = EMAIL
+      ENABLED = TRUE
+      ALLOWED_RECIPIENTS = ('security-team@company.com');
+    ```
+
+    **More Information:**
+    * [CREATE NOTIFICATION INTEGRATION](https://docs.snowflake.com/en/sql-reference/sql/create-notification-integration)
+
+- answer_title: rbac_review_frequency
+  question_text: How often should access reviews be conducted?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+    - text: Weekly
+    - text: Monthly
+    - text: Quarterly
+  guidance: |
+    **What is this asking?**
+    Select how frequently your organization should review RBAC configurations
+    and user access assignments.
+
+    **Why does this matter?**
+    Regular access reviews are a core requirement of most compliance frameworks
+    (SOC 2, HIPAA, PCI-DSS, SOX). The review frequency determines:
+    - How quickly stale access is detected
+    - How often compliance documentation is generated
+    - The cadence for the access review report
+
+    **Options explained:**
+    - **Weekly**: High-security environments or accounts with frequent user changes.
+      Generates a focused diff report each week.
+    - **Monthly**: Standard recommendation for most organizations. Balances
+      security with operational overhead.
+    - **Quarterly**: Minimum recommended frequency. Suitable for stable environments
+      with few access changes.
+
+    **Recommendation:** Monthly for production accounts. Weekly during initial
+    hardening or after organizational changes. Quarterly only for non-production
+    accounts with low change rates.
+
+    **More Information:**
+    * [SOC 2 Access Reviews](https://docs.snowflake.com/en/user-guide/security-access-control-overview)

@@ -1,0 +1,142 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- ENFORCE MANAGED ACCESS SCHEMAS
+-- ============================================================================
+-- Enforce Managed Access: {{ rbac_enforce_managed_access }}
+-- Audit Scope: {{ rbac_audit_scope }}
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+-- Target Prefixes: {{ rbac_target_prefixes | join(', ') }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: SECURITYADMIN
+-- ============================================================================
+
+{%- if rbac_enforce_managed_access == 'Yes' %}
+
+USE ROLE SECURITYADMIN;
+
+-- ============================================================================
+-- STEP 1: DISCOVER SCHEMAS WITHOUT MANAGED ACCESS
+-- ============================================================================
+-- Find all schemas that do not have Managed Access enabled.
+
+SELECT
+  catalog_name AS database_name,
+  schema_name,
+  schema_owner,
+  created,
+  last_altered,
+  'ALTER SCHEMA ' || catalog_name || '.' || schema_name
+    || ' ENABLE MANAGED ACCESS;' AS enable_statement
+FROM SNOWFLAKE.ACCOUNT_USAGE.SCHEMATA
+WHERE deleted IS NULL
+  AND schema_name NOT IN ('INFORMATION_SCHEMA')
+  AND catalog_name NOT IN ('SNOWFLAKE')
+  AND is_managed_access = 'NO'
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    catalog_name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+ORDER BY catalog_name, schema_name;
+
+-- ============================================================================
+-- STEP 2: ENABLE MANAGED ACCESS ON DISCOVERED SCHEMAS
+-- ============================================================================
+-- IMPORTANT: Review the discovery results before running these statements.
+-- Managed Access restricts who can GRANT on objects within the schema.
+
+-- Run the following generated statements from Step 1 output.
+-- Example (replace with actual values from Step 1):
+-- ALTER SCHEMA MY_DB.MY_SCHEMA ENABLE MANAGED ACCESS;
+
+-- ============================================================================
+-- STEP 3: VERIFY ALL TARGET SCHEMAS HAVE MANAGED ACCESS
+-- ============================================================================
+-- After enabling, re-run discovery. Expected: zero results.
+
+SELECT
+  catalog_name AS database_name,
+  schema_name,
+  schema_owner,
+  is_managed_access
+FROM SNOWFLAKE.ACCOUNT_USAGE.SCHEMATA
+WHERE deleted IS NULL
+  AND schema_name NOT IN ('INFORMATION_SCHEMA')
+  AND catalog_name NOT IN ('SNOWFLAKE')
+  AND is_managed_access = 'NO'
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    catalog_name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+ORDER BY catalog_name, schema_name;
+
+-- ============================================================================
+-- STEP 4: MANAGED ACCESS SUMMARY
+-- ============================================================================
+
+SELECT
+  is_managed_access,
+  COUNT(*) AS schema_count
+FROM SNOWFLAKE.ACCOUNT_USAGE.SCHEMATA
+WHERE deleted IS NULL
+  AND schema_name NOT IN ('INFORMATION_SCHEMA')
+  AND catalog_name NOT IN ('SNOWFLAKE')
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    catalog_name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+GROUP BY is_managed_access;
+
+{%- else %}
+
+-- ============================================================================
+-- MANAGED ACCESS ENFORCEMENT: SKIPPED
+-- ============================================================================
+-- rbac_enforce_managed_access is set to 'No'. No schemas will be modified.
+-- To enable this step, set rbac_enforce_managed_access to 'Yes'.
+
+-- Current managed access status (for reference):
+SELECT
+  catalog_name AS database_name,
+  schema_name,
+  is_managed_access
+FROM SNOWFLAKE.ACCOUNT_USAGE.SCHEMATA
+WHERE deleted IS NULL
+  AND schema_name NOT IN ('INFORMATION_SCHEMA')
+  AND catalog_name NOT IN ('SNOWFLAKE')
+ORDER BY catalog_name, schema_name;
+
+{%- endif %}
+
+/*
+MANAGED ACCESS ENFORCEMENT {{ 'COMPLETE' if rbac_enforce_managed_access == 'Yes' else 'SKIPPED' }}
+==========================================
+
+{%- if rbac_enforce_managed_access == 'Yes' %}
+Actions:
+1. Discovered schemas without Managed Access
+2. Generated ALTER SCHEMA ... ENABLE MANAGED ACCESS statements
+3. Verified all target schemas have Managed Access enabled
+
+After enabling Managed Access:
+- Object owners cannot GRANT on their objects
+- Only schema owner and SECURITYADMIN can manage grants
+- Existing grants remain in effect (no automatic revocation)
+{%- else %}
+No changes made. Schema access model is unchanged.
+{%- endif %}
+
+NEXT STEPS:
+- Run ALTER SCHEMA statements from Step 1 output
+- Proceed to Task 3: User & Service Account Provisioning
+*/

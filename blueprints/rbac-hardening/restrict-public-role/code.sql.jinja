@@ -1,0 +1,117 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- RESTRICT PUBLIC ROLE GRANTS
+-- ============================================================================
+-- Restrict PUBLIC: {{ rbac_restrict_public }}
+{%- if rbac_restrict_public == 'Yes' %}
+-- Exceptions: {{ rbac_public_exceptions | join(', ') }}
+{%- endif %}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: SECURITYADMIN
+-- ============================================================================
+
+{%- if rbac_restrict_public == 'Yes' %}
+
+USE ROLE SECURITYADMIN;
+
+-- ============================================================================
+-- STEP 1: DISCOVER CURRENT PUBLIC GRANTS
+-- ============================================================================
+-- Run this query first to review all current PUBLIC grants before revoking.
+
+SHOW GRANTS TO ROLE PUBLIC;
+
+-- ============================================================================
+-- STEP 2: REVOKE WAREHOUSE USAGE FROM PUBLIC
+-- ============================================================================
+-- This prevents all users from consuming compute by default.
+-- Users must be granted a role with warehouse access.
+
+REVOKE USAGE ON ALL WAREHOUSES IN ACCOUNT FROM ROLE PUBLIC;
+
+-- ============================================================================
+-- STEP 3: REVOKE DATABASE AND SCHEMA USAGE FROM PUBLIC
+-- ============================================================================
+-- Remove default visibility into database structures.
+-- NOTE: Review each database below. Exceptions are preserved.
+
+-- Discovery query: find all databases with grants to PUBLIC
+-- Use this to generate targeted REVOKE statements for your environment.
+SELECT
+  privilege,
+  granted_on AS object_type,
+  name AS object_name
+FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()))
+WHERE "privilege" != 'USAGE' OR "granted_on" != 'ROLE';
+
+-- Revoke all database-level grants from PUBLIC
+-- IMPORTANT: This is a broad revocation. Review the discovery query results
+-- and comment out any databases that should remain accessible.
+REVOKE USAGE ON ALL DATABASES IN ACCOUNT FROM ROLE PUBLIC;
+
+-- Exceptions: re-grant access for approved databases/schemas
+{%- for exception in rbac_public_exceptions %}
+-- Exception: {{ exception }}
+GRANT USAGE ON DATABASE {{ exception | upper }} TO ROLE PUBLIC;
+{%- endfor %}
+
+-- ============================================================================
+-- STEP 4: REVOKE FUNCTION AND PROCEDURE EXECUTION FROM PUBLIC
+-- ============================================================================
+-- Remove default ability to execute shared functions and procedures.
+
+-- Note: This requires iterating databases. Use the following pattern
+-- for each database in your account:
+-- REVOKE USAGE ON ALL FUNCTIONS IN DATABASE <db> FROM ROLE PUBLIC;
+-- REVOKE USAGE ON ALL PROCEDURES IN DATABASE <db> FROM ROLE PUBLIC;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Confirm PUBLIC grants have been reduced
+SHOW GRANTS TO ROLE PUBLIC;
+
+-- Count remaining grants
+SELECT COUNT(*) AS remaining_public_grants
+FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
+
+{%- else %}
+
+-- ============================================================================
+-- PUBLIC ROLE RESTRICTION: SKIPPED
+-- ============================================================================
+-- rbac_restrict_public is set to 'No'. No changes made to PUBLIC role grants.
+-- To enable this step, set rbac_restrict_public to 'Yes' in your answer file.
+
+-- Current PUBLIC grants (for reference):
+SHOW GRANTS TO ROLE PUBLIC;
+
+{%- endif %}
+
+/*
+PUBLIC ROLE RESTRICTION {{ 'COMPLETE' if rbac_restrict_public == 'Yes' else 'SKIPPED' }}
+========================================
+
+{%- if rbac_restrict_public == 'Yes' %}
+Actions taken:
+1. Revoked USAGE on all warehouses from PUBLIC
+2. Revoked USAGE on all databases from PUBLIC
+3. Re-granted exceptions:
+{%- for exception in rbac_public_exceptions %}
+   - {{ exception | upper }}
+{%- endfor %}
+{%- if rbac_public_exceptions | length == 0 %}
+   (none)
+{%- endif %}
+
+IMPORTANT: Test with a PUBLIC-only user to verify access is correctly restricted.
+{%- else %}
+No changes made. PUBLIC role grants are unchanged.
+{%- endif %}
+
+NEXT STEPS:
+- Verify restricted users can still access required resources
+- Proceed to Step 2.2: Enforce Admin Separation of Duties
+*/

@@ -1,0 +1,43 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# Admin Separation of Duties
+
+## Authorized ACCOUNTADMIN Users
+
+| # | Login Name | Status |
+|---|-----------|--------|
+{%- for user in rbac_accountadmin_users %}
+| {{ loop.index }} | `{{ user | upper }}` | Authorized (break-glass) |
+{%- endfor %}
+
+## System Role Assignments
+
+All authorized break-glass users will also receive:
+
+| Role | Purpose |
+|------|---------|
+| ACCOUNTADMIN | Emergency account administration |
+| SECURITYADMIN | Grant management (use instead of ACCOUNTADMIN) |
+| SYSADMIN | Object management (use instead of ACCOUNTADMIN) |
+
+## Actions Generated
+
+| # | Action | Details |
+|---|--------|---------|
+| 1 | Discover | Query current ACCOUNTADMIN holders |
+| 2 | Grant | Ensure authorized users have ACCOUNTADMIN |
+| 3 | Revoke | Generate REVOKE statements for unauthorized holders |
+| 4 | Support Roles | Grant SECURITYADMIN + SYSADMIN to authorized users |
+
+## Important Notes
+
+- REVOKE statements are generated as **output** (not auto-executed) to prevent accidental lockout
+- Review the Step 3 query output carefully before executing any REVOKE statements
+- Ensure at least one authorized user can access the account before revoking others
+- All authorized users should have MFA enabled
+
+## Next Steps
+
+After enforcing admin separation:
+- Execute the generated REVOKE statements
+- Configure ACCOUNTADMIN usage alerts (Task 4, Step 4.2)
+- Document break-glass procedures in your runbook
