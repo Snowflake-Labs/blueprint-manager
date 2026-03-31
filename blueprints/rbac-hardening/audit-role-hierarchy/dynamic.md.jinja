@@ -19,6 +19,8 @@
 | 2 | Orphaned Roles | Roles not granted to any parent (unreachable) |
 | 3 | Excessive Depth | Roles with hierarchy depth > 5 levels |
 | 4 | Role Grant Summary | Aggregate health statistics |
+| 5 | Ownership Concentration | Roles owning >10 objects (single point of failure risk) |
+| 6 | Ownership Without Parent | Roles that own objects but have no parent in the hierarchy |
 
 {%- if rbac_audit_scope == 'Specific Data Products' %}
 
@@ -48,6 +50,17 @@ Roles with no parent grant are unreachable from the standard hierarchy. Common c
 
 ### Excessive Depth
 Hierarchies deeper than 5 levels make it difficult to reason about effective privileges. The standard Data Product Setup hierarchy is 4 levels deep: READ → WRITE → CREATE → ADMIN → SYSADMIN.
+
+### Ownership Concentration
+Roles owning more than 10 objects are a single point of failure. If the role is accidentally dropped or misconfigured, all owned objects become inaccessible. Consider distributing ownership across schema-level or database-level roles to reduce blast radius.
+
+### Ownership Without Hierarchy Parent
+These roles own objects but sit outside the standard hierarchy — they have no parent role and are not reachable from SYSADMIN. This is a structural gap: ownership exists without accountability or a clear governance path. Common causes:
+- Roles created manually for one-off migrations or projects
+- Leftover roles from decommissioned data products
+- Service account roles granted object ownership directly
+
+Remediation: wire each role into the hierarchy (grant it to an appropriate parent), or transfer OWNERSHIP to a correctly-placed role and drop it.
 
 ## Next Steps
 

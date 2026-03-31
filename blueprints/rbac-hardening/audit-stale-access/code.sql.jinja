@@ -138,6 +138,32 @@ GROUP BY login_status
 ORDER BY user_count DESC;
 
 -- ============================================================================
+-- STEP 5: ROLE ACCUMULATION PER USER
+-- ============================================================================
+-- Find users who have been granted more than 10 roles.
+-- Over-provisioned users accumulate roles over time through project access,
+-- team changes, and one-off requests that never get cleaned up.
+
+SELECT
+  grantee_name AS user_name,
+  COUNT(*) AS role_count,
+  LISTAGG(name, ', ') WITHIN GROUP (ORDER BY name) AS granted_roles
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS
+WHERE granted_on = 'ROLE'
+  AND privilege = 'USAGE'
+  AND deleted_on IS NULL
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+GROUP BY grantee_name
+HAVING COUNT(*) > 10
+ORDER BY role_count DESC;
+
+-- ============================================================================
 -- VERIFICATION
 -- ============================================================================
 
@@ -158,6 +184,7 @@ Queries generated:
 2. Users who have never logged in but have role grants
 3. Unused roles (no direct user assignments)
 4. User access health summary by login activity bucket
+5. Role accumulation per user (>10 roles)
 
 Audit Scope: {{ rbac_audit_scope }}
 

@@ -19,6 +19,7 @@
 | 2 | Never Logged In | Users with grants who have never authenticated | High |
 | 3 | Unused Roles | Roles with no user assignments | Medium |
 | 4 | Health Summary | User activity buckets (Active/Stale/Dormant/Never) | Info |
+| 5 | Role Accumulation | Users with >10 active roles (over-provisioned) | Medium |
 
 ## Activity Thresholds
 
@@ -40,6 +41,12 @@
 1. Verify the role is not part of an active hierarchy (check Step 1.1 results)
 2. Confirm no automated processes depend on the role
 3. Drop the role: `DROP ROLE <role>;`
+
+### For Over-Provisioned Users (>10 Roles)
+Role accumulation happens gradually — project access, team changes, and one-off grants that never get revoked. For each user in the results:
+1. Review the full role list and identify roles that are no longer needed
+2. Revoke excess roles: `REVOKE ROLE <role> FROM USER <user>;`
+3. For users with functional roles from multiple data products, confirm each product access is still required
 
 ## Next Steps
 
