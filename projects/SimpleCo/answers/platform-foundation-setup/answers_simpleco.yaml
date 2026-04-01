@@ -48,11 +48,12 @@ domain_list:
 # -----------------------------------------------------------------------------
 identity_provider: None - Manual User Management
 human_auth_methods: Password with MFA
-service_auth_methods: Key Pair Only
+service_auth_methods:
+- Key Pair
 configure_saml: No - Configure SAML later
 
 # MFA Configuration
-mfa_method: Either TOTP or Passkey
+mfa_method: TOTP (Authenticator Apps)
 preferred_mfa_method: User's Choice
 mfa_enforcement_timeline: 14 Days - Allow two weeks for enrollment
 mfa_support_contact: it-support@simpleco.com
@@ -122,7 +123,7 @@ account_resource_monitor_action: Notify Only
 # Cost Management - Tags
 # -----------------------------------------------------------------------------
 enable_cost_tags: No
-additional_tag_dimensions: None
+additional_tag_dimensions: []
 require_cost_tags: No
 
 # -----------------------------------------------------------------------------

@@ -276,7 +276,7 @@ def detect_issues(answer_data: dict) -> list[tuple]:
         # 1. Known option text changes
         if key in VALUE_MIGRATIONS:
             mapping = VALUE_MIGRATIONS[key]
-            if value in mapping:
+            if isinstance(value, str) and value in mapping:
                 issues.append(
                     (key, value, mapping[value], "option text changed in latest schema")
                 )
