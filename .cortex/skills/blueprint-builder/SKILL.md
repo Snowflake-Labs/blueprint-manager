@@ -240,12 +240,23 @@ Invoke this skill when users:
 
 2. **⚠️ MANDATORY STOPPING POINT**: Wait for user to select a file.
 
-3. **Load selected answer file:**
-   - Read the YAML file
-   - Parse existing answers
-   - Validate structure
+3. **Run the migration script** to ensure the file is compatible with the current schema before loading:
+   ```bash
+   .venv/bin/python scripts/migration/migrate_answers.py [selected_file_path] --dry-run
+   ```
+   - If the dry-run reports changes, apply them:
+     ```bash
+     .venv/bin/python scripts/migration/migrate_answers.py [selected_file_path]
+     ```
+   - If the script reports errors or the file cannot be parsed, direct the user to `scripts/TROUBLESHOOTING.md` for resolution before continuing.
+   - If no changes are needed, proceed immediately.
 
-4. **Present current state:**
+4. **Load selected answer file:**
+    - Read the YAML file
+    - Parse existing answers
+    - Validate structure
+
+5. **Present current state:**
    ```
    Loaded answer file: [file path]
    
@@ -1267,6 +1278,16 @@ enable_feature: 'Yes'  # Reasoning: user mentioned SOC2 compliance requirement
 Dynamically produce this at the initiation of the workflow based on the current state of the contents in the repository.
 
 ## Troubleshooting
+
+**Outdated answer file — invalid option values or type mismatches:**
+- This occurs when an answer file was created before the latest schema update, which changed 41 questions from `multi-select` to `single-select` and renamed options for `mfa_method`, `additional_tag_dimensions`, and `service_auth_methods`.
+- **Always run the migration script before loading an existing answer file** (see Step 3 above).
+- For a full explanation of what changed and manual fix instructions, refer the user to `scripts/TROUBLESHOOTING.md`.
+- To migrate all answer files in the project at once:
+  ```bash
+  .venv/bin/python scripts/migration/migrate_answers.py --all --dry-run
+  .venv/bin/python scripts/migration/migrate_answers.py --all
+  ```
 
 **User gives vague answers:**
 - Ask clarifying follow-up questions
