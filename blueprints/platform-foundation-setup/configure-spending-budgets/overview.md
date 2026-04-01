@@ -75,7 +75,7 @@ If you expect to use 1,000 credits/month, set budget to 1,200-1,300 credits.
 
 **Important:** This is for alerting purposes only. Snowflake will not automatically stop services when the budget is exceeded. Use Resource Monitors (Configure Resource Monitors step) for hard limits.
 
-#### At what percentage of your budget should alerts be triggered? (`budget_notification_threshold`: multi-select)
+#### At what percentage of your budget should alerts be triggered? (`budget_notification_threshold`: single-select)
 **What is this asking?**
 Select the percentage of your budget limit at which Snowflake will send notifications when *projected* spending exceeds this threshold.
 
@@ -107,7 +107,7 @@ The threshold determines how early you receive warnings. Lower thresholds give m
 - 100
 - 110
 
-#### How frequently should the budget check for updated spending? (`budget_refresh_interval`: multi-select)
+#### How frequently should the budget check for updated spending? (`budget_refresh_interval`: single-select)
 **What is this asking?**
 Choose how often the budget updates its spending data and performs forecasting.
 
@@ -151,7 +151,7 @@ Budget alerts need to reach people who can investigate and take action on spendi
 **Alternative notification methods:**
 This step configures email notifications, which is the simplest approach. If you need webhook notifications (Slack/Teams) or cloud service queues (SNS/Event Grid), see the "Upgrading to Webhook Notifications" section in the generated documentation.
 
-#### Do you want to set up spending budgets? (`enable_budgets`: multi-select)
+#### Do you want to set up spending budgets? (`enable_budgets`: single-select)
 **What is this asking?**
 Decide whether to use Snowflake's native budget feature for automated spending monitoring and alerts.
 

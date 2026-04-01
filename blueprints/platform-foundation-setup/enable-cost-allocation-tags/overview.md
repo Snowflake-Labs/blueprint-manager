@@ -85,7 +85,7 @@ It is significantly easier to implement tags when you first set up your environm
   * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)  
   * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
 
-#### Do you want to add additional cost allocation tags? (`enable_cost_tags`: multi-select)
+#### Do you want to add additional cost allocation tags? (`enable_cost_tags`: single-select)
 **What is this asking?** Decide whether you want to configure additional cost allocation tags beyond the core platform tags.  
 
   **Why does this matter?** Additional cost tags enable more granular cost tracking and can integrate with your organization's accounting systems.  

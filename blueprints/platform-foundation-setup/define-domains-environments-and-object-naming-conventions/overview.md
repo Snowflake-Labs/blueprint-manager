@@ -213,7 +213,7 @@ Depending on your account strategy, environments appear at either the account le
 **More Information:**  
 * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  
 
-#### What core component ordering will be used for account-level object names? (`object_component_order`: multi-select)
+#### What core component ordering will be used for account-level object names? (`object_component_order`: single-select)
 **Why Order Matters:**  
 Snowflake displays objects alphabetically. The component order determines how objects cluster together in Snowsight, BI tools, and queries.  
 
@@ -244,7 +244,7 @@ Snowflake displays objects alphabetically. The component order determines how ob
 - <domain>_<dataproduct>_<env>
 - <env>_<domain>_<dataproduct>
 
-#### What account strategy do you wish to implement? (`account_strategy`: multi-select)
+#### What account strategy do you wish to implement? (`account_strategy`: single-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  
   * Best for: Small to medium organizations, centralized teams, simpler governance  

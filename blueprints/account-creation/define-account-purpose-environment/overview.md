@@ -31,7 +31,7 @@ In this strategy, domains (Sales, Finance, HR) are NOT at the account level. The
 
 ### Configuration Questions
 
-#### Which environment will this account represent? (`account_environment`: multi-select)
+#### Which environment will this account represent? (`account_environment`: single-select)
 **What is this asking?**
 Select the SDLC environment this account will represent. This account will serve all domains (Sales, Finance, HR, etc.) for this environment.
 
@@ -63,7 +63,7 @@ A clear description helps team members understand the account's purpose at a gla
 - "Finance domain account for financial reporting and analytics"
 - "HR domain account for people analytics and workforce planning"
 
-#### What account strategy do you wish to implement? (`account_strategy`: multi-select)
+#### What account strategy do you wish to implement? (`account_strategy`: single-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  
   * Best for: Small to medium organizations, centralized teams, simpler governance  

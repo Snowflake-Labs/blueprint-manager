@@ -64,7 +64,7 @@ Based on your Platform Foundation settings, follow this pattern:
 **Best Practice:**
 Use the suggested name from the previous step unless you have a specific reason to customize it. Consistent naming makes governance and cost allocation easier.
 
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: single-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
 

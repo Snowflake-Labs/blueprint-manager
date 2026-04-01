@@ -147,7 +147,7 @@ Block rules take precedence over allow rules. This is useful for blocking specif
 **More Information:**
 * [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies)
 
-#### Should the network policy be applied at the account level? (`enable_account_network_policy`: multi-select)
+#### Should the network policy be applied at the account level? (`enable_account_network_policy`: single-select)
 **What is this asking?**
 Decide whether to apply the network policy to all users in the account by default, or only to specific users.
 
@@ -169,7 +169,7 @@ If you enable account-level policy without including all necessary IPs, you coul
 - Yes - Apply to all users by default
 - No - Apply only to specific users
 
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: single-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
 

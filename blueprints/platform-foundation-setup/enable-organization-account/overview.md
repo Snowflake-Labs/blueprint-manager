@@ -42,7 +42,7 @@ Your decision here determines where all subsequent configuration steps will be e
 
 ### Configuration Questions
 
-#### Do you want to create an Organization Account? (`enable_org_account`: multi-select)
+#### Do you want to create an Organization Account? (`enable_org_account`: single-select)
 The Organization Account is a special account that provides centralized management capabilities for your Snowflake environment.  
   
   **⚠️ Strong Recommendation: Create an Organization Account**  

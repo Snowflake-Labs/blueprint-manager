@@ -68,7 +68,7 @@ Beyond compliance, regular reviews catch:
 
 ### Configuration Questions
 
-#### How often should access reviews be conducted? (`rbac_review_frequency`: multi-select)
+#### How often should access reviews be conducted? (`rbac_review_frequency`: single-select)
 **What is this asking?**
 Select how frequently your organization should review RBAC configurations
 and user access assignments.
@@ -100,7 +100,7 @@ accounts with low change rates.
 - Monthly
 - Quarterly
 
-#### What scope should the RBAC audit cover? (`rbac_audit_scope`: multi-select)
+#### What scope should the RBAC audit cover? (`rbac_audit_scope`: single-select)
 **What is this asking?**
 Choose whether to audit role-based access controls across the entire Snowflake
 account or limit the audit to specific data product role hierarchies.

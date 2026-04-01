@@ -37,7 +37,7 @@ If you completed the Platform Foundation workflow, your account strategy was alr
 
 ### Configuration Questions
 
-#### What account strategy do you wish to implement? (`account_strategy`: multi-select)
+#### What account strategy do you wish to implement? (`account_strategy`: single-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  
   * Best for: Small to medium organizations, centralized teams, simpler governance  

@@ -36,7 +36,7 @@ Even when using organization configuration:
 
 ### Configuration Questions
 
-#### How would you like to configure security for this account? (`security_config_approach`: multi-select)
+#### How would you like to configure security for this account? (`security_config_approach`: single-select)
 **What is this asking?**
 Choose whether to replicate the Platform Foundation security settings or create custom settings for this account.
 
@@ -75,7 +75,7 @@ Use organization configuration unless this account has specific requirements tha
 - Use Organization Configuration
 - Configure Custom Settings
 
-#### Will you configure SAML/SSO for this account? (`account_configure_saml`: multi-select)
+#### Will you configure SAML/SSO for this account? (`account_configure_saml`: single-select)
 **What is this asking?**
 Decide whether to set up SAML-based Single Sign-On for this account.
 
@@ -136,7 +136,7 @@ Based on your Platform Foundation settings, follow this pattern:
 **Best Practice:**
 Use the suggested name from the previous step unless you have a specific reason to customize it. Consistent naming makes governance and cost allocation easier.
 
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: single-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
 
@@ -161,7 +161,7 @@ If your organization has an enterprise IdP, we strongly recommend configuring SC
 - Other SCIM 2.0 Compatible IdP
 - None - Manual User Management
 
-#### Will you configure SAML/SSO for single sign-on? (`configure_saml`: multi-select)
+#### Will you configure SAML/SSO for single sign-on? (`configure_saml`: single-select)
 **What is this asking?**
 Decide whether to configure SAML-based Single Sign-On (SSO) as part of this setup, or defer it for later.
 

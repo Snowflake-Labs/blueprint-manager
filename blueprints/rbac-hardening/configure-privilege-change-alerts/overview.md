@@ -72,7 +72,7 @@ CREATE NOTIFICATION INTEGRATION my_notification
 
 ### Configuration Questions
 
-#### Do you want to configure alerts for privilege changes? (`rbac_enable_alerts`: multi-select)
+#### Do you want to configure alerts for privilege changes? (`rbac_enable_alerts`: single-select)
 **What is this asking?**
 Choose whether to create Snowflake alerts that monitor for suspicious
 GRANT and REVOKE activity and notify your security team.

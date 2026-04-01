@@ -8,8 +8,8 @@ This section documents the authentication policies for your Snowflake account. T
 
 | User Type | Policy Name | Authentication Methods | MFA |
 |-----------|-------------|------------------------|-----|
-| Human Users | `human_user_auth_policy` | {{ human_auth_methods }} | {{ mfa_method }} |
-| Service Accounts | `service_account_auth_policy` | {{ service_auth_methods }} | Not Required |
+| Human Users | `human_user_auth_policy` | {{ human_auth_methods | join(', ') }} | {{ mfa_method | join(', ') }} |
+| Service Accounts | `service_account_auth_policy` | {{ service_auth_methods | join(', ') }} | Not Required |
 | Break-Glass | `breakglass_auth_policy` | Password Only | Disabled |
 
 ## Policy Details
@@ -19,14 +19,14 @@ This section documents the authentication policies for your Snowflake account. T
 | Setting | Value |
 |---------|-------|
 | **Policy Name** | `human_user_auth_policy` |
-| **Authentication Methods** | {{ human_auth_methods }} |
-| **MFA Methods** | {{ mfa_method }} |
+| **Authentication Methods** | {{ human_auth_methods | join(', ') }} |
+| **MFA Methods** | {{ mfa_method | join(', ') }} |
 | **Client Types** | All (UI, Drivers, SnowSQL) |
 | **Account-Level** | {{ apply_auth_policies_account_level }} |
 
-{%- if human_auth_methods == "SAML Only (SSO required)" %}
+{%- if "SAML (SSO)" in human_auth_methods and "Password with MFA" not in human_auth_methods %}
 Users must authenticate through your Identity Provider ({{ identity_provider }}). Password authentication is not allowed.
-{%- elif human_auth_methods == "SAML or Password with MFA" %}
+{%- elif "SAML (SSO)" in human_auth_methods and "Password with MFA" in human_auth_methods %}
 Users can authenticate via SSO or with password + MFA. SSO is recommended for security.
 {%- else %}
 Users authenticate with password + MFA. Consider implementing SSO for improved security and user experience.
@@ -37,7 +37,7 @@ Users authenticate with password + MFA. Consider implementing SSO for improved s
 | Setting | Value |
 |---------|-------|
 | **Policy Name** | `service_account_auth_policy` |
-| **Authentication Methods** | {{ service_auth_methods }} |
+| **Authentication Methods** | {{ service_auth_methods | join(', ') }} |
 | **MFA Methods** | None (not applicable for services) |
 | **Client Types** | Drivers only (no UI access) |
 | **Password** | Disabled |

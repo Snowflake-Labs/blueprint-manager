@@ -93,7 +93,7 @@ Enter ONE of the following values exactly as shown:
 * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)
 * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-accountadmin-role)
 
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: single-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
 

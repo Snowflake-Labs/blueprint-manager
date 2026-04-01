@@ -75,11 +75,12 @@ A [**tag**](https://docs.snowflake.com/en/user-guide/object-tagging/introduction
 
 * **Recommendation:** Start with Essential (Cost Center, Owner). Add more as your FinOps practices mature.
 **Options:**
-- All (Cost Center, Owner, Project, Application)
-- Essential (Cost Center, Owner)
-- Minimal (Owner only)
+- Cost Center
+- Owner
+- Project
+- Application
 
-#### Should these tags be required on new resources? (`require_cost_tags`: multi-select)
+#### Should these tags be required on new resources? (`require_cost_tags`: single-select)
 **What is this asking?**
 Decide whether tagging should be a governance requirement when new resources are created.
 
@@ -158,7 +159,7 @@ Use "Yes (production only)" to ensure production cost visibility while allowing 
   * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)  
   * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
 
-#### Do you want to set up spending budgets? (`enable_budgets`: multi-select)
+#### Do you want to set up spending budgets? (`enable_budgets`: single-select)
 **What is this asking?**
 Decide whether to use Snowflake's native budget feature for automated spending monitoring and alerts.
 
@@ -207,7 +208,7 @@ If you expect to use 1,000 credits/month, set budget to 1,200-1,300 credits.
 
 **Important:** This is for alerting purposes only. Snowflake will not automatically stop services when the budget is exceeded. Use Resource Monitors (Configure Resource Monitors step) for hard limits.
 
-#### Do you want to configure resource monitors? (`enable_resource_monitors`: multi-select)
+#### Do you want to configure resource monitors? (`enable_resource_monitors`: single-select)
 **What is this asking?**
 Decide whether to implement an account-level resource monitor for active cost control.
 
@@ -266,7 +267,7 @@ If you set a budget of 1,000 credits with a 75% threshold, you'll receive budget
 
 **Warning:** When the limit is reached and suspension is configured, ALL warehouses will be affected.
 
-#### What action should be taken when the credit limit is reached? (`account_resource_monitor_action`: multi-select)
+#### What action should be taken when the credit limit is reached? (`account_resource_monitor_action`: single-select)
 **What is this asking?**
 Choose what happens when the credit limit is reached.
 
@@ -299,7 +300,7 @@ Use "Suspend After Current Queries" for production.
 - Suspend After Current Queries
 - Notify Only
 
-#### Do you want to add additional cost allocation tags? (`enable_cost_tags`: multi-select)
+#### Do you want to add additional cost allocation tags? (`enable_cost_tags`: single-select)
 **What is this asking?** Decide whether you want to configure additional cost allocation tags beyond the core platform tags.  
 
   **Why does this matter?** Additional cost tags enable more granular cost tracking and can integrate with your organization's accounting systems.  

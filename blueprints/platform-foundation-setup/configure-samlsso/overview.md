@@ -42,7 +42,7 @@ The certificate used to verify SAML assertions from the IdP. This is how Snowfla
 
 ### Configuration Questions
 
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: single-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
 
@@ -200,7 +200,7 @@ An account name prefix is an optional string added to the beginning of every acc
   * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
   * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
 
-#### Should the Snowflake login page show a button to log in with SSO? (`saml_sso_login_page`: multi-select)
+#### Should the Snowflake login page show a button to log in with SSO? (`saml_sso_login_page`: single-select)
 **What is this asking?**
 Decide whether to add a "Log in using SSO" button to the Snowflake login page.
 
@@ -217,7 +217,7 @@ Select **Yes** to provide users with an easy SSO option on the login page.
 - Yes
 - No
 
-#### Will you configure SAML/SSO for single sign-on? (`configure_saml`: multi-select)
+#### Will you configure SAML/SSO for single sign-on? (`configure_saml`: single-select)
 **What is this asking?**
 Decide whether to configure SAML-based Single Sign-On (SSO) as part of this setup, or defer it for later.
 

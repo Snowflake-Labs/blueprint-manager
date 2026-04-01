@@ -102,7 +102,7 @@ If you set a budget of 1,000 credits with a 75% threshold, you'll receive budget
 
 **Warning:** When the limit is reached and suspension is configured, ALL warehouses will be affected.
 
-#### How often should the resource monitor reset? (`account_resource_monitor_reset_frequency`: multi-select)
+#### How often should the resource monitor reset? (`account_resource_monitor_reset_frequency`: single-select)
 **What is this asking?**
 Choose when the credit counter resets to zero.
 
@@ -135,7 +135,7 @@ Use Monthly reset aligned with your billing cycle.
 - Daily
 - Never (manual reset)
 
-#### What action should be taken when the credit limit is reached? (`account_resource_monitor_action`: multi-select)
+#### What action should be taken when the credit limit is reached? (`account_resource_monitor_action`: single-select)
 **What is this asking?**
 Choose what happens when the credit limit is reached.
 

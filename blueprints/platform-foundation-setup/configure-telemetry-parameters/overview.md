@@ -32,7 +32,7 @@ Every Snowflake account contains a pre-existing event table at `SNOWFLAKE.TELEME
 
 ### Configuration Questions
 
-#### What log level should be set for this account? (`account_log_level`: multi-select)
+#### What log level should be set for this account? (`account_log_level`: single-select)
 **What is this asking?**
 Select the minimum severity level for log messages captured from stored
 procedures, UDFs, and other handler code.
@@ -66,7 +66,7 @@ development or test accounts.
 - Fatal
 - Off
 
-#### Should execution metrics be collected for this account? (`account_metric_level`: multi-select)
+#### Should execution metrics be collected for this account? (`account_metric_level`: single-select)
 **What is this asking?**
 Choose whether to collect execution metrics (CPU, memory, duration) from
 stored procedures, UDFs, and other handler code.
@@ -86,7 +86,7 @@ execution performance.
 - All
 - None
 
-#### What trace level should be set for this account? (`account_trace_level`: multi-select)
+#### What trace level should be set for this account? (`account_trace_level`: single-select)
 **What is this asking?**
 Choose whether trace spans are captured from handler code execution.
 Traces record start/end timestamps, execution status, and query context
@@ -114,7 +114,7 @@ if you only want traces for explicitly instrumented code.
 - On_Event
 - Off
 
-#### Should SQL statement text be captured in trace data? (`account_sql_trace_query_text`: multi-select)
+#### Should SQL statement text be captured in trace data? (`account_sql_trace_query_text`: single-select)
 **What is this asking?**
 Choose whether the SQL text of traced statements is included in the
 event table. When enabled, up to 1024 characters of each SQL statement

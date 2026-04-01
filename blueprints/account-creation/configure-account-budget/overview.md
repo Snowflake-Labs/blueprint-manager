@@ -95,7 +95,7 @@ A well-set budget provides meaningful alerts without being too restrictive. Sett
 **More Information:**
 * [Budgets Overview](https://docs.snowflake.com/en/user-guide/budgets) — Credit monitoring and alerts
 
-#### At what percentage should budget alerts be sent? (`account_budget_threshold`: multi-select)
+#### At what percentage should budget alerts be sent? (`account_budget_threshold`: single-select)
 **What is this asking?**
 Choose when to receive the first budget alert (as a percentage of the monthly limit).
 

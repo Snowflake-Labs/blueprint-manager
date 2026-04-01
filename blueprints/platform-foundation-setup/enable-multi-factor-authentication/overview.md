@@ -38,7 +38,7 @@ Snowflake allows a grace period for MFA enrollment after a policy is applied. Us
 
 ### Configuration Questions
 
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: single-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
 
@@ -198,7 +198,7 @@ Define one or more break-glass emergency access accounts. Each account can bypas
 * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user)
 * [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies)
 
-#### When should MFA be enforced for administrative users? (`mfa_enforcement_timeline`: multi-select)
+#### When should MFA be enforced for administrative users? (`mfa_enforcement_timeline`: single-select)
 **What is this asking?**
 Select when MFA should be required for users logging in with passwords.
 

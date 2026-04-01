@@ -1,7 +1,7 @@
 -- ============================================================================
 -- COST ALLOCATION TAGS CONFIGURATION
 -- ============================================================================
--- Additional Tags: {{ additional_tag_dimensions }}
+-- Additional Tags: {{ additional_tag_dimensions | join(', ') }}
 -- Enforcement: {{ require_cost_tags }}
 -- ============================================================================
 
@@ -13,27 +13,24 @@ USE SCHEMA {{ governance_name | upper }};
 -- STEP 1: CREATE ADDITIONAL COST ALLOCATION TAGS
 -- ============================================================================
 
-{%- if additional_tag_dimensions == "All (Cost Center, Owner, Project, Application)" %}
+{%- if "Cost Center" in additional_tag_dimensions %}
 CREATE TAG IF NOT EXISTS cost_center
   COMMENT = 'Accounting cost center code for chargeback';
+{%- endif %}
 
+{%- if "Owner" in additional_tag_dimensions %}
 CREATE TAG IF NOT EXISTS owner
   COMMENT = 'Team or individual responsible for the resource';
+{%- endif %}
 
+{%- if "Project" in additional_tag_dimensions %}
 CREATE TAG IF NOT EXISTS project
   COMMENT = 'Project or initiative name for cost allocation';
+{%- endif %}
 
+{%- if "Application" in additional_tag_dimensions %}
 CREATE TAG IF NOT EXISTS application
   COMMENT = 'Application or system name';
-{%- elif additional_tag_dimensions == "Essential (Cost Center, Owner)" %}
-CREATE TAG IF NOT EXISTS cost_center
-  COMMENT = 'Accounting cost center code for chargeback';
-
-CREATE TAG IF NOT EXISTS owner
-  COMMENT = 'Team or individual responsible for the resource';
-{%- else %}
-CREATE TAG IF NOT EXISTS owner
-  COMMENT = 'Team or individual responsible for the resource';
 {%- endif %}
 
 -- ============================================================================
@@ -135,7 +132,7 @@ Resource Monitors:
 
 Cost Allocation Tags:
 - Core tags: domain, environment, dataproduct, workload, zone, data_classification
-- Additional tags: {{ additional_tag_dimensions }}
+- Additional tags: {{ additional_tag_dimensions | join(', ') }}
 
 NEXT STEPS:
 1. Apply tags to existing warehouses and databases

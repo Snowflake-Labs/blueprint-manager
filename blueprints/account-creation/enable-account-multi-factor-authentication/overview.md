@@ -154,9 +154,8 @@ Accept the Platform Foundation value unless this account has specific requiremen
 **More Information:**
 * [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies) — Policy configuration guide
 **Options:**
-- SAML Only (SSO required)
-- SAML or Password with MFA
-- Password with MFA Only
+- SAML (SSO)
+- Password with MFA
 
 #### What MFA method should be required for password authentication? (`mfa_method`: multi-select)
 **What is this asking?**
@@ -178,9 +177,8 @@ MFA significantly reduces the risk of account compromise from password theft.
 **Options:**
 - TOTP (Authenticator Apps)
 - Passkey (FIDO2/WebAuthn)
-- Either TOTP or Passkey
 
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: single-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
 

@@ -87,7 +87,7 @@ In a multi-account strategy, each account needs access to the governance framewo
   * [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)  
   * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)
 
-#### What account strategy do you wish to implement? (`account_strategy`: multi-select)
+#### What account strategy do you wish to implement? (`account_strategy`: single-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  
   * Best for: Small to medium organizations, centralized teams, simpler governance  
@@ -153,7 +153,7 @@ Your Snowflake organization name is the first part of your account URL and conne
   * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
   * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
 
-#### How frequently should the infrastructure database be replicated to target accounts? (`replication_schedule`: multi-select)
+#### How frequently should the infrastructure database be replicated to target accounts? (`replication_schedule`: single-select)
 **What is this asking?** Choose how often Snowflake should automatically synchronize the infrastructure database to all target accounts.  
 **Why does this matter?** More frequent replication means changes (new tags, updated views) are available sooner in target accounts, but may have minor cost implications.  
 **Recommendations:**  

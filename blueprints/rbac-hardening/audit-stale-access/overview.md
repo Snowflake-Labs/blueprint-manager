@@ -53,7 +53,7 @@ Snowflake's LOGIN_HISTORY view provides login records for up to 365 days. Users 
 
 ### Configuration Questions
 
-#### What scope should the RBAC audit cover? (`rbac_audit_scope`: multi-select)
+#### What scope should the RBAC audit cover? (`rbac_audit_scope`: single-select)
 **What is this asking?**
 Choose whether to audit role-based access controls across the entire Snowflake
 account or limit the audit to specific data product role hierarchies.
