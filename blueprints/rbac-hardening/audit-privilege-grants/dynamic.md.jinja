@@ -20,6 +20,7 @@
 | 3 | ACCOUNTADMIN Holders | Users with the most powerful role | Critical |
 | 4 | Powerful Privileges | Non-system roles with account-level privileges | Medium |
 | 5 | Summary Statistics | Aggregate grant health metrics | Info |
+| 6 | Recent Grant Velocity | High-churn grant activity in last 30 days | Medium |
 
 ## Risk Assessment Guide
 
@@ -33,6 +34,14 @@ Each grant is effectively given to every user. Review each and either:
 
 ### ACCOUNTADMIN Holders (Critical)
 Best practice is 2-3 break-glass users maximum. Compare results against `rbac_accountadmin_users` list in Task 2 (Enforce Admin Separation).
+
+### Recent Grant Velocity (Medium)
+Spikes in daily grant activity indicate bulk access events or ad-hoc provisioning outside normal governance. Look for:
+- Days with significantly higher grant counts than the baseline
+- Grants clustered around weekends or off-hours
+- A high number of distinct grantees on a single day
+
+Investigate the specific grants from high-churn days to confirm they were intentional and authorized.
 
 ## Next Steps
 

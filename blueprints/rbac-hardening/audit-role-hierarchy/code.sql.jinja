@@ -145,6 +145,62 @@ SELECT
   ) AS orphaned_roles;
 
 -- ============================================================================
+-- STEP 5: OBJECT OWNERSHIP CONCENTRATION
+-- ============================================================================
+-- Find roles that own a disproportionate number of objects.
+-- Concentrated ownership creates single points of failure: if the role is
+-- dropped or misconfigured, all owned objects become inaccessible.
+
+SELECT
+  grantee_name AS role_name,
+  granted_on AS object_type,
+  COUNT(*) AS owned_objects
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE privilege = 'OWNERSHIP'
+  AND deleted_on IS NULL
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    grantee_name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+GROUP BY grantee_name, granted_on
+HAVING COUNT(*) > 10
+ORDER BY owned_objects DESC;
+
+-- ============================================================================
+-- STEP 6: OWNERSHIP WITHOUT HIERARCHY PARENT
+-- ============================================================================
+-- Find roles that own objects but are not granted to any parent role.
+-- These roles sit outside the hierarchy: ownership without accountability.
+-- If dropped, the owned objects lose their owner and become inaccessible.
+
+SELECT
+  gr.grantee_name AS role_name,
+  COUNT(*) AS owned_objects
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES gr
+WHERE gr.privilege = 'OWNERSHIP'
+  AND gr.deleted_on IS NULL
+  AND gr.grantee_name NOT IN ('ACCOUNTADMIN', 'SECURITYADMIN', 'SYSADMIN', 'USERADMIN', 'PUBLIC', 'ORGADMIN')
+  AND gr.grantee_name NOT IN (
+    SELECT DISTINCT name
+    FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+    WHERE granted_on = 'ROLE'
+      AND privilege = 'USAGE'
+      AND deleted_on IS NULL
+  )
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    gr.grantee_name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+GROUP BY gr.grantee_name
+ORDER BY owned_objects DESC;
+
+-- ============================================================================
 -- VERIFICATION
 -- ============================================================================
 
@@ -162,6 +218,8 @@ Queries generated:
 2. Orphaned roles (no parent grant)
 3. Excessive hierarchy depth (>5 levels)
 4. Role grant summary statistics
+5. Object ownership concentration (>10 objects per role)
+6. Ownership without hierarchy parent (structural gap)
 
 Audit Scope: {{ rbac_audit_scope }}
 {%- if rbac_audit_scope == 'Specific Data Products' %}

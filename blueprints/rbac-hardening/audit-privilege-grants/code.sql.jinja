@@ -137,6 +137,31 @@ WHERE name = 'ACCOUNTADMIN'
   AND deleted_on IS NULL;
 
 -- ============================================================================
+-- STEP 6: RECENT GRANT VELOCITY
+-- ============================================================================
+-- Find grants created in the last 30 days, grouped by day.
+-- High-churn periods signal ad-hoc access patterns or bulk provisioning events
+-- that may have bypassed normal governance controls.
+
+SELECT
+  DATE_TRUNC('day', created_on) AS grant_date,
+  COUNT(*) AS grants_created,
+  COUNT(DISTINCT grantee_name) AS distinct_grantees
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE created_on > DATEADD('day', -30, CURRENT_TIMESTAMP())
+  AND deleted_on IS NULL
+  AND granted_on != 'ROLE'  -- Object grants only, not role-to-role
+{%- if rbac_audit_scope == 'Specific Data Products' %}
+  AND (
+{%- for prefix in rbac_target_prefixes %}
+    grantee_name LIKE '{{ prefix | upper }}%'{% if not loop.last %} OR{% endif %}
+{%- endfor %}
+  )
+{%- endif %}
+GROUP BY grant_date
+ORDER BY grant_date DESC;
+
+-- ============================================================================
 -- VERIFICATION
 -- ============================================================================
 
@@ -155,6 +180,7 @@ Queries generated:
 3. ACCOUNTADMIN holders (should be 2-3 break-glass users)
 4. Roles with powerful account-level privileges
 5. Summary statistics
+6. Recent grant velocity (last 30 days)
 
 Audit Scope: {{ rbac_audit_scope }}
 
