@@ -45,14 +45,16 @@ domain_list:
 # Identity & Authentication
 # -----------------------------------------------------------------------------
 identity_provider: None - Manual User Management
-human_auth_methods: Password with MFA
+human_auth_methods:
+- Password with MFA
 service_auth_methods:
 - OAuth
 - Key Pair
 configure_saml: No - Configure SAML later
 
 # MFA Configuration
-mfa_method: TOTP (Authenticator Apps)
+mfa_method:
+- TOTP (Authenticator Apps)
 preferred_mfa_method: User's Choice
 mfa_enforcement_timeline: 7 Days - Allow one week for enrollment
 mfa_support_contact: it-helpdesk@techcorp.io

@@ -99,7 +99,16 @@ MULTI_TO_SINGLE_SELECT = {
 
 VALUE_MIGRATIONS = {
     "mfa_method": {
-        "Either TOTP or Passkey": "TOTP (Authenticator Apps)",
+        "Either TOTP or Passkey": ["TOTP (Authenticator Apps)", "Passkey (FIDO2/WebAuthn)"],
+        "TOTP (Authenticator Apps)": ["TOTP (Authenticator Apps)"],
+        "Passkey (FIDO2/WebAuthn)": ["Passkey (FIDO2/WebAuthn)"],
+    },
+    "human_auth_methods": {
+        "SAML Only (SSO required)": ["SAML (SSO)"],
+        "SAML or Password with MFA": ["SAML (SSO)", "Password with MFA"],
+        "Password with MFA Only": ["Password with MFA"],
+        "Password with MFA": ["Password with MFA"],
+        "SAML (SSO)": ["SAML (SSO)"],
     },
     "additional_tag_dimensions": {
         "All (Cost Center, Owner, Project, Application)": [

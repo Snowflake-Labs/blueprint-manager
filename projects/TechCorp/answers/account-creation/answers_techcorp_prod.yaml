@@ -48,12 +48,14 @@ account_configure_saml: No - Configure SAML later
 
 # Identity & Authentication (inherited from org)
 identity_provider: None - Manual User Management
-human_auth_methods: Password with MFA
+human_auth_methods:
+- Password with MFA
 service_auth_methods:
 - OAuth
 - Key Pair
 configure_saml: No - Configure SAML later
-mfa_method: TOTP (Authenticator Apps)
+mfa_method:
+- TOTP (Authenticator Apps)
 apply_auth_policies_account_level: Yes - Apply default policy to all users
 
 # Account MFA Support
