@@ -1055,7 +1055,18 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
 
 **If user selects "Generate SQL now":**
 
-1. **Run render script with project flag:**
+1. **Run the migration script** to ensure the answer file is compatible with the current schema before rendering:
+   ```bash
+   .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path] --dry-run
+   ```
+   - If the dry-run reports changes, apply them:
+     ```bash
+     .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path]
+     ```
+   - If the script reports errors or the file cannot be parsed, direct the user to `scripts/TROUBLESHOOTING.md` for resolution before continuing.
+   - If no changes are needed, proceed immediately.
+
+2. **Run render script with project flag:**
    ```bash
    python scripts/render_journey.py \
      [answer_file_path] \
@@ -1073,12 +1084,12 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
      --project [project_name]
    ```
 
-2. **Check for output file:**
+3. **Check for output file:**
    ```bash
    ls -lt projects/[project_name]/output/iac/sql/ | head -5
    ```
 
-3. **Present results:**
+4. **Present results:**
    ```
    ✓ SQL infrastructure code generated successfully!
    
@@ -1097,7 +1108,15 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
 
 1. **Display command:**
    ```
-   Run this command to generate your infrastructure code:
+   Before rendering, ensure your answer file is compatible with the current schema:
+
+   ```bash
+   .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path] --dry-run
+   # If changes are reported, apply them:
+   .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path]
+   ```
+
+   Then run this command to generate your infrastructure code:
    
    ```bash
    python scripts/render_journey.py \
