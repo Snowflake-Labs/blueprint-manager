@@ -97,9 +97,8 @@ Accept the Platform Foundation value unless this account has specific requiremen
 **More Information:**
 * [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies) — Policy configuration guide
 **Options:**
-- SAML Only (SSO required)
-- SAML or Password with MFA
-- Password with MFA Only
+- SAML (SSO)
+- Password with MFA
 
 #### What name would you like to use for the SAML integration? (`saml_integration_name`: text)
 **What is this asking?**
@@ -139,7 +138,6 @@ MFA significantly reduces the risk of account compromise from password theft.
 **Options:**
 - TOTP (Authenticator Apps)
 - Passkey (FIDO2/WebAuthn)
-- Either TOTP or Passkey
 
 #### What authentication methods should be allowed for service accounts? (`service_auth_methods`: multi-select)
 **What is this asking?**
@@ -161,12 +159,11 @@ Service accounts should not use password authentication, which is less secure an
 * [Key Pair Authentication](https://docs.snowflake.com/en/user-guide/key-pair-auth)
 * [OAuth](https://docs.snowflake.com/en/user-guide/oauth)
 **Options:**
-- OAuth Only
-- Key Pair Only
-- OAuth or Key Pair
-- OAuth, Key Pair, or PAT
+- OAuth
+- Key Pair
+- PAT
 
-#### Should authentication policies be applied at the account level? (`apply_auth_policies_account_level`: multi-select)
+#### Should authentication policies be applied at the account level? (`apply_auth_policies_account_level`: single-select)
 **What is this asking?**
 Decide whether to enforce the human user authentication policy for all users by default.
 
@@ -185,7 +182,7 @@ Decide whether to enforce the human user authentication policy for all users by 
 - Yes - Apply default policy to all users
 - No - Apply only to specific users
 
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: single-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
 

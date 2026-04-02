@@ -71,7 +71,7 @@ These tools work best **together**, not as alternatives:
 
 ### Configuration Questions
 
-#### Do you want to configure resource monitors? (`enable_resource_monitors`: multi-select)
+#### Do you want to configure resource monitors? (`enable_resource_monitors`: single-select)
 **What is this asking?**
 Decide whether to implement an account-level resource monitor for active cost control.
 

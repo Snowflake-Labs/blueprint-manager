@@ -45,12 +45,16 @@ domain_list:
 # Identity & Authentication
 # -----------------------------------------------------------------------------
 identity_provider: None - Manual User Management
-human_auth_methods: Password with MFA
-service_auth_methods: OAuth or Key Pair
+human_auth_methods:
+- Password with MFA
+service_auth_methods:
+- OAuth
+- Key Pair
 configure_saml: No - Configure SAML later
 
 # MFA Configuration
-mfa_method: Either TOTP or Passkey
+mfa_method:
+- TOTP (Authenticator Apps)
 preferred_mfa_method: User's Choice
 mfa_enforcement_timeline: 7 Days - Allow one week for enrollment
 mfa_support_contact: it-helpdesk@techcorp.io
@@ -120,7 +124,7 @@ account_resource_monitor_action: Suspend After Current Queries
 # Cost Management - Tags
 # -----------------------------------------------------------------------------
 enable_cost_tags: No
-additional_tag_dimensions: None
+additional_tag_dimensions: []
 require_cost_tags: No
 
 # -----------------------------------------------------------------------------

@@ -108,7 +108,7 @@ If you allow `10.0.0.0/8` but want to block a specific subnet:
 
 **Note:** If you don't need any blocked rules, you can leave this empty.
 
-#### How would you like to configure security for this account? (`security_config_approach`: multi-select)
+#### How would you like to configure security for this account? (`security_config_approach`: single-select)
 **What is this asking?**
 Choose whether to replicate the Platform Foundation security settings or create custom settings for this account.
 

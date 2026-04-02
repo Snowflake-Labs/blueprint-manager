@@ -95,7 +95,7 @@
     * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)'
 - answer_title: replication_schedule
   question_text: How frequently should the infrastructure database be replicated to target accounts?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Every 10 minutes
@@ -123,7 +123,7 @@
     \ platform_replication_group  \n* **Default recommendation:** infrastructure_replication_group"
 - answer_title: enable_org_account
   question_text: Do you want to create an Organization Account?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: 'Yes'
@@ -146,7 +146,7 @@
     \ – Snowflake Edition options "
 - answer_title: resource_monitor_action
   question_text: What should happen when the credit limit is reached?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Notify Only (continue running)
@@ -402,7 +402,7 @@
     Focus on the business value: What questions does this data product answer? Who uses it?'
 - answer_title: data_product_environment
   question_text: Which environment is this data product being deployed to?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   guidance: '**What is this asking?**
 
@@ -457,7 +457,7 @@
     target account name.'
 - answer_title: data_product_domain
   question_text: Which domain does this data product belong to?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   guidance: '**What is this asking?**
 
@@ -777,7 +777,7 @@
     **Format:** Enter each email address on a separate line.'
 - answer_title: account_budget_threshold
   question_text: At what percentage should budget alerts be sent?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: '50'
@@ -1318,7 +1318,7 @@
     * [SCIM Integration](https://docs.snowflake.com/en/user-guide/scim) — SCIM provisioning overview'
 - answer_title: account_configure_saml
   question_text: Will you configure SAML/SSO for this account?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Yes - Configure SAML for this account
@@ -1382,7 +1382,7 @@
     authentication options'
 - answer_title: security_config_approach
   question_text: How would you like to configure security for this account?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Use Organization Configuration
@@ -1564,7 +1564,7 @@
     list'
 - answer_title: new_account_edition
   question_text: What Snowflake edition will this account use?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Standard
@@ -1773,7 +1773,7 @@
     naming makes governance and cost allocation easier.'
 - answer_title: account_environment
   question_text: Which environment will this account represent?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   guidance: '**What is this asking?**
 
@@ -1833,7 +1833,7 @@
     - "HR domain account for people analytics and workforce planning"'
 - answer_title: account_domain
   question_text: Which domain will this account represent?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   guidance: '**What is this asking?**
 
@@ -1862,7 +1862,7 @@
     management overview'
 - answer_title: require_cost_tags
   question_text: Should these tags be required on new resources?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Yes (all resources)
@@ -1933,9 +1933,10 @@
   answer_type: multi-select
   is_org_scope: true
   options:
-  - text: All (Cost Center, Owner, Project, Application)
-  - text: Essential (Cost Center, Owner)
-  - text: Minimal (Owner only)
+  - text: Cost Center
+  - text: Owner
+  - text: Project
+  - text: Application
   guidance: "**What is this asking?** Select which additional tags to create beyond the core platform\
     \ tags created in the previous step (DOMAIN, ENVIRONMENT, DATAPRODUCT, WORKLOAD, ZONE, and DATA_CLASSIFICATION).\
     \  \n  \n  * **Why does this matter?** Different organizations need different levels of cost tracking\
@@ -1950,7 +1951,7 @@
     \ Add more as your FinOps practices mature."
 - answer_title: account_resource_monitor_reset_frequency
   question_text: How often should the resource monitor reset?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Monthly
@@ -2003,7 +2004,7 @@
     Use Monthly reset aligned with your billing cycle.'
 - answer_title: account_resource_monitor_action
   question_text: What action should be taken when the credit limit is reached?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Suspend Immediately
@@ -2058,7 +2059,7 @@
     Use "Suspend After Current Queries" for production.'
 - answer_title: budget_notification_threshold
   question_text: At what percentage of your budget should alerts be triggered?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: '50'
@@ -2153,7 +2154,7 @@
     * [MFA Troubleshooting](https://docs.snowflake.com/en/user-guide/security-mfa#troubleshooting-mfa-issues)'
 - answer_title: preferred_mfa_method
   question_text: What is your organization's preferred MFA method?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: TOTP (Authenticator Apps)
@@ -2195,7 +2196,7 @@
     * [Supported MFA Methods](https://docs.snowflake.com/en/user-guide/security-mfa#supported-mfa-methods)'
 - answer_title: mfa_enforcement_timeline
   question_text: When should MFA be enforced for administrative users?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Immediately - Require MFA now
@@ -2236,7 +2237,7 @@
     * [MFA Enrollment](https://docs.snowflake.com/en/user-guide/security-mfa-enroll)'
 - answer_title: apply_auth_policies_account_level
   question_text: Should authentication policies be applied at the account level?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Yes - Apply default policy to all users
@@ -2272,7 +2273,6 @@
   options:
   - text: TOTP (Authenticator Apps)
   - text: Passkey (FIDO2/WebAuthn)
-  - text: Either TOTP or Passkey
   guidance: '**What is this asking?**
 
     Select the multi-factor authentication method(s) to require when users authenticate with passwords.
@@ -2307,10 +2307,9 @@
   answer_type: multi-select
   is_org_scope: false
   options:
-  - text: OAuth Only
-  - text: Key Pair Only
-  - text: OAuth or Key Pair
-  - text: OAuth, Key Pair, or PAT
+  - text: OAuth
+  - text: Key Pair
+  - text: PAT
   guidance: '**What is this asking?**
 
     Define how service accounts (automated processes, applications) should authenticate.
@@ -2347,17 +2346,12 @@
   answer_type: multi-select
   is_org_scope: false
   options:
-  - text: SAML Only (SSO required)
+  - text: SAML (SSO)
     condition:
       answer_title: account_configure_saml
       operator: is
       value: Yes - Configure SAML for this account
-  - text: SAML or Password with MFA
-    condition:
-      answer_title: account_configure_saml
-      operator: is
-      value: Yes - Configure SAML for this account
-  - text: Password with MFA Only
+  - text: Password with MFA
   guidance: '**What is this asking?**
 
     Choose how human users (interactive users) should authenticate to this account. The value from Platform
@@ -2518,7 +2512,7 @@
     * [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies)'
 - answer_title: saml_sso_login_page
   question_text: Should the Snowflake login page show a button to log in with SSO?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: 'Yes'
@@ -2680,7 +2674,7 @@
     * [CREATE SECURITY INTEGRATION (SAML2)](https://docs.snowflake.com/en/sql-reference/sql/create-security-integration-saml2)'
 - answer_title: configure_saml
   question_text: Will you configure SAML/SSO for single sign-on?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Yes - Configure SAML now
@@ -2921,7 +2915,7 @@
     * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-accountadmin-role)'
 - answer_title: enable_account_network_policy
   question_text: Should the network policy be applied at the account level?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Yes - Apply to all users by default
@@ -3139,7 +3133,7 @@
     access control'
 - answer_title: scim_provisioner_role
   question_text: Which role should own the SCIM integration and provisioned users?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: OKTA_PROVISIONER
@@ -3241,7 +3235,7 @@
     \  \n  * [Supported Cloud Regions](https://docs.snowflake.com/en/user-guide/intro-regions)  "
 - answer_title: org_account_edition
   question_text: What Snowflake edition will you use for the Organization Account?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: ENTERPRISE
@@ -3290,7 +3284,7 @@
     \  * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#accountadmin-role) "
 - answer_title: object_component_order
   question_text: What core component ordering will be used for account-level object names?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: true
   options:
   - text: <domain>_<env>_<dataproduct>
@@ -3433,7 +3427,7 @@
     **Warning:** When the limit is reached and suspension is configured, ALL warehouses will be affected.'
 - answer_title: enable_resource_monitors
   question_text: Do you want to configure resource monitors?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: 'Yes'
@@ -3486,7 +3480,7 @@
     * [Working with Resource Monitors](https://docs.snowflake.com/en/user-guide/resource-monitors)'
 - answer_title: budget_refresh_interval
   question_text: How frequently should the budget check for updated spending?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: 6.5 hours (default)
@@ -3597,7 +3591,7 @@
     when the budget is exceeded. Use Resource Monitors (Configure Resource Monitors step) for hard limits.'
 - answer_title: enable_budgets
   question_text: Do you want to set up spending budgets?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: 'Yes'
@@ -3649,7 +3643,7 @@
     * [Monitor credit usage with budgets](https://docs.snowflake.com/en/user-guide/budgets)'
 - answer_title: enable_cost_tags
   question_text: Do you want to add additional cost allocation tags?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: true
   options:
   - text: 'Yes'
@@ -3670,7 +3664,7 @@
     \ better financial accountability.  \n\n**More Information:**  \n  * [Attributing Costs using Tags](https://docs.snowflake.com/en/user-guide/cost-attributing)"
 - answer_title: identity_provider
   question_text: Which Identity Provider will you use for SCIM integration?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Okta
@@ -3713,7 +3707,7 @@
     * [Supported Identity Providers](https://docs.snowflake.com/en/user-guide/scim#supported-identity-providers)'
 - answer_title: account_strategy
   question_text: What account strategy do you wish to implement?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: true
   options:
   - text: Single Account
@@ -3902,7 +3896,7 @@
     \ more later.\n"
 - answer_title: default_time_travel_days
   question_text: What is the default time travel retention for databases?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: 1 day (minimal)
@@ -4083,7 +4077,7 @@
     '
 - answer_title: resource_monitor_frequency
   question_text: How often should the resource monitor credit quota reset?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
   - text: Daily
@@ -4140,7 +4134,7 @@
     \ approach\n\n**More Information:**\n* [SCIM Provisioning](https://docs.snowflake.com/en/user-guide/scim)\n"
 - answer_title: account_log_level
   question_text: What log level should be set for this account?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
     - text: Trace
@@ -4176,7 +4170,7 @@
     * [How Snowflake determines the level in effect](https://docs.snowflake.com/en/developer-guide/logging-tracing/telemetry-levels#label-telemetry-level-effective)
 - answer_title: account_metric_level
   question_text: Should execution metrics be collected for this account?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
     - text: All
@@ -4198,7 +4192,7 @@
     * [METRIC_LEVEL Parameter](https://docs.snowflake.com/en/sql-reference/parameters#label-metric-level)
 - answer_title: account_trace_level
   question_text: What trace level should be set for this account?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
     - text: Always
@@ -4228,7 +4222,7 @@
     * [TRACE_LEVEL Parameter](https://docs.snowflake.com/en/sql-reference/parameters#trace-level)
 - answer_title: account_sql_trace_query_text
   question_text: Should SQL statement text be captured in trace data?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
     - text: 'On'
@@ -4261,7 +4255,7 @@
 
 - answer_title: rbac_audit_scope
   question_text: What scope should the RBAC audit cover?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
     - text: Full Account
@@ -4319,7 +4313,7 @@
 
 - answer_title: rbac_restrict_public
   question_text: Do you want to revoke unnecessary grants from the PUBLIC role?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
     - text: 'Yes'
@@ -4405,7 +4399,7 @@
 
 - answer_title: rbac_enforce_managed_access
   question_text: Do you want to convert existing schemas to managed access?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
     - text: 'Yes'
@@ -4575,7 +4569,7 @@
 
 - answer_title: rbac_enable_alerts
   question_text: Do you want to configure alerts for privilege changes?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
     - text: 'Yes'
@@ -4645,7 +4639,7 @@
 
 - answer_title: rbac_review_frequency
   question_text: How often should access reviews be conducted?
-  answer_type: multi-select
+  answer_type: single-select
   is_org_scope: false
   options:
     - text: Weekly

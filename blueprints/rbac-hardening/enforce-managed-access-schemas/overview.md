@@ -55,7 +55,7 @@ With `MANAGED ACCESS`, only the schema owner and SECURITYADMIN (or higher) can m
 
 ### Configuration Questions
 
-#### Do you want to convert existing schemas to managed access? (`rbac_enforce_managed_access`: multi-select)
+#### Do you want to convert existing schemas to managed access? (`rbac_enforce_managed_access`: single-select)
 **What is this asking?**
 Choose whether to generate ALTER SCHEMA statements that enable WITH MANAGED ACCESS
 on existing schemas.
@@ -85,7 +85,7 @@ Setup is the only path to data access.
 - Yes
 - No
 
-#### What scope should the RBAC audit cover? (`rbac_audit_scope`: multi-select)
+#### What scope should the RBAC audit cover? (`rbac_audit_scope`: single-select)
 **What is this asking?**
 Choose whether to audit role-based access controls across the entire Snowflake
 account or limit the audit to specific data product role hierarchies.

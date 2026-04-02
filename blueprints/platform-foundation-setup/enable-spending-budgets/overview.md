@@ -59,7 +59,7 @@ Snowflake's native budget feature is the most efficient way to monitor credit co
 
 ### Configuration Questions
 
-#### Do you want to set up spending budgets? (`enable_budgets`: multi-select)
+#### Do you want to set up spending budgets? (`enable_budgets`: single-select)
 **What is this asking?**
 Decide whether to use Snowflake's native budget feature for automated spending monitoring and alerts.
 

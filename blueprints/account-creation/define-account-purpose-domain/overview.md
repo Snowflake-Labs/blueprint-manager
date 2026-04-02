@@ -31,7 +31,7 @@ In this strategy, environments (Dev, Test, Prod) are NOT at the account level. T
 
 ### Configuration Questions
 
-#### Which domain will this account represent? (`account_domain`: multi-select)
+#### Which domain will this account represent? (`account_domain`: single-select)
 **What is this asking?**
 Select the business domain this account will represent. This account will serve all environments (Dev, Test, Prod) for this domain.
 
@@ -58,7 +58,7 @@ A clear description helps team members understand the account's purpose at a gla
 - "Finance domain account for financial reporting and analytics"
 - "HR domain account for people analytics and workforce planning"
 
-#### What account strategy do you wish to implement? (`account_strategy`: multi-select)
+#### What account strategy do you wish to implement? (`account_strategy`: single-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  
   * Best for: Small to medium organizations, centralized teams, simpler governance  

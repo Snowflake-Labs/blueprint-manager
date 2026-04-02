@@ -10,19 +10,19 @@ USE ROLE ACCOUNTADMIN;
 -- STEP 1: CREATE HUMAN USER AUTHENTICATION POLICY
 -- ============================================================================
 
-{%- if human_auth_methods == "SAML Only (SSO required)" %}
+{%- if "SAML (SSO)" in human_auth_methods and "Password with MFA" not in human_auth_methods %}
 CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
   AUTHENTICATION_METHODS = (SAML)
   CLIENT_TYPES = (SNOWFLAKE_UI, DRIVERS, SNOWSQL)
   SECURITY_INTEGRATIONS = ({{ saml_integration_name | upper }})
   COMMENT = 'Human user policy - SAML SSO only';
-{%- elif human_auth_methods == "SAML or Password with MFA" %}
+{%- elif "SAML (SSO)" in human_auth_methods and "Password with MFA" in human_auth_methods %}
 CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
   AUTHENTICATION_METHODS = (SAML, PASSWORD)
   MFA_ENROLLMENT = 'REQUIRED'
-{%- if mfa_method == "TOTP (Authenticator Apps)" %}
+{%- if mfa_method | length == 1 and "TOTP (Authenticator Apps)" in mfa_method %}
   MFA_POLICY = (ALLOWED_METHODS = ('TOTP'))
-{%- elif mfa_method == "Passkey (FIDO2/WebAuthn)" %}
+{%- elif mfa_method | length == 1 and "Passkey (FIDO2/WebAuthn)" in mfa_method %}
   MFA_POLICY = (ALLOWED_METHODS = ('PASSKEY'))
 {%- else %}
   MFA_POLICY = (ALLOWED_METHODS = ('TOTP', 'PASSKEY'))
@@ -34,9 +34,9 @@ CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
 CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
   AUTHENTICATION_METHODS = (PASSWORD)
   MFA_ENROLLMENT = 'REQUIRED'
-{%- if mfa_method == "TOTP (Authenticator Apps)" %}
+{%- if mfa_method | length == 1 and "TOTP (Authenticator Apps)" in mfa_method %}
   MFA_POLICY = (ALLOWED_METHODS = ('TOTP'))
-{%- elif mfa_method == "Passkey (FIDO2/WebAuthn)" %}
+{%- elif mfa_method | length == 1 and "Passkey (FIDO2/WebAuthn)" in mfa_method %}
   MFA_POLICY = (ALLOWED_METHODS = ('PASSKEY'))
 {%- else %}
   MFA_POLICY = (ALLOWED_METHODS = ('TOTP', 'PASSKEY'))
@@ -50,30 +50,25 @@ CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
 -- STEP 2: CREATE SERVICE ACCOUNT AUTHENTICATION POLICY
 -- ============================================================================
 
-{%- if service_auth_methods == "OAuth Only" %}
-CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
-  AUTHENTICATION_METHODS = (OAUTH)
-  CLIENT_TYPES = (DRIVERS)
-  SECURITY_INTEGRATIONS = ()
-  COMMENT = 'Service account policy - OAuth only, no UI access';
-{%- elif service_auth_methods == "Key Pair Only" %}
-CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
-  AUTHENTICATION_METHODS = (KEYPAIR)
-  CLIENT_TYPES = (DRIVERS)
-  SECURITY_INTEGRATIONS = ()
-  COMMENT = 'Service account policy - Key pair only, no UI access';
-{%- elif service_auth_methods == "OAuth or Key Pair" %}
-CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
-  AUTHENTICATION_METHODS = (OAUTH, KEYPAIR)
-  CLIENT_TYPES = (DRIVERS)
-  SECURITY_INTEGRATIONS = ()
-  COMMENT = 'Service account policy - OAuth or Key pair, no UI access';
+{%- set auth_methods = [] %}
+{%- if "OAuth" in service_auth_methods %}
+{%- set _ = auth_methods.append('OAUTH') %}
+{%- endif %}
+{%- if "Key Pair" in service_auth_methods %}
+{%- set _ = auth_methods.append('KEYPAIR') %}
+{%- endif %}
+{%- if "PAT" in service_auth_methods %}
+{%- set _ = auth_methods.append('PROGRAMMATIC_ACCESS_TOKEN') %}
+{%- endif %}
+{%- if auth_methods | length == 0 %}
+-- ERROR: No service authentication methods selected. At least one method is required.
+-- Please go back and select at least one service authentication method.
 {%- else %}
 CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
-  AUTHENTICATION_METHODS = (OAUTH, KEYPAIR)
+  AUTHENTICATION_METHODS = ({{ auth_methods | join(', ') }})
   CLIENT_TYPES = (DRIVERS)
   SECURITY_INTEGRATIONS = ()
-  COMMENT = 'Service account policy - OAuth, Key pair, or PAT, no UI access';
+  COMMENT = 'Service account policy - {{ service_auth_methods | join(', ') }}, no UI access';
 {%- endif %}
 
 -- ============================================================================

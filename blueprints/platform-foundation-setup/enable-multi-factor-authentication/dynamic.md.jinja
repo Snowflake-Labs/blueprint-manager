@@ -136,7 +136,7 @@ This completes the **Security & Identity Configuration** task of the Platform Fo
 | 2.3 | SAML/SSO | {% if configure_saml == 'Yes - Configure SAML now' %}`{{ saml_integration_name | upper }}`{% else %}Deferred{% endif %} |
 | 2.4 | Break-Glass Access | {{ breakglass_accounts | length }} break-glass account(s) |
 | 2.5 | Network Policies | {{ enable_account_network_policy }} |
-| 2.6 | Authentication Policies | {{ human_auth_methods }} |
+| 2.6 | Authentication Policies | {{ human_auth_methods | join(', ') }} |
 | 2.7 | MFA Enforcement | {{ mfa_enforcement_timeline }} |
 
 ## Next Steps

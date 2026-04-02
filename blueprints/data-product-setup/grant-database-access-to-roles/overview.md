@@ -85,7 +85,7 @@ Choose a name that business users would recognize. Ask: "If someone searched for
 **More Information:**
 * [Identifier Requirements](https://docs.snowflake.com/en/sql-reference/identifiers-syntax) — Valid characters and length limits
 
-#### What account strategy do you wish to implement? (`account_strategy`: multi-select)
+#### What account strategy do you wish to implement? (`account_strategy`: single-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  
   * Best for: Small to medium organizations, centralized teams, simpler governance  
@@ -153,7 +153,7 @@ Copy the exact account name from your Snowflake session to avoid typos.
 **More Information:**
 * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) — Understanding account names
 
-#### Which domain does this data product belong to? (`data_product_domain`: multi-select)
+#### Which domain does this data product belong to? (`data_product_domain`: single-select)
 **What is this asking?**
 Select the business domain (team, department, or organizational unit) that owns this data product.
 
@@ -184,7 +184,7 @@ Work with your platform team to add the domain to Platform Foundation, then retu
 **Recommendation:**
 For domain-based and domain+environment strategies, select the domain that matches your target account name.
 
-#### Which environment is this data product being deployed to? (`data_product_environment`: multi-select)
+#### Which environment is this data product being deployed to? (`data_product_environment`: single-select)
 **What is this asking?**
 Select the SDLC environment for this data product deployment.
 

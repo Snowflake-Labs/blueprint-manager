@@ -34,7 +34,7 @@ When the user requests ANY of the following at ANY point during this skill's wor
 ```bash
 python scripts/render_journey.py \
   [answer_file_path] \
-  --blueprint [blueprint_id] \
+  --blueprint [blueprint_slug] \
   --lang sql \
   --project [project_name]
 ```
@@ -161,7 +161,7 @@ Invoke this skill when users:
    ```
 
 2. **Read blueprint metadata** for each blueprint:
-   - Load `blueprints/<blueprint_id>/meta.yaml`
+   - Load `blueprints/<blueprint_slug>/meta.yaml`
    - Extract: `name`, `summary`, `overview`, `is_repeatable`, `steps`
 
 3. **Present blueprints** to user:
@@ -180,7 +180,9 @@ Invoke this skill when users:
 
 **⚠️ MANDATORY STOPPING POINT**: Wait for user to select a blueprint.
 
-**Output:** Selected blueprint ID and metadata
+**Output:** Selected blueprint slug (directory name) and metadata
+
+> **Note:** The blueprint slug is the directory name under `blueprints/` (e.g., `platform-foundation-setup`). This is **different** from the `blueprint_id` field inside `meta.yaml` (e.g., `blueprint_4d563df2`). All file path operations in subsequent steps use the slug.
 
 ### Step 3: Initialize or Select Answer File
 
@@ -190,7 +192,7 @@ Invoke this skill when users:
 
 1. **Check for existing answer files in the project:**
    ```bash
-   find projects/<project_name>/answers/<blueprint_id> -name "*.yaml" -type f 2>/dev/null | sort -r
+   find projects/<project_name>/answers/<blueprint_slug> -name "*.yaml" -type f 2>/dev/null | sort -r
    ```
 
 2. **Present options to user:**
@@ -214,11 +216,11 @@ Invoke this skill when users:
 
 2. **Create answer file directory:**
    ```bash
-   mkdir -p projects/<project_name>/answers/<blueprint_id>
+   mkdir -p projects/<project_name>/answers/<blueprint_slug>
    ```
 
 3. **Create initial answer file:**
-   - Path: `projects/<project_name>/answers/<blueprint_id>/answers_<timestamp>.yaml`
+   - Path: `projects/<project_name>/answers/<blueprint_slug>/answers_<timestamp>.yaml`
    - Initialize with header comments (project name, blueprint name, date, blueprint ID)
 
 4. **Proceed to Step 4** (Collect User Context)
@@ -229,10 +231,10 @@ Invoke this skill when users:
    ```
    Existing answer files for this project and blueprint:
    
-   1. projects/<project_name>/answers/<blueprint_id>/answers_20251221214657.yaml
+   1. projects/<project_name>/answers/<blueprint_slug>/answers_20251221214657.yaml
       Created: 2025-12-21 21:46:57
       
-   2. projects/<project_name>/answers/<blueprint_id>/answers_20251221222441.yaml
+   2. projects/<project_name>/answers/<blueprint_slug>/answers_20251221222441.yaml
       Created: 2025-12-21 22:24:41
    
    Which file would you like to work with? (1-N):
@@ -240,12 +242,23 @@ Invoke this skill when users:
 
 2. **⚠️ MANDATORY STOPPING POINT**: Wait for user to select a file.
 
-3. **Load selected answer file:**
-   - Read the YAML file
-   - Parse existing answers
-   - Validate structure
+3. **Run the migration script** to ensure the file is compatible with the current schema before loading:
+   ```bash
+   .venv/bin/python scripts/migration/migrate_answers.py [selected_file_path] --dry-run
+   ```
+   - If the dry-run reports changes, apply them:
+     ```bash
+     .venv/bin/python scripts/migration/migrate_answers.py [selected_file_path]
+     ```
+   - If the script reports errors or the file cannot be parsed, direct the user to `scripts/TROUBLESHOOTING.md` for resolution before continuing.
+   - If no changes are needed, proceed immediately.
 
-4. **Present current state:**
+4. **Load selected answer file:**
+    - Read the YAML file
+    - Parse existing answers
+    - Validate structure
+
+5. **Present current state:**
    ```
    Loaded answer file: [file path]
    
@@ -371,7 +384,7 @@ Invoke this skill when users:
 **Actions:**
 
 1. **Load blueprint steps:**
-   - Read `blueprints/<blueprint_id>/meta.yaml` for step order
+   - Read `blueprints/<blueprint_slug>/meta.yaml` for step order
    - Load each step's `overview.md` to understand questions
 
 2. **For each step, extract questions:**
@@ -559,7 +572,7 @@ Before presenting a step's details, check whether this step is the **first step 
 
    First, load the task overview markdown file if available:
    ```bash
-   read blueprints/<blueprint_id>/tasks/<task_slug>.md
+   read blueprints/<blueprint_slug>/tasks/<task_slug>.md
    ```
 
    Then present the task overview:
@@ -610,7 +623,7 @@ Before presenting a step's details, check whether this step is the **first step 
 
 1. **Read step overview:**
    ```bash
-   read blueprints/<blueprint_id>/<step_id>/overview.md
+   read blueprints/<blueprint_slug>/<step_id>/overview.md
    ```
 
 2. **Extract questions for this step** (parse overview.md for question IDs)
@@ -805,7 +818,7 @@ When a user returns to an in-progress blueprint (e.g., they resume a previous se
 1. Identify the current step from the answer file (the last step with answers provided, or the first step with null/missing answers)
 2. Use `get_current_task(current_step_slug, tasks)` to get the task context
 3. Use `get_task_progress(current_step_slug, tasks)` to show overall progress
-4. Load the task overview for the current task: `read blueprints/<blueprint_id>/tasks/<task_slug>.md`
+4. Load the task overview for the current task: `read blueprints/<blueprint_slug>/tasks/<task_slug>.md`
 5. Present a recovery summary that includes the current task's overview context:
 
 ```
@@ -1042,11 +1055,22 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
 
 **If user selects "Generate SQL now":**
 
-1. **Run render script with project flag:**
+1. **Run the migration script** to ensure the answer file is compatible with the current schema before rendering:
+   ```bash
+   .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path] --dry-run
+   ```
+   - If the dry-run reports changes, apply them:
+     ```bash
+     .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path]
+     ```
+   - If the script reports errors or the file cannot be parsed, direct the user to `scripts/TROUBLESHOOTING.md` for resolution before continuing.
+   - If no changes are needed, proceed immediately.
+
+2. **Run render script with project flag:**
    ```bash
    python scripts/render_journey.py \
      [answer_file_path] \
-     --blueprint [blueprint_id] \
+     --blueprint [blueprint_slug] \
      --lang sql \
      --project [project_name]
    ```
@@ -1055,17 +1079,17 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
    ```bash
    ./venv/bin/python scripts/render_journey.py \
      [answer_file_path] \
-     --blueprint [blueprint_id] \
+     --blueprint [blueprint_slug] \
      --lang sql \
      --project [project_name]
    ```
 
-2. **Check for output file:**
+3. **Check for output file:**
    ```bash
    ls -lt projects/[project_name]/output/iac/sql/ | head -5
    ```
 
-3. **Present results:**
+4. **Present results:**
    ```
    ✓ SQL infrastructure code generated successfully!
    
@@ -1084,12 +1108,20 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
 
 1. **Display command:**
    ```
-   Run this command to generate your infrastructure code:
+   Before rendering, ensure your answer file is compatible with the current schema:
+
+   ```bash
+   .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path] --dry-run
+   # If changes are reported, apply them:
+   .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path]
+   ```
+
+   Then run this command to generate your infrastructure code:
    
    ```bash
    python scripts/render_journey.py \
      [answer_file_path] \
-     --blueprint [blueprint_id] \
+     --blueprint [blueprint_slug] \
      --lang sql \
      --project [project_name]
    ```
@@ -1099,12 +1131,12 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
    ```bash
    ./venv/bin/python scripts/render_journey.py \
      [answer_file_path] \
-     --blueprint [blueprint_id] \
+     --blueprint [blueprint_slug] \
      --lang sql \
      --project [project_name]
    ```
    
-   Output will be saved to: projects/[project_name]/output/iac/sql/[blueprint_id]_[timestamp].sql
+   Output will be saved to: projects/[project_name]/output/iac/sql/[blueprint_slug]_[timestamp].sql
    ```
 
 **If user selects "Go back":**
@@ -1268,6 +1300,16 @@ Dynamically produce this at the initiation of the workflow based on the current 
 
 ## Troubleshooting
 
+**Outdated answer file — invalid option values or type mismatches:**
+- This occurs when an answer file was created before the latest schema update, which changed 41 questions from `multi-select` to `single-select` and renamed options for `mfa_method`, `additional_tag_dimensions`, and `service_auth_methods`.
+- **Always run the migration script before loading an existing answer file** (see Step 3 above).
+- For a full explanation of what changed and manual fix instructions, refer the user to `scripts/TROUBLESHOOTING.md`.
+- To migrate all answer files in the project at once:
+  ```bash
+  .venv/bin/python scripts/migration/migrate_answers.py --all --dry-run
+  .venv/bin/python scripts/migration/migrate_answers.py --all
+  ```
+
 **User gives vague answers:**
 - Ask clarifying follow-up questions
 - Provide examples to help them choose
@@ -1292,11 +1334,11 @@ Dynamically produce this at the initiation of the workflow based on the current 
 ## Output
 
 Upon completion, this skill produces:
-- An answer file at `projects/<project_name>/answers/<blueprint_id>/answers_<timestamp>.yaml` with:
+- An answer file at `projects/<project_name>/answers/<blueprint_slug>/answers_<timestamp>.yaml` with:
   - ✅ Auto-answered questions (where user context was sufficient)
   - ❓ User-specific questions marked as `null` with guidance on what's needed
   - ⚠️ Insufficient context questions marked as `null` with explanation of missing information
 - Clear inline comments explaining reasoning for each answered question
 - Explicit tracking of which questions were answered vs not answered (and why)
-- Optional: Generated SQL infrastructure code at `projects/<project_name>/output/iac/sql/<blueprint_id>_<timestamp>.sql`
+- Optional: Generated SQL infrastructure code at `projects/<project_name>/output/iac/sql/<blueprint_slug>_<timestamp>.sql`
 - Summary showing exact breakdown: auto-answered, needs user input, needs more context

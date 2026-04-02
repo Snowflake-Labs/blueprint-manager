@@ -6,49 +6,49 @@ These values are inherited from Platform Foundation. Any changes apply only to t
 
 | Setting | Value | Source |
 |---------|-------|--------|
-| **Human Authentication** | {{ human_auth_methods }} | Platform Foundation (editable) |
-| **MFA Method** | {{ mfa_method }} | Platform Foundation (editable) |
-| **Service Authentication** | {{ service_auth_methods }} | Platform Foundation (editable) |
+| **Human Authentication** | {{ human_auth_methods | join(', ') }} | Platform Foundation (editable) |
+| **MFA Method** | {{ mfa_method | join(', ') }} | Platform Foundation (editable) |
+| **Service Authentication** | {{ service_auth_methods | join(', ') }} | Platform Foundation (editable) |
 | **Account-Level Enforcement** | {{ apply_auth_policies_account_level }} | Platform Foundation (editable) |
 
 ### Policy Summary
 
 | User Type | Policy Name | Authentication Methods |
 |-----------|-------------|------------------------|
-| **Human Users** | `human_user_auth_policy` | {{ human_auth_methods }} |
-| **Service Accounts** | `service_account_auth_policy` | {{ service_auth_methods }} |
+| **Human Users** | `human_user_auth_policy` | {{ human_auth_methods | join(', ') }} |
+| **Service Accounts** | `service_account_auth_policy` | {{ service_auth_methods | join(', ') }} |
 | **Break-Glass** | `breakglass_auth_policy` | Password Only |
 
 ### Human User Authentication Policy
 
-{%- if human_auth_methods == "SAML Only (SSO required)" %}
+{%- if "SAML (SSO)" in human_auth_methods and "Password with MFA" not in human_auth_methods %}
 - Authentication: SAML only
 - Users must use SSO via {{ identity_provider }}
 - MFA handled by Identity Provider
-{%- elif human_auth_methods == "SAML or Password with MFA" %}
+{%- elif "SAML (SSO)" in human_auth_methods and "Password with MFA" in human_auth_methods %}
 - Authentication: SAML or Password
-- MFA: {{ mfa_method }} (for password logins)
+- MFA: {{ mfa_method | join(', ') }} (for password logins)
 - Users can choose SSO or password + MFA
 {%- else %}
 - Authentication: Password only
-- MFA: {{ mfa_method }} (required)
+- MFA: {{ mfa_method | join(', ') }} (required)
 - Users authenticate directly with Snowflake
 {%- endif %}
 
 ### Service Account Authentication Policy
 
-{%- if service_auth_methods == "OAuth Only" %}
+{%- if service_auth_methods | length == 1 and "OAuth" in service_auth_methods %}
 - Authentication: OAuth only
 - Requires OAuth integration
-{%- elif service_auth_methods == "Key Pair Only" %}
+{%- elif service_auth_methods | length == 1 and "Key Pair" in service_auth_methods %}
 - Authentication: Key-pair only
 - No passwords to manage
 - Most secure for automated access
-{%- elif service_auth_methods == "OAuth or Key Pair" %}
+{%- elif "OAuth" in service_auth_methods and "Key Pair" in service_auth_methods and "PAT" not in service_auth_methods %}
 - Authentication: OAuth or key-pair
 - Flexibility for different integration types
 {%- else %}
-- Authentication: OAuth, key-pair, or PAT
+- Authentication: {{ service_auth_methods | join(', ') }}
 - Maximum flexibility including personal access tokens
 {%- endif %}
 

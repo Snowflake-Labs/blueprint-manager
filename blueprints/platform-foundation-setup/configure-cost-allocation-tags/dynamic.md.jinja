@@ -2,7 +2,7 @@
 
 ### Configuration Summary
 
-**Additional Tags:** {{ additional_tag_dimensions }}
+**Additional Tags:** {{ additional_tag_dimensions | join(', ') }}
 **Enforcement:** {{ require_cost_tags }}
 
 ### Complete Tag Framework
@@ -24,16 +24,17 @@ After this step, you'll have the following tags:
 
 | Tag | Purpose |
 |-----|---------|
-{%- if additional_tag_dimensions == "All (Cost Center, Owner, Project, Application)" %}
+{%- if "Cost Center" in additional_tag_dimensions %}
 | `cost_center` | Accounting code |
+{%- endif %}
+{%- if "Owner" in additional_tag_dimensions %}
 | `owner` | Responsible party |
+{%- endif %}
+{%- if "Project" in additional_tag_dimensions %}
 | `project` | Initiative name |
+{%- endif %}
+{%- if "Application" in additional_tag_dimensions %}
 | `application` | System name |
-{%- elif additional_tag_dimensions == "Essential (Cost Center, Owner)" %}
-| `cost_center` | Accounting code |
-| `owner` | Responsible party |
-{%- else %}
-| `owner` | Responsible party |
 {%- endif %}
 
 ### Applying Tags to Resources
@@ -60,4 +61,4 @@ ALTER WAREHOUSE my_warehouse SET TAG
 | 3.4 | Monitor Limit | {{ account_resource_monitor_limit }} credits |
 | {%- endif %} |  |  |
 | 3.5 | Cost Allocation Tags | Extended |
-| 3.6 | Additional Tags | {{ additional_tag_dimensions }} |
+| 3.6 | Additional Tags | {{ additional_tag_dimensions | join(', ') }} |

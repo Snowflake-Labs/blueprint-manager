@@ -63,11 +63,11 @@ MFA Configuration Summary
 =========================
 
 Account: {{ new_account_name | upper }}
-Auth Policy: {{ human_auth_methods }}
-MFA Method: {{ mfa_method }}
-{%- if "MFA" in human_auth_methods or "Password with MFA" in human_auth_methods %}
+Auth Policy: {{ human_auth_methods | join(', ') }}
+MFA Method: {{ mfa_method | join(', ') }}
+{%- if "Password with MFA" in human_auth_methods %}
 MFA Required: Yes (for password logins)
-{%- elif human_auth_methods == "SAML Only (SSO required)" %}
+{%- elif "SAML (SSO)" in human_auth_methods and "Password with MFA" not in human_auth_methods %}
 MFA Required: Via IdP ({{ identity_provider }})
 {%- else %}
 MFA Required: No

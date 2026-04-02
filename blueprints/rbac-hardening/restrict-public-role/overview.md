@@ -55,7 +55,7 @@ Configure exceptions via `rbac_public_exceptions` to exclude these from revocati
 
 ### Configuration Questions
 
-#### Do you want to revoke unnecessary grants from the PUBLIC role? (`rbac_restrict_public`: multi-select)
+#### Do you want to revoke unnecessary grants from the PUBLIC role? (`rbac_restrict_public`: single-select)
 **What is this asking?**
 Choose whether to generate REVOKE statements that remove unnecessary privileges
 from the PUBLIC role. The PUBLIC role is automatically granted to every user in

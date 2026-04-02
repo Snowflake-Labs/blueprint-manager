@@ -99,7 +99,7 @@ The initial administrator is the first user created in the Organization Account 
   * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
   * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#accountadmin-role) 
 
-#### What Snowflake edition will you use for the Organization Account? (`org_account_edition`: multi-select)
+#### What Snowflake edition will you use for the Organization Account? (`org_account_edition`: single-select)
 The Organization Account requires **Enterprise Edition or higher**. Standard Edition does not support Organization Account functionality.  
 
 **Enterprise Edition** (Recommended):  
@@ -164,7 +164,7 @@ Your Snowflake organization name is the first part of your account URL and conne
   **More Information:**  
   * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
 
-#### Do you want to create an Organization Account? (`enable_org_account`: multi-select)
+#### Do you want to create an Organization Account? (`enable_org_account`: single-select)
 The Organization Account is a special account that provides centralized management capabilities for your Snowflake environment.  
   
   **⚠️ Strong Recommendation: Create an Organization Account**  

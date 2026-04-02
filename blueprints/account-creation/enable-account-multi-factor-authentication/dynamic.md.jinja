@@ -4,20 +4,20 @@
 
 | Setting | Value |
 |---------|-------|
-| **Human Auth Policy** | {{ human_auth_methods }} |
-| **MFA Method** | {{ mfa_method }} |
-| **MFA Required** | {% if 'MFA' in human_auth_methods or 'Password with MFA' in human_auth_methods %}Yes{% else %}No (handled by SSO IdP){% endif %} |
+| **Human Auth Policy** | {{ human_auth_methods | join(', ') }} |
+| **MFA Method** | {{ mfa_method | join(', ') }} |
+| **MFA Required** | {% if "Password with MFA" in human_auth_methods %}Yes{% else %}No (handled by SSO IdP){% endif %} |
 | **Support Contact** | {{ account_mfa_support_contact }} |
 
 ### MFA Enforcement
 
-{%- if human_auth_methods == "SAML Only (SSO required)" %}
+{%- if "SAML (SSO)" in human_auth_methods and "Password with MFA" not in human_auth_methods %}
 
 **MFA via Identity Provider**
 
 Since you're using SAML-only authentication, MFA is handled by your Identity Provider ({{ identity_provider }}). Ensure your IdP is configured to require MFA for Snowflake access.
 
-{%- elif "MFA" in human_auth_methods or "Password with MFA" in human_auth_methods %}
+{%- elif "Password with MFA" in human_auth_methods %}
 
 **MFA Required for Password Logins**
 
@@ -34,7 +34,7 @@ Users authenticating with passwords must use MFA. They'll be prompted to enroll 
 
 **MFA Not Required**
 
-⚠️ Your current authentication policy does not require MFA for password logins. Consider upgrading to "Password with MFA" for improved security.
+Your current authentication policy does not require MFA for password logins. Consider upgrading to "Password with MFA" for improved security.
 
 {%- endif %}
 

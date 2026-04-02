@@ -173,7 +173,7 @@ Your Snowflake organization name is the first part of your account URL and conne
   **More Information:**  
   * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
 
-#### How would you like to configure security for this account? (`security_config_approach`: multi-select)
+#### How would you like to configure security for this account? (`security_config_approach`: single-select)
 **What is this asking?**
 Choose whether to replicate the Platform Foundation security settings or create custom settings for this account.
 

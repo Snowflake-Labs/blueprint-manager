@@ -1,5 +1,5 @@
 # =============================================================================
-# Account Creation - TechCorp PROD Account
+# Account Creation - TechCorp Answer File
 # Blueprint: blueprint_4e7081df
 # =============================================================================
 
@@ -30,15 +30,15 @@ environment_list:
 # -----------------------------------------------------------------------------
 # New Account Details
 # -----------------------------------------------------------------------------
-new_account_name: TECHCORP_PROD
+new_account_name: TECHCORP_DEV
 new_account_admin_name: Casey Demo
 new_account_admin_email: casey.demo@techcorp.io
 new_account_edition: ENTERPRISE
 new_account_region: us-east-2
 
 account_domain: security
-account_environment: prod
-account_description: Production environment for all TechCorp data products
+account_environment: dev
+account_description: Development environment for all TechCorp data products
 
 # -----------------------------------------------------------------------------
 # Account Security Configuration Approach
@@ -48,14 +48,10 @@ account_configure_saml: No - Configure SAML later
 
 # Identity & Authentication (inherited from org)
 identity_provider: None - Manual User Management
-human_auth_methods:
-- Password with MFA
-service_auth_methods:
-- OAuth
-- Key Pair
+human_auth_methods: Password with MFA
+service_auth_methods: OAuth or Key Pair
 configure_saml: No - Configure SAML later
-mfa_method:
-- TOTP (Authenticator Apps)
+mfa_method: Either TOTP or Passkey
 apply_auth_policies_account_level: Yes - Apply default policy to all users
 
 # Account MFA Support
@@ -67,10 +63,8 @@ account_mfa_support_contact: it-helpdesk@techcorp.io
 enable_account_network_policy: No - Apply only to specific users
 
 allowed_network_rules:
-- ip_addresses: 10.0.0.0/8
-  rule_name: CORPORATE_NETWORK
-- ip_addresses: 192.168.0.0/16
-  rule_name: VPN_NETWORK
+- ip_addresses: 0.0.0.0/0
+  rule_name: ALLOW_ALL_RULE
 
 blocked_network_rules: []
 
@@ -90,21 +84,19 @@ account_scim_allowed_ips:
 account_admin_users:
 - admin_role: ACCOUNTADMIN
   email: casey.demo@techcorp.io
-  first_name: Sarah
-  last_name: Chen
+  first_name: Casey
+  last_name: Demo
   login_name: casey.demo@techcorp.io
 - admin_role: SYSADMIN
   email: riley.test@techcorp.io
-  first_name: Mike
-  last_name: Johnson
+  first_name: Riley
+  last_name: Test
   login_name: riley.test@techcorp.io
 
 # Account Network Rules
 account_allowed_network_rules:
-- ip_addresses: 10.0.0.0/8
-  rule_name: CORPORATE_NETWORK
-- ip_addresses: 192.168.0.0/16
-  rule_name: VPN_NETWORK
+- ip_addresses: 0.0.0.0/0
+  rule_name: ALLOW_ALL_RULE
 
 account_blocked_network_rules: []
 
@@ -123,12 +115,11 @@ local_policies_schema: POLICIES
 # -----------------------------------------------------------------------------
 # Account Cost Management
 # -----------------------------------------------------------------------------
-account_budget_limit: 10000
+account_budget_limit: 2500
 account_budget_threshold: 75
 account_budget_emails:
 - finops@techcorp.io
-- platform-admin@techcorp.io
 
-account_resource_monitor_limit: 8000
-account_resource_monitor_reset_frequency: MONTHLY
-account_resource_monitor_action: Suspend After Current Qu
+account_resource_monitor_limit: 1923
+account_resource_monitor_reset_frequency: WEEKLY
+account_resource_monitor_action: Suspend After Current Queries

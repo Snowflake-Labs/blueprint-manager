@@ -64,7 +64,7 @@ Based on your Platform Foundation settings, follow this pattern:
 **Best Practice:**
 Use the suggested name from the previous step unless you have a specific reason to customize it. Consistent naming makes governance and cost allocation easier.
 
-#### What Snowflake edition will this account use? (`new_account_edition`: multi-select)
+#### What Snowflake edition will this account use? (`new_account_edition`: single-select)
 **What is this asking?**
 Select the Snowflake edition for this account.
 
@@ -176,7 +176,7 @@ This is the bootstrap user who will configure the account after creation. Choosi
 **More Information:**
 * [CREATE USER](https://docs.snowflake.com/en/sql-reference/sql/create-user) — User creation reference
 
-#### What account strategy do you wish to implement? (`account_strategy`: multi-select)
+#### What account strategy do you wish to implement? (`account_strategy`: single-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  
   * Best for: Small to medium organizations, centralized teams, simpler governance  
@@ -211,7 +211,7 @@ Choose the account strategy that best fits your organization. Your choice determ
 - Multi-Account (Domain-based)
 - Multi-Account (Domain + Environment)
 
-#### Which domain will this account represent? (`account_domain`: multi-select)
+#### Which domain will this account represent? (`account_domain`: single-select)
 **What is this asking?**
 Select the business domain this account will represent. This account will serve all environments (Dev, Test, Prod) for this domain.
 
@@ -226,7 +226,7 @@ Since you're using a domain-based strategy, environments (Dev, Test, Prod) will 
 **More Information:**
 * [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
 
-#### Which environment will this account represent? (`account_environment`: multi-select)
+#### Which environment will this account represent? (`account_environment`: single-select)
 **What is this asking?**
 Select the SDLC environment this account will represent. This account will serve all domains (Sales, Finance, HR, etc.) for this environment.
 

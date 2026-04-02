@@ -59,7 +59,7 @@ The integration name identifies the SAML connection in Snowflake. A descriptive 
 **More Information:**
 * [SAML Security Integration](https://docs.snowflake.com/en/sql-reference/sql/create-security-integration-saml2) — CREATE SECURITY INTEGRATION reference
 
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: single-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
 

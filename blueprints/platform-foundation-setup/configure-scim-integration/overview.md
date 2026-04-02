@@ -37,7 +37,7 @@ A network policy that restricts SCIM API access to only your IdP's IP addresses.
 
 ### Configuration Questions
 
-#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: multi-select)
+#### Which Identity Provider will you use for SCIM integration? (`identity_provider`: single-select)
 **What is this asking?**
 Select the Identity Provider (IdP) that your organization uses to manage user identities. This IdP will be the source of truth for user provisioning to Snowflake.
 
@@ -84,7 +84,7 @@ Use a format like `<IDP>_SCIM_INTEGRATION` where `<IDP>` is your Identity Provid
 **More Information:**
 * [CREATE SECURITY INTEGRATION (SCIM)](https://docs.snowflake.com/en/sql-reference/sql/create-security-integration-scim) — SQL command reference
 
-#### Which role should own the SCIM integration and provisioned users? (`scim_provisioner_role`: multi-select)
+#### Which role should own the SCIM integration and provisioned users? (`scim_provisioner_role`: single-select)
 **What is this asking?**
 Select the role that will own the SCIM integration and be granted ownership of users provisioned through SCIM.
 
