@@ -403,6 +403,7 @@
 - answer_title: data_product_environment
   question_text: Which environment is this data product being deployed to?
   answer_type: single-select
+  dynamic_options_source: environment_list
   is_org_scope: false
   guidance: '**What is this asking?**
 
@@ -458,6 +459,7 @@
 - answer_title: data_product_domain
   question_text: Which domain does this data product belong to?
   answer_type: single-select
+  dynamic_options_source: domain_list
   is_org_scope: false
   guidance: '**What is this asking?**
 
@@ -1774,6 +1776,7 @@
 - answer_title: account_environment
   question_text: Which environment will this account represent?
   answer_type: single-select
+  dynamic_options_source: environment_list
   is_org_scope: false
   guidance: '**What is this asking?**
 
@@ -1834,6 +1837,7 @@
 - answer_title: account_domain
   question_text: Which domain will this account represent?
   answer_type: single-select
+  dynamic_options_source: domain_list
   is_org_scope: false
   guidance: '**What is this asking?**
 
