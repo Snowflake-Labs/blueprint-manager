@@ -630,7 +630,47 @@ Before presenting a step's details, check whether this step is the **first step 
 
 3. **Load question details** from definitions/questions.yaml for all questions in this step
 
-4. **Present step information:**
+4. **Resolve options for single-select and multi-select questions** using the three-stage resolution below before presenting any question.
+
+   > **Maintainer note — Three-Stage Option Resolution:**
+   > For every single-select or multi-select question, options are resolved in this priority order:
+   > - **Stage 1 (Dynamic, primary):** If the question has a `dynamic_options_source` field, look up the current in-memory answer for the `answer_title` referenced by that field. If the answer is non-empty (the source question has been answered and contains list values), use those list values as the options. Proceed to render normally.
+   > - **Stage 2 (Static fallback):** If Stage 1 yields no options (either `dynamic_options_source` is absent, or the referenced source answer is empty/unanswered), check whether the question has a static `options` list. If present, use it. Proceed to render normally.
+   > - **Stage 3 (Block):** Only if neither Stage 1 nor Stage 2 yields options, block the question. Display a notice naming the source question (the `answer_title` from `dynamic_options_source`) that must be completed first.
+   >
+   > A question with both `dynamic_options_source` and a static `options` list is valid: Stage 1 takes priority when the source is answered; Stage 2 provides a graceful fallback when it is not. Never treat `dynamic_options_source` and `options` as mutually exclusive.
+
+   **Resolution algorithm (apply per question before display):**
+
+   ```
+   For each single-select / multi-select question:
+
+     resolved_options = []
+     source_title = question.dynamic_options_source  # may be null/absent
+
+     # Stage 1 — Dynamic (primary)
+     if source_title is present:
+       source_answer = in_memory_answers.get(source_title)
+       if source_answer is non-empty list:
+         resolved_options = source_answer
+
+     # Stage 2 — Static fallback
+     if resolved_options is empty:
+       if question.options is present and non-empty:
+         resolved_options = question.options
+
+     # Stage 3 — Block
+     if resolved_options is empty:
+       → Do NOT render the question for input
+       → Display blocking notice:
+         "⚠️ This question cannot be answered yet. Please complete
+          '[source_title]' first, then return to this question."
+       → Skip to next question
+     else:
+       → Render question normally using resolved_options
+   ```
+
+5. **Present step information:**
    ```
    ======================================================================
     Step [N] of [Total]: [Step Name]
@@ -644,39 +684,43 @@ Before presenting a step's details, check whether this step is the **first step 
    
    ## Configuration Questions and Answers
    
-   ### Question 1: [question_text]
-   
-   **Answer:** [your answer]
-   
-   **Reasoning:** [why this answer was chosen based on user context]
-   
-   **Question Details:**
-   - **Type:** [answer_type: multi-select, list, or text]
-   - **Guidance:** 
-     [Full guidance text from definitions - all paragraphs and formatting]
-   [For multi-select questions:]
-   - **Available Options:**
-     1. [option 1 text]
-     2. [option 2 text]
-     ...
-   
-   ---
-   
-   ### Question 2: [question_text]
-   
-   **Answer:** [your answer]
-   
-   **Reasoning:** [why this answer was chosen based on user context]
-   
-   **Question Details:**
-   - **Type:** [answer_type]
-   - **Guidance:**
-     [Full guidance text from definitions - all paragraphs and formatting]
-   [For multi-select questions:]
-   - **Available Options:**
-     1. [option 1 text]
-     2. [option 2 text]
-     ...
+    ### Question 1: [question_text]
+    
+    **Answer:** [your answer]
+    
+    **Reasoning:** [why this answer was chosen based on user context]
+    
+    **Question Details:**
+    - **Type:** [answer_type: single-select, multi-select, list, or text]
+    - **Guidance:** 
+      [Full guidance text from definitions - all paragraphs and formatting]
+    [For single-select / multi-select questions — Stage 1 or Stage 2 resolved options:]
+    - **Available Options:**
+      1. [option 1 text]
+      2. [option 2 text]
+      ...
+    [For single-select / multi-select questions — Stage 3 blocked (no dynamic or static options available):]
+    ⚠️ This question cannot be answered yet. Please complete '[source_title]' first, then return to this question.
+    
+    ---
+    
+    ### Question 2: [question_text]
+    
+    **Answer:** [your answer]
+    
+    **Reasoning:** [why this answer was chosen based on user context]
+    
+    **Question Details:**
+    - **Type:** [answer_type]
+    - **Guidance:**
+      [Full guidance text from definitions - all paragraphs and formatting]
+    [For single-select / multi-select questions — Stage 1 or Stage 2 resolved options:]
+    - **Available Options:**
+      1. [option 1 text]
+      2. [option 2 text]
+      ...
+    [For single-select / multi-select questions — Stage 3 blocked (no dynamic or static options available):]
+    ⚠️ This question cannot be answered yet. Please complete '[source_title]' first, then return to this question.
    
    ---
    
