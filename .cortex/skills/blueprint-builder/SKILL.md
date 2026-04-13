@@ -630,7 +630,72 @@ Before presenting a step's details, check whether this step is the **first step 
 
 3. **Load question details** from definitions/questions.yaml for all questions in this step
 
-4. **Present step information:**
+4. **Resolve options for single-select and multi-select questions** using the three-stage resolution below before presenting any question.
+
+   > **Maintainer note — Three-Stage Option Resolution:**
+   > For every single-select or multi-select question, options are resolved in this priority order:
+   > - **Stage 1a (Dynamic, in-memory):** If the question has a `dynamic_options_source` field, look up the current in-memory answer for the `answer_title` referenced by that field. If the answer is non-empty (the source question has been answered in this session and contains list values), use those list values as the options. Proceed to render normally.
+   > - **Stage 1b (Dynamic, project files):** If Stage 1a finds nothing (source not yet answered in this session), search all `*.yaml` answer files saved under `projects/<project_name>/answers/` for a key matching `source_title`. If a non-empty list value is found, use it as the options. Record the file it came from (`resolved_source`) to show the user where the options originated. Proceed to render normally.
+   > - **Stage 2 (Static fallback):** If neither Stage 1a nor 1b yields options (either `dynamic_options_source` is absent, or the source key was not found anywhere), check whether the question has a static `options` list. If present, use it. Proceed to render normally.
+   > - **Stage 3 (Block):** Only if none of the above stages yield options, block the question. Display a notice that varies by sub-case: if the source question was answered in-memory but produced no usable values (empty or non-list result), tell the user that no options are available from that answer; if the source question has not been answered yet in any project file, tell the user to complete the blueprint that defines it first; if there is no `dynamic_options_source` at all (and no static `options` list), tell the user that no options are available and the question definition should be checked.
+   >
+   > A question with both `dynamic_options_source` and a static `options` list is valid: Stage 1a/1b take priority when the source is answered; Stage 2 provides a graceful fallback when it is not. Never treat `dynamic_options_source` and `options` as mutually exclusive.
+
+   **Resolution algorithm (apply per question before display):**
+
+   ```
+   For each single-select / multi-select question:
+
+     resolved_options = []
+     resolved_source = null                            # tracks where options came from
+     source_title = question.dynamic_options_source    # may be null/absent
+     source_was_answered = false
+
+     # Stage 1a — Dynamic, in-memory (current session)
+     if source_title is present:
+       if source_title in in_memory_answers:           # key exists → source was answered this session
+         source_answer = in_memory_answers[source_title]
+         if source_answer is non-empty list:
+           resolved_options = source_answer
+           resolved_source = "current answers"
+         else:
+           source_was_answered = true                  # answered but produced no usable options
+
+     # Stage 1b — Dynamic, project files (cross-blueprint lookup)
+     if resolved_options is empty and source_title is present and not source_was_answered:
+       for each yaml_file in glob("projects/<project_name>/answers/**/*.yaml"):
+         loaded = parse_yaml(yaml_file)
+         if source_title in loaded and loaded[source_title] is non-empty list:
+           resolved_options = loaded[source_title]
+           resolved_source = relative path of yaml_file
+           break
+
+     # Stage 2 — Static fallback
+     if resolved_options is empty:
+       if question.options is present and non-empty:
+         resolved_options = question.options
+         resolved_source = "question definition"
+
+     # Stage 3 — Block
+     if resolved_options is empty:
+       → Do NOT render the question for input
+       → if source_was_answered:
+           Display: "⚠️ This question has no available options. '[source_title]'
+                     was answered but produced no selectable values."
+         elif source_title is present:
+           Display: "⚠️ This question cannot be answered yet. '[source_title]' was
+                     not found in the current session or in any saved answer files
+                     for project '<project_name>'. Complete the blueprint that
+                     defines '[source_title]' first, then return to this question."
+         else:
+           Display: "⚠️ This question has no available options and no dynamic
+                     source is configured. Check the question definition."
+       → Skip to next question
+     else:
+       → Render question normally using resolved_options and resolved_source
+   ```
+
+5. **Present step information:**
    ```
    ======================================================================
     Step [N] of [Total]: [Step Name]
@@ -644,39 +709,51 @@ Before presenting a step's details, check whether this step is the **first step 
    
    ## Configuration Questions and Answers
    
-   ### Question 1: [question_text]
-   
-   **Answer:** [your answer]
-   
-   **Reasoning:** [why this answer was chosen based on user context]
-   
-   **Question Details:**
-   - **Type:** [answer_type: multi-select, list, or text]
-   - **Guidance:** 
-     [Full guidance text from definitions - all paragraphs and formatting]
-   [For multi-select questions:]
-   - **Available Options:**
-     1. [option 1 text]
-     2. [option 2 text]
-     ...
-   
-   ---
-   
-   ### Question 2: [question_text]
-   
-   **Answer:** [your answer]
-   
-   **Reasoning:** [why this answer was chosen based on user context]
-   
-   **Question Details:**
-   - **Type:** [answer_type]
-   - **Guidance:**
-     [Full guidance text from definitions - all paragraphs and formatting]
-   [For multi-select questions:]
-   - **Available Options:**
-     1. [option 1 text]
-     2. [option 2 text]
-     ...
+    ### Question 1: [question_text]
+    
+    **Answer:** [your answer]
+    
+    **Reasoning:** [why this answer was chosen based on user context]
+    
+    **Question Details:**
+    - **Type:** [answer_type: single-select, multi-select, list, or text]
+    - **Guidance:** 
+      [Full guidance text from definitions - all paragraphs and formatting]
+     [For single-select / multi-select questions — Stage 1a/1b or Stage 2 resolved options:]
+     - **Available Options** (from `[resolved_source]`):
+       1. [option 1 text]
+       2. [option 2 text]
+       ...
+     [For single-select / multi-select questions — Stage 3 blocked (source not found anywhere):]
+     ⚠️ This question cannot be answered yet. '[source_title]' was not found in the current session or in any saved answer files for project '<project_name>'. Complete the blueprint that defines '[source_title]' first, then return to this question.
+     [For single-select / multi-select questions — Stage 3 blocked (source answered, no usable values):]
+     ⚠️ This question has no available options. '[source_title]' was answered but produced no selectable values.
+     [For single-select / multi-select questions — Stage 3 blocked (no dynamic source configured):]
+     ⚠️ This question has no available options and no dynamic source is configured. Check the question definition.
+     
+     ---
+     
+     ### Question 2: [question_text]
+     
+     **Answer:** [your answer]
+     
+     **Reasoning:** [why this answer was chosen based on user context]
+     
+     **Question Details:**
+     - **Type:** [answer_type]
+     - **Guidance:**
+       [Full guidance text from definitions - all paragraphs and formatting]
+     [For single-select / multi-select questions — Stage 1a/1b or Stage 2 resolved options:]
+     - **Available Options** (from `[resolved_source]`):
+       1. [option 1 text]
+       2. [option 2 text]
+       ...
+     [For single-select / multi-select questions — Stage 3 blocked (source not found anywhere):]
+     ⚠️ This question cannot be answered yet. '[source_title]' was not found in the current session or in any saved answer files for project '<project_name>'. Complete the blueprint that defines '[source_title]' first, then return to this question.
+     [For single-select / multi-select questions — Stage 3 blocked (source answered, no usable values):]
+     ⚠️ This question has no available options. '[source_title]' was answered but produced no selectable values.
+     [For single-select / multi-select questions — Stage 3 blocked (no dynamic source configured):]
+     ⚠️ This question has no available options and no dynamic source is configured. Check the question definition.
    
    ---
    
