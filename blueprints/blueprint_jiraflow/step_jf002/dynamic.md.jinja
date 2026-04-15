@@ -1,0 +1,19 @@
+## Create Network Rule
+
+### Configuration
+
+| Setting | Value |
+|---------|-------|
+| **Database** | `{{ rule_db | upper }}` |
+| **Schema** | `{{ rule_schema | upper }}` |
+| **Rule Name** | `{{ rule_db | upper }}.{{ rule_schema | upper }}.JIRA_NETWORK_RULE` |
+| **Type** | HOST_PORT / EGRESS |
+
+### Allowed Hosts
+
+| Host | Port | Purpose |
+|------|------|---------|
+| `snowflakecomputing.atlassian.net` | 443 | Resolves Jira Cloud ID from instance URL |
+| `api.atlassian.com` | 443 | All Jira REST API calls |
+
+> **Both hosts are required.** The connector first contacts the instance URL to resolve the Atlassian Cloud ID, then routes all subsequent API calls through `api.atlassian.com`. Omitting either host will cause the `Jira Connection` controller to fail validation.

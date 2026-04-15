@@ -1,0 +1,24 @@
+## Prerequisites Confirmation
+
+### nipyapi Profile
+
+| Setting | Value |
+|---------|-------|
+| **Profile Name** | `{{ nipyapi_profile }}` |
+
+### Verify Installation
+
+Run the following to confirm nipyapi is installed and the profile is reachable:
+
+```bash
+# Check nipyapi version (must be >= 1.2.0)
+nipyapi --version
+
+# Verify profile exists
+grep "{{ nipyapi_profile }}:" ~/.nipyapi/profiles.yml
+
+# Test connectivity to your runtime
+nipyapi --profile {{ nipyapi_profile }} canvas get_root_pg_id
+```
+
+If connectivity fails with a 401 error, regenerate your Personal Access Token from the Snowflake UI and update the `nifi_bearer_token` in `~/.nipyapi/profiles.yml`.

@@ -1,0 +1,15 @@
+## Grant Privileges to Runtime Role
+
+### Grants Summary
+
+| Object | Privilege | Grantee |
+|--------|-----------|---------|
+| `{{ dest_db | upper }}` (database) | USAGE | `{{ runtime_role | upper }}` |
+| `{{ dest_db | upper }}.{{ dest_schema | upper }}` (schema) | USAGE | `{{ runtime_role | upper }}` |
+| `{{ dest_db | upper }}.{{ dest_schema | upper }}` (schema) | CREATE TABLE, CREATE VIEW | `{{ runtime_role | upper }}` |
+| All tables in schema | INSERT, UPDATE, DELETE, SELECT | `{{ runtime_role | upper }}` |
+| Future tables in schema | INSERT, UPDATE, DELETE, SELECT | `{{ runtime_role | upper }}` |
+| `{{ warehouse_name | upper }}` (warehouse) | USAGE | `{{ runtime_role | upper }}` |
+| `JIRA_EAI` (integration) | USAGE | `{{ runtime_role | upper }}` |
+
+> **FUTURE TABLES grant** is included to cover the `{{ dest_table | upper }}` table that the connector auto-creates on first run — without it, the connector can create the table but cannot insert data.

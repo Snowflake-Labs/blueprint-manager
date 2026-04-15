@@ -1,0 +1,18 @@
+-- ============================================================================
+-- CREATE WAREHOUSE FOR JIRA CONNECTOR
+-- ============================================================================
+-- Warehouse: {{ warehouse_name }}
+-- ============================================================================
+-- REQUIRED ROLE: ACCOUNTADMIN (or SYSADMIN with CREATE WAREHOUSE privilege)
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+CREATE WAREHOUSE IF NOT EXISTS {{ warehouse_name | upper }}
+  WAREHOUSE_SIZE = XSMALL
+  AUTO_SUSPEND = 60
+  AUTO_RESUME = TRUE
+  COMMENT = 'Warehouse for Openflow Jira Cloud connector';
+
+-- Verify creation
+SHOW WAREHOUSES LIKE '{{ warehouse_name | upper }}';

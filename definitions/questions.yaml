@@ -4675,3 +4675,94 @@
 
     **More Information:**
     * [SOC 2 Access Reviews](https://docs.snowflake.com/en/user-guide/security-access-control-overview)
+
+# =============================================================================
+# OPENFLOW JIRA CLOUD CONNECTOR (blueprint_jiraflow)
+# =============================================================================
+- answer_title: nipyapi_profile
+  question_text: What is your nipyapi profile name?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**What is a nipyapi profile?**\n\nA named entry in `~/.nipyapi/profiles.yml`\
+    \ that stores the NiFi API URL and Personal Access Token (PAT) for a specific\
+    \ Openflow runtime. All nipyapi CLI commands use `--profile <name>` to target\
+    \ the correct runtime.\n\n**How to find your profile name:**\n```bash\ngrep -E\
+    \ \"^[a-zA-Z].*:$\" ~/.nipyapi/profiles.yml | tr -d ':'\n```\n\n**How to create\
+    \ a profile** (if it doesn't exist):\n```yaml\n# ~/.nipyapi/profiles.yml\n<profile_name>:\n\
+    \  nifi_url: https://of--<account>.snowflakecomputing.app/<runtime_name>/nifi-api\n\
+    \  nifi_bearer_token: <personal_access_token>\n```\n\n**Important:** SPCS runtimes\
+    \ reject JWT session tokens. You must use a Personal Access Token generated from\
+    \ the Snowflake UI under your user profile -> Security -> Personal Access Tokens.\n\
+    \n**More Information:**\n* [nipyapi documentation](https://nipyapi.readthedocs.io)"
+- answer_title: rule_db
+  question_text: What database should contain the Jira network rule?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**What is this asking?**\n\nThe database where the `JIRA_NETWORK_RULE`\
+    \ network rule object will be created.\n\n**Recommendation:** Use an existing\
+    \ security or governance database such as `SECURITY`, `GOVERNANCE`, or `PLATFORM`.\n\
+    \n**More Information:**\n* [CREATE NETWORK RULE](https://docs.snowflake.com/en/sql-reference/sql/create-network-rule)"
+- answer_title: rule_schema
+  question_text: What schema should contain the Jira network rule?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**What is this asking?**\n\nThe schema within `rule_db` where `JIRA_NETWORK_RULE`\
+    \ will be created.\n\n**Recommendation:** Use `PUBLIC` or a dedicated security/policies\
+    \ schema.\n\n**More Information:**\n* [CREATE NETWORK RULE](https://docs.snowflake.com/en/sql-reference/sql/create-network-rule)"
+- answer_title: runtime_role
+  question_text: What is the Openflow runtime role name?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**What is the runtime role?**\n\nThe Snowflake role under which the\
+    \ Openflow SPCS runtime operates.\n\n**How to find it:**\n```sql\nSHOW ROLES\
+    \ LIKE '%OPENFLOW%';\n```\n\nLook for a role named `OPENFLOW_RUNTIME_ROLE_SPCS_<runtime_name>`\
+    \ or similar."
+- answer_title: dest_db
+  question_text: What database should store Jira issues?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**Default:** `JIRA_DB`\n\nThe Snowflake database where the Jira connector\
+    \ will write issue data. Will be created if it does not already exist.\n\n**More\
+    \ Information:**\n* [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)"
+- answer_title: dest_schema
+  question_text: What schema should store Jira issues?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**Default:** `JIRA_SCHEMA`\n\nThe schema within `dest_db` where the\
+    \ connector will write data. The connector auto-creates the destination table\
+    \ within this schema on its first run."
+- answer_title: dest_table
+  question_text: What table name should the connector write Jira issues to?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**Default:** `JIRA_ISSUES`\n\nAuto-created by the connector on first\
+    \ run. Raw issue JSON is stored in an `ISSUE` VARIANT column queryable with dot\
+    \ notation or `::TYPE` casts."
+- answer_title: warehouse_name
+  question_text: What warehouse should the Jira connector use?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**Default:** `JIRA_WH`\n\nUsed by the SnowflakeConnectionService for\
+    \ MERGE operations. A dedicated XSMALL with auto-suspend (60s) keeps costs minimal.\n\
+    \n**More Information:**\n* [CREATE WAREHOUSE](https://docs.snowflake.com/en/sql-reference/sql/create-warehouse)"
+- answer_title: jira_url
+  question_text: What is your Jira Cloud instance URL?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**Format:** `https://<yourorg>.atlassian.net/`\n\nUsed to resolve your\
+    \ Atlassian Cloud ID. All subsequent API calls route through `api.atlassian.com`.\
+    \ Include the trailing slash."
+- answer_title: jira_email
+  question_text: What email address is associated with the Jira API token?
+  answer_type: text
+  is_org_scope: false
+  guidance: "The email of the Atlassian account that owns the API token.\n\n**Note:**\
+    \ The API token itself is NOT stored in the answers file. Pass it via `--jira-token`\
+    \ at script execution time."
+- answer_title: jira_project_keys
+  question_text: What Jira project key(s) should be synced to Snowflake?
+  answer_type: text
+  is_org_scope: false
+  guidance: "**Format:** Single key: `PLAT` | Multiple (comma-separated): `PLAT,SEC,OPS`\n\
+    \nMaps to the `Project Names - Simple Query` parameter in the connector (not\
+    \ `Project Names`). Find project keys in Jira under Project Settings."

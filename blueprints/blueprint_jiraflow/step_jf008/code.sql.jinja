@@ -1,0 +1,22 @@
+-- ============================================================================
+-- DEPLOY JIRA CONNECTOR - nipyapi CLI STEP
+-- ============================================================================
+-- Profile: {{ nipyapi_profile }}
+-- ============================================================================
+
+-- This step is completed via the nipyapi CLI.
+-- No SQL is executed here.
+
+/*
+CLI COMMANDS
+============
+# List available connectors to find the Jira flow name
+nipyapi --profile {{ nipyapi_profile }} ci list_flows
+
+# Deploy the Jira Cloud connector from the Snowflake registry
+nipyapi --profile {{ nipyapi_profile }} ci deploy_flow \
+  --bucket "Snowflake Openflow Connector Registry" \
+  --flow "Jira Cloud"
+
+Capture the returned process group ID - you will need it in the next steps.
+*/

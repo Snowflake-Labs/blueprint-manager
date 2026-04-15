@@ -1,0 +1,32 @@
+# Openflow Jira Cloud Connector - Sample Answers
+# Blueprint: blueprint_jiraflow
+# Description: Sample configuration for testing the render pipeline.
+#              Replace all values with your actual configuration before use.
+
+# ─── PREREQUISITES ────────────────────────────────────────────────────────────
+# nipyapi profile name from ~/.nipyapi/profiles.yml
+nipyapi_profile: my_openflow_runtime
+
+# ─── NETWORK RULE LOCATION ────────────────────────────────────────────────────
+# Database and schema where JIRA_NETWORK_RULE will be created
+rule_db: SECURITY
+rule_schema: PUBLIC
+
+# ─── OPENFLOW RUNTIME ROLE ────────────────────────────────────────────────────
+# Run: SHOW ROLES LIKE '%OPENFLOW%'; to find your runtime role
+runtime_role: OPENFLOW_RUNTIME_ROLE_SPCS_MY_RUNTIME
+
+# ─── DESTINATION ──────────────────────────────────────────────────────────────
+dest_db: JIRA_DB
+dest_schema: JIRA_SCHEMA
+dest_table: JIRA_ISSUES
+
+# ─── WAREHOUSE ────────────────────────────────────────────────────────────────
+warehouse_name: JIRA_WH
+
+# ─── JIRA CONNECTION ──────────────────────────────────────────────────────────
+# NOTE: jira_api_token is intentionally NOT stored here.
+#       Pass it via --jira-token at script execution time.
+jira_url: https://acme.atlassian.net/
+jira_email: admin@acme.com
+jira_project_keys: PLAT,SEC

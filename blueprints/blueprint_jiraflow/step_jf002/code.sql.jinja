@@ -1,0 +1,32 @@
+-- ============================================================================
+-- CREATE NETWORK RULE FOR JIRA CLOUD
+-- ============================================================================
+-- Database: {{ rule_db }}
+-- Schema:   {{ rule_schema }}
+-- ============================================================================
+-- REQUIRED ROLE: ACCOUNTADMIN (or role with CREATE NETWORK RULE privilege)
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- STEP 1: CREATE NETWORK RULE
+-- ============================================================================
+-- Both hosts are required:
+--   snowflakecomputing.atlassian.net - used to resolve the Jira Cloud ID
+--   api.atlassian.com                - all API calls route through this host
+
+CREATE OR REPLACE NETWORK RULE {{ rule_db | upper }}.{{ rule_schema | upper }}.JIRA_NETWORK_RULE
+  TYPE = HOST_PORT
+  MODE = EGRESS
+  VALUE_LIST = (
+    'snowflakecomputing.atlassian.net:443',
+    'api.atlassian.com:443'
+  )
+  COMMENT = 'Allows Openflow Jira connector to reach Jira Cloud APIs';
+
+-- ============================================================================
+-- STEP 2: VERIFY NETWORK RULE
+-- ============================================================================
+
+SHOW NETWORK RULES LIKE 'JIRA_NETWORK_RULE' IN SCHEMA {{ rule_db | upper }}.{{ rule_schema | upper }};

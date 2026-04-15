@@ -1,0 +1,26 @@
+-- ============================================================================
+-- ENABLE CONTROLLERS AND START FLOW - nipyapi CLI STEP
+-- ============================================================================
+-- Profile: {{ nipyapi_profile }}
+-- ============================================================================
+
+-- This step is completed via the nipyapi CLI.
+-- No SQL is executed here.
+
+/*
+CLI COMMANDS
+============
+# Enable all controller services
+# Note: Forge Private Key Service and Snowflake Private Key Service will fail
+# validation - this is EXPECTED with SNOWFLAKE_MANAGED auth. Ignore those two.
+nipyapi --profile {{ nipyapi_profile }} canvas schedule_all_controllers "<process_group_id>" True
+
+# Verify configuration (expect 29/31 passed - the 2 Private Key Service failures are normal)
+nipyapi --profile {{ nipyapi_profile }} ci verify_config "<process_group_id>"
+
+# Start the flow
+nipyapi --profile {{ nipyapi_profile }} canvas schedule_process_group "<process_group_id>" True
+
+Data will appear in {{ dest_db | upper }}.{{ dest_schema | upper }}.{{ dest_table | upper }}
+within approximately 10 minutes (one 5-min fetch + one 5-min merge buffer flush).
+*/

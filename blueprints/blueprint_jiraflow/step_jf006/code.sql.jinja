@@ -1,0 +1,54 @@
+-- ============================================================================
+-- GRANT PRIVILEGES TO RUNTIME ROLE
+-- ============================================================================
+-- Runtime Role: {{ runtime_role }}
+-- Database:     {{ dest_db }}
+-- Schema:       {{ dest_schema }}
+-- Warehouse:    {{ warehouse_name }}
+-- ============================================================================
+-- REQUIRED ROLE: ACCOUNTADMIN
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- DATABASE AND SCHEMA ACCESS
+-- ============================================================================
+
+GRANT USAGE ON DATABASE {{ dest_db | upper }} TO ROLE {{ runtime_role | upper }};
+GRANT USAGE ON SCHEMA {{ dest_db | upper }}.{{ dest_schema | upper }} TO ROLE {{ runtime_role | upper }};
+
+-- ============================================================================
+-- TABLE MANAGEMENT
+-- ============================================================================
+-- CREATE TABLE is required because the connector auto-creates the destination table.
+
+GRANT CREATE TABLE ON SCHEMA {{ dest_db | upper }}.{{ dest_schema | upper }} TO ROLE {{ runtime_role | upper }};
+GRANT CREATE VIEW ON SCHEMA {{ dest_db | upper }}.{{ dest_schema | upper }} TO ROLE {{ runtime_role | upper }};
+
+-- ============================================================================
+-- DML ON EXISTING TABLES
+-- ============================================================================
+
+GRANT INSERT, UPDATE, DELETE, SELECT ON ALL TABLES IN SCHEMA {{ dest_db | upper }}.{{ dest_schema | upper }} TO ROLE {{ runtime_role | upper }};
+
+-- Also cover tables created after this grant runs
+GRANT INSERT, UPDATE, DELETE, SELECT ON FUTURE TABLES IN SCHEMA {{ dest_db | upper }}.{{ dest_schema | upper }} TO ROLE {{ runtime_role | upper }};
+
+-- ============================================================================
+-- WAREHOUSE ACCESS
+-- ============================================================================
+
+GRANT USAGE ON WAREHOUSE {{ warehouse_name | upper }} TO ROLE {{ runtime_role | upper }};
+
+-- ============================================================================
+-- EAI ACCESS
+-- ============================================================================
+
+GRANT USAGE ON INTEGRATION JIRA_EAI TO ROLE {{ runtime_role | upper }};
+
+-- ============================================================================
+-- VERIFY
+-- ============================================================================
+
+SHOW GRANTS TO ROLE {{ runtime_role | upper }};

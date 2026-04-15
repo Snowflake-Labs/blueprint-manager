@@ -1,0 +1,11 @@
+## Create Destination Database and Schema
+
+### Configuration
+
+| Setting | Value |
+|---------|-------|
+| **Database** | `{{ dest_db | upper }}` |
+| **Schema** | `{{ dest_db | upper }}.{{ dest_schema | upper }}` |
+| **Destination Table** | `{{ dest_db | upper }}.{{ dest_schema | upper }}.{{ dest_table | upper }}` |
+
+> The destination table `{{ dest_table | upper }}` will be created **automatically** by the connector on its first run. You do not need to create it manually.
