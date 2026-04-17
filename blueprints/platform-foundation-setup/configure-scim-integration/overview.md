@@ -111,20 +111,21 @@ Use the IdP-specific role name if available, as this follows Snowflake's documen
 
 #### What IP addresses should be allowed to access the SCIM API? (`scim_allowed_ips`: list)
 **What is this asking?**
-Provide the IP addresses or CIDR blocks that your Identity Provider uses for SCIM provisioning requests.
+Provide the IP addresses or CIDR blocks that your Identity Provider uses for SCIM provisioning requests. This creates a network policy that restricts SCIM API access to those IPs.
 
-**Why does this matter?**
-A network policy restricts SCIM API access to only your IdP's servers. This prevents unauthorized systems from creating or modifying users in Snowflake.
+**Recommendation for Azure AD and Okta: leave this empty.**
+Azure AD (Entra ID) IP addresses change on a weekly schedule and Okta IPs change unpredictably — a static IP list will drift out of date and break SCIM provisioning. The SCIM bearer token is the primary authentication mechanism and is sufficient on its own. Skipping the network policy avoids ongoing maintenance burden without meaningfully reducing security.
+Only provide IPs if your IdP uses a stable, known set of outbound addresses (e.g. on-premises or private-network IdPs).
 
-**How to find your IdP's IP addresses:**
+**How to find your IdP's IP addresses (if needed):**
 
 **Okta:**
 - Visit [Okta IP Ranges](https://help.okta.com/en/prod/Content/Topics/Security/ip-address-allow-listing.htm)
-- Use the ranges for your Okta cell (find your cell at `Settings > Account`)
+- Use the ranges for your Okta cell only (find your cell at `Settings > Account`); note these change without notice
 
 **Microsoft Entra ID (Azure AD):**
-- Visit [Azure IP Ranges](https://www.microsoft.com/en-us/download/details.aspx?id=56519)
-- Look for "AzureActiveDirectory" service tag
+- Visit [Azure Service Tags](https://www.microsoft.com/en-us/download/details.aspx?id=56519)
+- Look for the "AzureActiveDirectory" service tag; updated weekly by Microsoft
 - Filter for your region
 
 **Other IdPs:**

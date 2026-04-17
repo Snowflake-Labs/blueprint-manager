@@ -1134,6 +1134,7 @@
   - email
   - first_name
   - last_name
+  - user_identifier
   guidance: '**What is this asking?**
 
     Define the users who need administrator privileges in this account.
@@ -1176,6 +1177,11 @@
 
     - **admin_role**: The administrative role to assign
 
+    - **user_identifier** *(optional)*: The exact Snowflake username to use when granting roles. If your IdP
+      provisions usernames differently from `login_name` (e.g., Snowflake stores `JOHN.DOE@COMPANY.COM` but
+      `login_name` was entered as `john.doe@company.com`), set this to the value shown in `SHOW USERS;`. Falls
+      back to `login_name` if not provided.
+
 
     Leave `email`, `first_name`, and `last_name` blank for SCIM users—these are managed by your IdP.
 
@@ -1193,6 +1199,10 @@
     - **first_name**: User''s first name
 
     - **last_name**: User''s last name
+
+    - **user_identifier** *(optional)*: Override the identifier used in `CREATE USER` and `GRANT ROLE`
+      statements. Useful when the desired Snowflake username contains `@` or `.` and needs to be quoted,
+      or differs from the login name. Falls back to `login_name` if not provided.
 
 
     **Admin Role Options:**
@@ -1236,7 +1246,18 @@
   guidance: '**What is this asking?**
 
     Enter the IP addresses from which your Identity Provider will make SCIM API calls to Snowflake. This
-    creates a network policy that restricts SCIM access.
+    creates a network policy that restricts SCIM access to those IPs.
+
+
+    **Recommendation for Azure AD and Okta: leave this empty.**
+
+    Azure AD (Entra ID) IP addresses change on a weekly schedule and Okta IPs change unpredictably — a
+    static IP list will drift out of date and break SCIM provisioning. The SCIM bearer token is the
+    primary authentication mechanism and is sufficient on its own. Skipping the network policy avoids
+    ongoing maintenance burden without meaningfully reducing security.
+
+    Only provide IPs if your IdP uses a stable, known set of outbound addresses (e.g. on-premises
+    or private-network IdPs).
 
 
     **If using Organization Configuration:**
@@ -1244,16 +1265,13 @@
     Use the same IdP IP addresses as your Organization Account for consistency.
 
 
-    **Why does this matter?**
+    **How to find your IdP''s IP ranges (if needed):**
 
-    Restricting SCIM access to known IdP IPs prevents unauthorized provisioning attempts.
+    - **Okta**: [Okta IP Ranges](https://help.okta.com/en-us/Content/Topics/Security/IP-Ranges.htm)
+    — use the ranges for your Okta cell only; note these change without notice
 
-
-    **How to find your IdP''s IP ranges:**
-
-    - **Okta**: [Okta IP Addresses](https://help.okta.com/en-us/Content/Topics/Security/IP-Ranges.htm)
-
-    - **Azure AD**: [Azure AD IP Ranges](https://docs.microsoft.com/en-us/azure/active-directory/enterprise-users/directory-service-limits-restrictions)
+    - **Azure AD**: [Azure Service Tags](https://www.microsoft.com/en-us/download/details.aspx?id=56519)
+    — look for the AzureActiveDirectory tag; updated weekly by Microsoft
 
 
     **Format:**
@@ -1267,10 +1285,6 @@
     198.51.100.1
 
     ```
-
-
-    **Important:** If you don''t know your IdP''s IP ranges, you can skip the network policy and add it
-    later. However, this is a security best practice.
 
 
     **More Information:**
@@ -3088,29 +3102,36 @@
   guidance: '**What is this asking?**
 
     Provide the IP addresses or CIDR blocks that your Identity Provider uses for SCIM provisioning requests.
+    This creates a network policy that restricts SCIM API access to those IPs.
 
 
-    **Why does this matter?**
+    **Recommendation for Azure AD and Okta: leave this empty.**
 
-    A network policy restricts SCIM API access to only your IdP''s servers. This prevents unauthorized
-    systems from creating or modifying users in Snowflake.
+    Azure AD (Entra ID) IP addresses change on a weekly schedule and Okta IPs change unpredictably — a
+    static IP list will drift out of date and break SCIM provisioning. The SCIM bearer token is the
+    primary authentication mechanism and is sufficient on its own. Skipping the network policy avoids
+    ongoing maintenance burden without meaningfully reducing security.
+
+    Only provide IPs if your IdP uses a stable, known set of outbound addresses (e.g. on-premises
+    or private-network IdPs).
 
 
-    **How to find your IdP''s IP addresses:**
+    **How to find your IdP''s IP addresses (if needed):**
 
 
     **Okta:**
 
     - Visit [Okta IP Ranges](https://help.okta.com/en/prod/Content/Topics/Security/ip-address-allow-listing.htm)
 
-    - Use the ranges for your Okta cell (find your cell at `Settings > Account`)
+    - Use the ranges for your Okta cell only (find your cell at `Settings > Account`); note these change
+    without notice
 
 
     **Microsoft Entra ID (Azure AD):**
 
-    - Visit [Azure IP Ranges](https://www.microsoft.com/en-us/download/details.aspx?id=56519)
+    - Visit [Azure Service Tags](https://www.microsoft.com/en-us/download/details.aspx?id=56519)
 
-    - Look for "AzureActiveDirectory" service tag
+    - Look for the "AzureActiveDirectory" service tag; updated weekly by Microsoft
 
     - Filter for your region
 
@@ -3941,16 +3962,17 @@
   object_name: Schema Configuration
   keys:
   - zone
-  - schema_name
-  - purpose
-  guidance: "**What is this asking?**\nDefine schemas within each zone. Schemas organize tables by source\
-    \ system \nor subject area.\n\n**Example Configuration:**\n\n**RAW Zone:**\n| Schema | Purpose |\n\
-    |--------|---------|\n| SALESFORCE | Salesforce CRM data |\n| SAP | SAP ERP data |\n| STRIPE | Payment\
-    \ processing data |\n\n**CURATED Zone:**\n| Schema | Purpose |\n|--------|---------|\n| CUSTOMERS\
-    \ | Unified customer data |\n| ORDERS | Order history |\n| PRODUCTS | Product catalog |\n\n**CONSUMPTION\
-    \ Zone:**\n| Schema | Purpose |\n|--------|---------|\n| REPORTING | BI-ready tables |\n| ANALYTICS\
-    \ | Aggregations and metrics |\n\n**Best Practices:**\n- Use consistent naming across zones\n- Group\
-    \ by source system in RAW, by subject in CURATED\n- Keep schema count manageable (2-5 per zone)\n"
+  - schemas
+  guidance: "**What is this asking?**\nDefine schemas for each zone in your data product. Each row\
+    \ represents one zone, and `schemas` is a comma-separated list of schema names that belong to\
+    \ that zone.\n\n**Example Configuration:**\n\n| Zone | Schemas |\n|------|---------|\n| RAW |\
+    \ SALESFORCE, SAP, STRIPE |\n| CURATED | CUSTOMERS, ORDERS, PRODUCTS |\n| CONSUMPTION | REPORTING,\
+    \ ANALYTICS |\n\n**Field Descriptions:**\n- **zone**: The data zone this entry applies to (e.g.\
+    \ RAW, CURATED, CONSUMPTION). Must match a zone defined in your data architecture.\n- **schemas**:\
+    \ Comma-separated list of schema names for this zone (e.g. `SALESFORCE, SAP, STRIPE`). Each\
+    \ schema name should be uppercase and contain only letters, numbers, and underscores.\n\n**Best\
+    \ Practices:**\n- Use consistent naming across zones\n- Group by source system in RAW, by subject\
+    \ in CURATED\n- Keep schema count manageable (2-5 per zone)\n"
 - answer_title: warehouse_configuration
   question_text: Define the warehouses for your data product.
   answer_type: object-list
@@ -3962,9 +3984,31 @@
   - min_cluster_count
   - max_cluster_count
   - auto_suspend_seconds
+  - workload
+  - timeout_minutes
+  - comment
   guidance: '**What is this asking?**
 
     Define compute warehouses for your data product workloads.
+
+
+    **Field Descriptions:**
+
+    - **name**: Short identifier used in Snowflake object names (e.g. `ETL` → `PREFIX_WH_ETL`). Uppercase,
+      no spaces.
+
+    - **workload**: Functional label describing the workload type (e.g. `ETL`, `ANALYTICS`, `INTERACTIVE`).
+      Used in planning summaries and warehouse tags.
+
+    - **size**: Warehouse size (X-Small, Small, Medium, Large, X-Large, 2X-Large).
+
+    - **min_cluster_count** / **max_cluster_count**: Multi-cluster range. Use 1/1 for single-cluster.
+
+    - **auto_suspend_seconds**: Seconds of inactivity before auto-suspend (60–600 recommended).
+
+    - **timeout_minutes**: Query timeout in minutes. Queries exceeding this are cancelled (e.g. `30`).
+
+    - **comment**: Human-readable description of the warehouse''s purpose.
 
 
     **Common Patterns:**
@@ -3972,37 +4016,37 @@
 
     **Simple (1 warehouse):**
 
-    | Name | Size | Min/Max Clusters | Auto-Suspend |
+    | Name | Workload | Size | Min/Max | Auto-Suspend | Timeout (min) | Comment |
 
-    |------|------|------------------|--------------|
+    |------|----------|------|---------|--------------|---------------|---------|
 
-    | GENERAL | Small | 1/1 | 300 |
+    | GENERAL | GENERAL | Small | 1/1 | 300 | 30 | General purpose warehouse |
 
 
     **Standard (2-3 warehouses):**
 
-    | Name | Size | Min/Max Clusters | Auto-Suspend |
+    | Name | Workload | Size | Min/Max | Auto-Suspend | Timeout (min) | Comment |
 
-    |------|------|------------------|--------------|
+    |------|----------|------|---------|--------------|---------------|---------|
 
-    | ETL | Medium | 1/3 | 60 |
+    | ETL | ETL | Medium | 1/3 | 60 | 120 | Batch ingestion and transformation |
 
-    | QUERY | Small | 1/2 | 300 |
+    | QUERY | INTERACTIVE | Small | 1/2 | 300 | 30 | Ad-hoc and BI queries |
 
 
     **Advanced (workload isolation):**
 
-    | Name | Size | Min/Max Clusters | Auto-Suspend |
+    | Name | Workload | Size | Min/Max | Auto-Suspend | Timeout (min) | Comment |
 
-    |------|------|------------------|--------------|
+    |------|----------|------|---------|--------------|---------------|---------|
 
-    | INGEST | Large | 1/3 | 60 |
+    | INGEST | INGEST | Large | 1/3 | 60 | 240 | High-volume data loading |
 
-    | TRANSFORM | Medium | 1/3 | 120 |
+    | TRANSFORM | ETL | Medium | 1/3 | 120 | 120 | dbt and transformation jobs |
 
-    | INTERACTIVE | Small | 1/2 | 300 |
+    | INTERACTIVE | INTERACTIVE | Small | 1/2 | 300 | 30 | Analyst queries |
 
-    | REPORTING | Medium | 1/4 | 300 |
+    | REPORTING | REPORTING | Medium | 1/4 | 300 | 60 | BI tool queries |
 
 
     **Sizing Guidelines:**

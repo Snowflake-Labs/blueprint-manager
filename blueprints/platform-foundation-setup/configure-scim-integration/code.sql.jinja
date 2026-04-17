@@ -24,9 +24,11 @@ GRANT CREATE ROLE ON ACCOUNT TO ROLE {{ scim_provisioner_role | upper }};
 GRANT ROLE {{ scim_provisioner_role | upper }} TO ROLE ACCOUNTADMIN;
 
 -- ============================================================================
--- STEP 2: CREATE NETWORK RULE FOR SCIM
+-- STEP 2: CREATE NETWORK RULE AND POLICY FOR SCIM (if IPs provided)
 -- ============================================================================
 -- Restrict SCIM API access to your IdP's IP addresses
+
+{%- if scim_allowed_ips | length > 0 %}
 
 CREATE OR REPLACE NETWORK RULE scim_network_rule
   TYPE = IPV4
@@ -46,6 +48,8 @@ CREATE OR REPLACE NETWORK POLICY scim_network_policy
   ALLOWED_NETWORK_RULE_LIST = (scim_network_rule)
   COMMENT = 'Network policy for {{ identity_provider }} SCIM integration';
 
+{%- endif %}
+
 -- ============================================================================
 -- STEP 4: CREATE SCIM SECURITY INTEGRATION
 -- ============================================================================
@@ -55,7 +59,9 @@ CREATE OR REPLACE SECURITY INTEGRATION {{ scim_integration_name | upper }}
   TYPE = SCIM
   SCIM_CLIENT = 'OKTA'
   RUN_AS_ROLE = '{{ scim_provisioner_role | upper }}'
+{%- if scim_allowed_ips | length > 0 %}
   NETWORK_POLICY = 'scim_network_policy'
+{%- endif %}
   SYNC_PASSWORD = FALSE
   COMMENT = 'Okta SCIM integration for user provisioning';
 {%- elif identity_provider == "Microsoft Entra ID (Azure AD)" %}
@@ -63,7 +69,9 @@ CREATE OR REPLACE SECURITY INTEGRATION {{ scim_integration_name | upper }}
   TYPE = SCIM
   SCIM_CLIENT = 'AZURE'
   RUN_AS_ROLE = '{{ scim_provisioner_role | upper }}'
+{%- if scim_allowed_ips | length > 0 %}
   NETWORK_POLICY = 'scim_network_policy'
+{%- endif %}
   SYNC_PASSWORD = FALSE
   COMMENT = 'Azure AD SCIM integration for user provisioning';
 {%- else %}
@@ -71,7 +79,9 @@ CREATE OR REPLACE SECURITY INTEGRATION {{ scim_integration_name | upper }}
   TYPE = SCIM
   SCIM_CLIENT = 'GENERIC'
   RUN_AS_ROLE = '{{ scim_provisioner_role | upper }}'
+{%- if scim_allowed_ips | length > 0 %}
   NETWORK_POLICY = 'scim_network_policy'
+{%- endif %}
   SYNC_PASSWORD = FALSE
   COMMENT = '{{ identity_provider }} SCIM integration for user provisioning';
 {%- endif %}
@@ -96,8 +106,11 @@ https://{{ snowflake_org_name | lower }}-{% if account_name_prefix | upper != "N
 -- Verify the role was created
 SHOW ROLES LIKE '{{ scim_provisioner_role | upper }}';
 
+{%- if scim_allowed_ips | length > 0 %}
+
 -- Verify the network policy was created
 SHOW NETWORK POLICIES LIKE 'scim_network_policy';
+{%- endif %}
 
 -- Verify the security integration was created
 SHOW SECURITY INTEGRATIONS LIKE '{{ scim_integration_name | upper }}';
