@@ -10,13 +10,27 @@
 
 ### SCIM Network Policy
 
-The following IP addresses will be allowed to access the SCIM API:
+{%- if scim_allowed_ips | length > 0 %}
+
+A network policy will be created to restrict SCIM access to these IP addresses:
 
 | IP Address/CIDR |
 |-----------------|
 {%- for ip in scim_allowed_ips %}
 | `{{ ip }}` |
 {%- endfor %}
+
+{%- if identity_provider in ["Microsoft Entra ID (Azure AD)", "Okta"] %}
+
+> **Note:** {{ identity_provider }} outbound IP addresses change over time (Azure AD: weekly; Okta: unpredictably). This static list will require periodic maintenance to avoid SCIM provisioning failures. The SCIM bearer token alone is sufficient for authentication — consider removing these IPs to reduce operational overhead.
+
+{%- endif %}
+
+{%- else %}
+
+No SCIM network policy will be created. The SCIM bearer token provides sufficient authentication.{% if identity_provider in ["Microsoft Entra ID (Azure AD)", "Okta"] %} For {{ identity_provider }}, this is the recommended approach — their outbound IP addresses change over time, making static IP lists difficult to maintain reliably.{% endif %}
+
+{%- endif %}
 
 ### SCIM Endpoint URL
 

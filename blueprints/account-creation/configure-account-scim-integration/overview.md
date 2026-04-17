@@ -112,17 +112,18 @@ Use the suggested name from the previous step unless you have a specific reason 
 
 #### What IP addresses should be allowed for SCIM provisioning? (`account_scim_allowed_ips`: list)
 **What is this asking?**
-Enter the IP addresses from which your Identity Provider will make SCIM API calls to Snowflake. This creates a network policy that restricts SCIM access.
+Enter the IP addresses from which your Identity Provider will make SCIM API calls to Snowflake. This creates a network policy that restricts SCIM access to those IPs.
+
+**Recommendation for Azure AD and Okta: leave this empty.**
+Azure AD (Entra ID) IP addresses change on a weekly schedule and Okta IPs change unpredictably — a static IP list will drift out of date and break SCIM provisioning. The SCIM bearer token is the primary authentication mechanism and is sufficient on its own. Skipping the network policy avoids ongoing maintenance burden without meaningfully reducing security.
+Only provide IPs if your IdP uses a stable, known set of outbound addresses (e.g. on-premises or private-network IdPs).
 
 **If using Organization Configuration:**
 Use the same IdP IP addresses as your Organization Account for consistency.
 
-**Why does this matter?**
-Restricting SCIM access to known IdP IPs prevents unauthorized provisioning attempts.
-
-**How to find your IdP's IP ranges:**
-- **Okta**: [Okta IP Addresses](https://help.okta.com/en-us/Content/Topics/Security/IP-Ranges.htm)
-- **Azure AD**: [Azure AD IP Ranges](https://docs.microsoft.com/en-us/azure/active-directory/enterprise-users/directory-service-limits-restrictions)
+**How to find your IdP's IP ranges (if needed):**
+- **Okta**: [Okta IP Ranges](https://help.okta.com/en-us/Content/Topics/Security/IP-Ranges.htm) — use the ranges for your Okta cell only; note these change without notice
+- **Azure AD**: [Azure Service Tags](https://www.microsoft.com/en-us/download/details.aspx?id=56519) — look for the AzureActiveDirectory tag; updated weekly by Microsoft
 
 **Format:**
 Enter each IP address or CIDR block on a separate line:
@@ -130,8 +131,6 @@ Enter each IP address or CIDR block on a separate line:
 203.0.113.0/24
 198.51.100.1
 ```
-
-**Important:** If you don't know your IdP's IP ranges, you can skip the network policy and add it later. However, this is a security best practice.
 
 **More Information:**
 * [Network Policies](https://docs.snowflake.com/en/user-guide/network-policies) — IP-based access control

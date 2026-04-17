@@ -223,30 +223,19 @@ For environment-based and domain+environment strategies, select the environment 
 
 #### Define the schemas for each zone in your data product. (`schema_configuration`: object-list)
 **What is this asking?**
-Define schemas within each zone. Schemas organize tables by source system 
-or subject area.
+Define schemas for each zone in your data product. Each row represents one zone, and `schemas` is a comma-separated list of schema names that belong to that zone.
 
 **Example Configuration:**
 
-**RAW Zone:**
-| Schema | Purpose |
-|--------|---------|
-| SALESFORCE | Salesforce CRM data |
-| SAP | SAP ERP data |
-| STRIPE | Payment processing data |
+| Zone | Schemas |
+|------|---------|
+| RAW | SALESFORCE, SAP, STRIPE |
+| CURATED | CUSTOMERS, ORDERS, PRODUCTS |
+| CONSUMPTION | REPORTING, ANALYTICS |
 
-**CURATED Zone:**
-| Schema | Purpose |
-|--------|---------|
-| CUSTOMERS | Unified customer data |
-| ORDERS | Order history |
-| PRODUCTS | Product catalog |
-
-**CONSUMPTION Zone:**
-| Schema | Purpose |
-|--------|---------|
-| REPORTING | BI-ready tables |
-| ANALYTICS | Aggregations and metrics |
+**Field Descriptions:**
+- **zone**: The data zone this entry applies to (e.g. RAW, CURATED, CONSUMPTION). Must match a zone defined in your data architecture.
+- **schemas**: Comma-separated list of schema names for this zone (e.g. `SALESFORCE, SAP, STRIPE`). Each schema name should be uppercase and contain only letters, numbers, and underscores.
 
 **Best Practices:**
 - Use consistent naming across zones

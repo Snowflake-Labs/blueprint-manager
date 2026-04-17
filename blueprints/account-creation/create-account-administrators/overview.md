@@ -111,6 +111,7 @@ We strongly recommend using the user's **email address** as the `login_name`, ev
 Users are created automatically from your IdP. You only need to specify:
 - **login_name**: The username as it appears in Snowflake (typically the email address—check `SHOW USERS;` after SCIM sync)
 - **admin_role**: The administrative role to assign
+- **user_identifier** *(optional)*: The exact Snowflake username to use when granting roles. If your IdP provisions usernames differently from `login_name` (e.g., Snowflake stores `JOHN.DOE@COMPANY.COM` but `login_name` was entered as `john.doe@company.com`), set this to the value shown in `SHOW USERS;`. Falls back to `login_name` if not provided.
 
 Leave `email`, `first_name`, and `last_name` blank for SCIM users—these are managed by your IdP.
 
@@ -121,6 +122,7 @@ Users will be created directly in Snowflake. Provide:
 - **email**: Email address for notifications (can match login_name)
 - **first_name**: User's first name
 - **last_name**: User's last name
+- **user_identifier** *(optional)*: Override the identifier used in `CREATE USER` and `GRANT ROLE` statements. Useful when the desired Snowflake username contains `@` or `.` and needs to be quoted, or differs from the login name. Falls back to `login_name` if not provided.
 
 **Admin Role Options:**
 | Role | Responsibility | Recommended For |
