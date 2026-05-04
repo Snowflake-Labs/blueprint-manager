@@ -56,6 +56,23 @@ Without proper authentication policies:
 
 ### Configuration Questions
 
+#### What do you want to name the platform database? (`platform_database_name`: text)
+**What is the Platform/Infrastructure Database?**  
+  The Infrastructure Database is a centralized "hub" database that houses platform-wide objects including tags, network rules, governance policies, and shared procedures. It is owned by the central platform team and shared across all accounts in multi-account deployments.  
+  **Recommended Naming Approach:**  
+  Use a name that clearly identifies this as a platform-owned, infrastructure-focused database. The format should be: \<domain\>\_\<dataproduct\>  
+  * **Domain:** Use plat (short for "platform") or your platform team's acronym (e.g., cdp, snow, data)  
+  * **Data Product:** Use infra or another term indicating infrastructure purpose  
+* **Example:** PLAT\_INFRA — clearly indicates Platform team ownership and Infrastructure purpose  
+  **Alternative Examples:**  
+  * CDP\_INFRA — Cloud Data Platform Infrastructure  
+  * SNOW\_ADMIN — Snowflake Administration  
+  * DATA\_PLATFORM — Data Platform database  
+* **Important:** Choose carefully\! This name will eventually be referenced by dozens to hundreds of objects, policies, and procedures. Changing it later can be complex and risky.  
+  **More Information:**  
+  * [CREATE DATABASE](https://docs.snowflake.com/en/sql-reference/sql/create-database)  
+  * [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)
+
 #### What authentication methods should be allowed for human users in this account? (`human_auth_methods`: multi-select)
 **What is this asking?**
 Choose how human users (interactive users) should authenticate to this account. The value from Platform Foundation is pre-populated—accept it for consistency or change it if this account has different requirements.

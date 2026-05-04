@@ -48,7 +48,7 @@ JOIN snowflake.account_usage.tag_references tr
   ON wm.warehouse_name = tr.object_name
   AND tr.domain = 'WAREHOUSE'
   AND tr.tag_name = 'DOMAIN'
-  AND tr.deleted_on IS NULL
+  AND tr.object_deleted IS NULL
 WHERE wm.start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP())
 GROUP BY tr.tag_value, DATE_TRUNC('day', wm.start_time)
 ORDER BY usage_date DESC, total_credits DESC;
@@ -64,7 +64,7 @@ JOIN snowflake.account_usage.tag_references tr
   ON wm.warehouse_name = tr.object_name
   AND tr.domain = 'WAREHOUSE'
   AND tr.tag_name = 'ENVIRONMENT'
-  AND tr.deleted_on IS NULL
+  AND tr.object_deleted IS NULL
 WHERE wm.start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP())
 GROUP BY tr.tag_value, DATE_TRUNC('day', wm.start_time)
 ORDER BY usage_date DESC, total_credits DESC;
@@ -79,7 +79,7 @@ FROM snowflake.account_usage.warehouses w
 LEFT JOIN (
   SELECT DISTINCT object_name 
   FROM snowflake.account_usage.tag_references 
-  WHERE tag_name = 'DOMAIN' AND domain = 'WAREHOUSE' AND deleted_on IS NULL
+  WHERE tag_name = 'DOMAIN' AND domain = 'WAREHOUSE' AND object_deleted IS NULL
 ) d ON w.name = d.object_name
 WHERE w.deleted IS NULL
   AND d.object_name IS NULL
@@ -94,8 +94,10 @@ GRANT SELECT ON VIEW untagged_warehouses TO ROLE SYSADMIN;
 -- STEP 3: TAG THE INFRASTRUCTURE DATABASE
 -- ============================================================================
 
+{%- if "Owner" in additional_tag_dimensions %}
 ALTER DATABASE {{ platform_database_name | upper }} SET TAG 
   {{ platform_database_name | upper }}.{{ governance_name | upper }}.owner = 'Platform Team';
+{%- endif %}
 
 -- ============================================================================
 -- VERIFICATION

@@ -317,6 +317,60 @@ python scripts/render_journey.py \
 
 Review the generated SQL file, then execute it in your Snowflake worksheet. The SQL is idempotent — safe to run multiple times.
 
+## Step-level Implementation Tracking (QUERY_TAG)
+
+Rendered SQL journeys are automatically annotated with Snowflake
+`QUERY_TAG`s so that execution of Blueprint-generated SQL can be detected
+in query history. This is applied **only to SQL output**; Terraform output
+is unaffected.
+
+For every rendered step the renderer wraps the step's SQL with a
+matching SET/UNSET pair:
+
+```sql
+ALTER SESSION SET QUERY_TAG = '{"src":"blueprints","bp":"<blueprint_id>","step":"<step_slug>"}';
+-- ... step SQL ...
+ALTER SESSION UNSET QUERY_TAG;
+```
+
+so each step's tag is scoped to just that step's queries and does not
+bleed into unrelated queries the customer runs later in the same
+session.
+
+### Tag schema
+
+The tag value is a compact single-line JSON object with exactly these
+keys (total payload is kept well under Snowflake's 2 KB `QUERY_TAG`
+limit):
+
+| key    | meaning                                               |
+|--------|-------------------------------------------------------|
+| `src`  | source identifier, always `"blueprints"` for this repo |
+| `bp`   | blueprint identifier (from `meta.yaml` `blueprint_id`, falling back to blueprint directory name) |
+| `step` | step identifier (step slug) within the blueprint       |
+
+> `run_id` is intentionally **not** included. Chronological ordering in
+> query history is sufficient for the current analysis. If per-run
+> attribution is later required it can be added as an additional short
+> key.
+
+### Querying executions
+
+To find Blueprint-executed steps in the usual job/query-history views,
+use the `TAG` column (e.g. `job_etl_v` / `CXE_JOB_RAW_V_LAST_90`):
+
+```sql
+SELECT TAG:bp::string   AS blueprint,
+       TAG:step::string AS step,
+       COUNT(*)         AS n
+FROM   job_etl_v
+WHERE  TAG:src::string = 'blueprints'
+GROUP  BY 1, 2;
+```
+
+Because `QUERY_TAG` lands in a dedicated `TAG` column, these queries do
+not require `LIKE` / `ILIKE` scans over SQL text.
+
 License
 Copyright (c) 2026 Snowflake Inc. All rights reserved.
 This repo is source-available and licensed under these [terms](/LICENSE).

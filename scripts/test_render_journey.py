@@ -2586,5 +2586,280 @@ class TestTocToHeadingAnchorConsistency(BlueprintTestCase):
         self.assertEqual(step_anchors[1], generate_anchor("Step 1.2: Set Up Roles"))
 
 
+class TestQueryTagPayload(TestCase):
+    """Unit tests for the QUERY_TAG payload helper."""
+
+    def test_payload_contains_exact_key_set(self):
+        """Payload must contain exactly src, bp, step — and no run_id."""
+        import json as _json
+        from render_journey import build_query_tag_payload
+
+        payload = build_query_tag_payload("bp-1", "step-a")
+        obj = _json.loads(payload)
+        self.assertEqual(set(obj.keys()), {"src", "bp", "step"})
+        self.assertNotIn("run_id", obj)
+
+    def test_payload_values_are_as_expected(self):
+        """src defaults to 'blueprints' and other fields pass through."""
+        import json as _json
+        from render_journey import build_query_tag_payload
+
+        obj = _json.loads(build_query_tag_payload("bp-1", "step-a"))
+        self.assertEqual(obj, {
+            "src": "blueprints",
+            "bp": "bp-1",
+            "step": "step-a",
+        })
+
+    def test_payload_is_single_line(self):
+        """Payload must be single-line JSON safe to embed in SQL."""
+        from render_journey import build_query_tag_payload
+
+        payload = build_query_tag_payload("bp-1", "step-a")
+        self.assertNotIn("\n", payload)
+        self.assertNotIn("\r", payload)
+
+    def test_payload_is_valid_json(self):
+        """Payload must parse as valid JSON."""
+        import json as _json
+        from render_journey import build_query_tag_payload
+
+        payload = build_query_tag_payload("bp-1", "step-a")
+        # Should not raise
+        _json.loads(payload)
+
+    def test_payload_under_2kb_budget(self):
+        """Tag payload must stay well below Snowflake's 2 KB QUERY_TAG limit."""
+        from render_journey import build_query_tag_payload, QUERY_TAG_MAX_BYTES
+
+        payload = build_query_tag_payload(
+            "some-long-blueprint-name", "some-long-step-slug"
+        )
+        self.assertLess(len(payload.encode("utf-8")), QUERY_TAG_MAX_BYTES)
+
+    def test_payload_over_budget_truncates_instead_of_raising(self):
+        """Oversized inputs are truncated per-value so rendering is never blocked."""
+        import json as _json
+        from render_journey import (
+            build_query_tag_payload,
+            QUERY_TAG_MAX_BYTES,
+            QUERY_TAG_MAX_VALUE_CHARS,
+        )
+
+        # 2100-char strings would have blown the 2 KB budget before; now each
+        # value is capped at QUERY_TAG_MAX_VALUE_CHARS so build never raises.
+        huge = "x" * 2100
+        payload = build_query_tag_payload(huge, huge)
+
+        self.assertLess(len(payload.encode("utf-8")), QUERY_TAG_MAX_BYTES)
+        obj = _json.loads(payload)
+        for key in ("bp", "step"):
+            self.assertEqual(len(obj[key]), QUERY_TAG_MAX_VALUE_CHARS)
+            self.assertTrue(obj[key].startswith("x"))
+
+    def test_render_set_query_tag_sql_escapes_single_quotes(self):
+        """Single quotes in bp/step must be SQL-escaped by doubling."""
+        from render_journey import render_set_query_tag_sql
+
+        sql = render_set_query_tag_sql("bp'1", "step'a")
+        # The raw single quotes from the JSON payload must be doubled so the
+        # outer ALTER SESSION SET QUERY_TAG = '...' string is not broken.
+        # (Keys in the JSON don't contain single quotes; only our injected
+        # bp / step values do — and they should be doubled.)
+        self.assertIn("bp''1", sql)
+        self.assertIn("step''a", sql)
+        # Sanity: the statement still starts/ends the way we expect.
+        self.assertTrue(sql.startswith("ALTER SESSION SET QUERY_TAG = '"))
+        self.assertTrue(sql.endswith("';"))
+
+    def test_render_unset_query_tag_sql_shape(self):
+        """UNSET statement is a fixed, well-formed ALTER SESSION."""
+        from render_journey import render_unset_query_tag_sql
+
+        self.assertEqual(
+            render_unset_query_tag_sql(), "ALTER SESSION UNSET QUERY_TAG;"
+        )
+
+    def test_default_source_is_blueprints(self):
+        """src must default to 'blueprints'."""
+        import json as _json
+        from render_journey import build_query_tag_payload
+
+        obj = _json.loads(build_query_tag_payload("bp", "step"))
+        self.assertEqual(obj["src"], "blueprints")
+
+
+class TestQueryTagInjection(BlueprintTestCase):
+    """Snapshot-style tests: QUERY_TAG SET/UNSET injection in render_blueprint_code."""
+
+    def _make_blueprint(self, lang="sql", extra_meta=None):
+        """Create a 2-step blueprint on disk and return (blueprint_dir, meta)."""
+        blueprint_dir = self.base_dir / "test-blueprint"
+        blueprint_dir.mkdir(parents=True, exist_ok=True)
+
+        step1 = blueprint_dir / "step-1"
+        step1.mkdir(parents=True, exist_ok=True)
+        (step1 / f"code.{lang}.jinja").write_text("SELECT 1;")
+
+        step2 = blueprint_dir / "step-2"
+        step2.mkdir(parents=True, exist_ok=True)
+        (step2 / f"code.{lang}.jinja").write_text("SELECT 2;")
+
+        meta = {
+            "blueprint_id": "blueprint_test",
+            "name": "Test Blueprint",
+            "steps": ["step-1", "step-2"],
+        }
+        if extra_meta:
+            meta.update(extra_meta)
+
+        meta_file = blueprint_dir / "meta.yaml"
+        with open(meta_file, "w") as f:
+            yaml.dump(meta, f)
+
+        return blueprint_dir, meta
+
+    def test_sql_every_step_has_set_and_unset_query_tag(self):
+        """Every rendered SQL step must be wrapped by SET/UNSET QUERY_TAG."""
+        from render_journey import render_blueprint_code
+
+        blueprint_dir, meta = self._make_blueprint(lang="sql")
+
+        rendered, rendered_count, _ = render_blueprint_code(
+            blueprint_dir, "sql", {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00",
+        )
+
+        self.assertEqual(rendered_count, 2)
+        # Both step IDs appear inside ALTER SESSION SET QUERY_TAG statements.
+        self.assertIn(
+            'ALTER SESSION SET QUERY_TAG = \'{"src":"blueprints",'
+            '"bp":"blueprint_test","step":"step-1"}\';',
+            rendered,
+        )
+        self.assertIn(
+            'ALTER SESSION SET QUERY_TAG = \'{"src":"blueprints",'
+            '"bp":"blueprint_test","step":"step-2"}\';',
+            rendered,
+        )
+        # One UNSET per rendered step (end of each step, not end of journey).
+        self.assertEqual(rendered.count("ALTER SESSION UNSET QUERY_TAG;"), 2)
+        # Each step SQL still appears after its tag.
+        self.assertIn("SELECT 1;", rendered)
+        self.assertIn("SELECT 2;", rendered)
+
+    def test_sql_unset_follows_each_step(self):
+        """Each rendered step emits its own UNSET QUERY_TAG after the SQL."""
+        from render_journey import render_blueprint_code
+
+        blueprint_dir, meta = self._make_blueprint(lang="sql")
+
+        rendered, _, _ = render_blueprint_code(
+            blueprint_dir, "sql", {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00",
+        )
+
+        # One UNSET per step, not a single end-of-journey UNSET.
+        self.assertEqual(rendered.count("ALTER SESSION UNSET QUERY_TAG;"), 2)
+        # Comment label is "End of step", not "End of journey".
+        self.assertIn("End of step: clear QUERY_TAG.", rendered)
+        self.assertNotIn("End of journey: clear QUERY_TAG.", rendered)
+
+    def test_sql_set_precedes_step_sql(self):
+        """For each step, the SET statement appears before the step's SQL."""
+        from render_journey import render_blueprint_code
+
+        blueprint_dir, meta = self._make_blueprint(lang="sql")
+
+        rendered, _, _ = render_blueprint_code(
+            blueprint_dir, "sql", {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00",
+        )
+
+        set_step1_pos = rendered.find('"step":"step-1"')
+        select1_pos = rendered.find("SELECT 1;")
+        set_step2_pos = rendered.find('"step":"step-2"')
+        select2_pos = rendered.find("SELECT 2;")
+
+        self.assertGreater(set_step1_pos, -1)
+        self.assertGreater(select1_pos, set_step1_pos)
+        self.assertGreater(set_step2_pos, select1_pos)
+        self.assertGreater(select2_pos, set_step2_pos)
+
+    def test_terraform_output_has_no_query_tag_statements(self):
+        """Non-SQL languages must not include any QUERY_TAG statements."""
+        from render_journey import render_blueprint_code
+
+        blueprint_dir, meta = self._make_blueprint(lang="terraform")
+
+        rendered, rendered_count, _ = render_blueprint_code(
+            blueprint_dir, "terraform", {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00",
+        )
+
+        self.assertEqual(rendered_count, 2)
+        self.assertNotIn("ALTER SESSION SET QUERY_TAG", rendered)
+        self.assertNotIn("ALTER SESSION UNSET QUERY_TAG", rendered)
+
+    def test_no_rendered_steps_means_no_unset(self):
+        """If nothing rendered (all skipped), don't emit a stray UNSET."""
+        from render_journey import render_blueprint_code
+
+        blueprint_dir = self.base_dir / "test-blueprint-skip"
+        blueprint_dir.mkdir(parents=True, exist_ok=True)
+        step1 = blueprint_dir / "step-1"
+        step1.mkdir(parents=True, exist_ok=True)
+        # Template references a variable that won't be provided -> step skipped
+        (step1 / "code.sql.jinja").write_text("SELECT {{ missing_var }};")
+        meta = {
+            "blueprint_id": "blueprint_test",
+            "name": "Test Blueprint",
+            "steps": ["step-1"],
+        }
+        (blueprint_dir / "meta.yaml").write_text(yaml.dump(meta))
+
+        rendered, rendered_count, skipped_count = render_blueprint_code(
+            blueprint_dir, "sql", {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00",
+        )
+
+        self.assertEqual(rendered_count, 0)
+        self.assertEqual(skipped_count, 1)
+        self.assertNotIn("ALTER SESSION SET QUERY_TAG", rendered)
+        self.assertNotIn("ALTER SESSION UNSET QUERY_TAG", rendered)
+
+    def test_step_sql_content_is_unchanged_by_injection(self):
+        """Injecting the tag wrappers must not modify the step SQL content itself."""
+        from render_journey import render_blueprint_code
+
+        blueprint_dir, meta = self._make_blueprint(lang="sql")
+
+        rendered, _, _ = render_blueprint_code(
+            blueprint_dir, "sql", {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00",
+        )
+
+        # Full step SQL is preserved byte-for-byte.
+        self.assertIn("SELECT 1;", rendered)
+        self.assertIn("SELECT 2;", rendered)
+
+    def test_blueprint_id_falls_back_to_directory_name(self):
+        """If meta.yaml has no blueprint_id, fall back to the blueprint dir name."""
+        import json as _json
+        from render_journey import render_blueprint_code
+
+        blueprint_dir, meta = self._make_blueprint(lang="sql")
+        meta.pop("blueprint_id", None)
+        (blueprint_dir / "meta.yaml").write_text(yaml.dump(meta))
+
+        rendered, _, _ = render_blueprint_code(
+            blueprint_dir, "sql", {}, self.base_dir, meta,
+            date_display="2026-02-27 10:00:00",
+        )
+
+        # Directory name is "test-blueprint"
+        self.assertIn('"bp":"test-blueprint"', rendered)
+
+
 if __name__ == "__main__":
     main()

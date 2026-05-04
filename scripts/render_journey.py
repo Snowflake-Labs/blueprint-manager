@@ -16,6 +16,7 @@ Steps with missing variables are skipped entirely.
 """
 
 import argparse
+import json
 import re
 import sys
 from datetime import datetime
@@ -97,6 +98,45 @@ class NullTracker:
 
 
 DEFAULT_PROJECT_NAME = "default-project"
+
+# QUERY_TAG constants: tag rendered SQL with {src, bp, step} so step
+# execution can be attributed in Snowflake query history.
+QUERY_TAG_SOURCE = "blueprints"
+QUERY_TAG_MAX_BYTES = 2000  # Snowflake QUERY_TAG hard limit.
+QUERY_TAG_MAX_VALUE_CHARS = 200  # Per-value cap keeps payload under the budget.
+
+
+def _coerce_tag_value(value):
+    """Stringify and truncate a QUERY_TAG field; ``None`` becomes ``""``."""
+    if value is None:
+        return ""
+    return str(value)[:QUERY_TAG_MAX_VALUE_CHARS]
+
+
+def build_query_tag_payload(blueprint, step, source=QUERY_TAG_SOURCE):
+    """Build the compact JSON payload used as the Snowflake QUERY_TAG value."""
+    payload = {
+        "src": _coerce_tag_value(source),
+        "bp": _coerce_tag_value(blueprint),
+        "step": _coerce_tag_value(step),
+    }
+    return json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
+
+
+def _escape_sql_single_quotes(value):
+    """Escape single quotes for use inside a SQL single-quoted string literal."""
+    return value.replace("'", "''")
+
+
+def render_set_query_tag_sql(blueprint, step, source=QUERY_TAG_SOURCE):
+    """Render ``ALTER SESSION SET QUERY_TAG = '<json>';`` for the given blueprint/step."""
+    payload = build_query_tag_payload(blueprint, step, source=source)
+    return f"ALTER SESSION SET QUERY_TAG = '{_escape_sql_single_quotes(payload)}';"
+
+
+def render_unset_query_tag_sql():
+    """Render the statement that clears the session QUERY_TAG."""
+    return "ALTER SESSION UNSET QUERY_TAG;"
 
 
 def classify_missing_vars(missing_vars, answers):
@@ -872,6 +912,12 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, blueprint_meta
     Only renders steps where all required variables are available.
     Steps with missing variables include a skip note in the output.
     Returns the concatenated rendered code and count of rendered/skipped steps.
+
+    For SQL output, each rendered step is wrapped with
+    ``ALTER SESSION SET QUERY_TAG`` before the step's SQL and
+    ``ALTER SESSION UNSET QUERY_TAG`` after it, so the step's queries can be
+    attributed in Snowflake query history without the tag leaking to queries
+    outside the step.
     
     Args:
         blueprint_dir: Path to the blueprint directory
@@ -895,6 +941,12 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, blueprint_meta
         raise ValueError(f"blueprint_meta must be a dict, got {type(blueprint_meta).__name__}")
     blueprint_name = blueprint_meta.get("name", blueprint_id)
     step_order = blueprint_meta.get("steps", [])
+
+    # Prefer meta.yaml's stable blueprint_id; fall back to the directory name.
+    blueprint_tag_id = blueprint_meta.get("blueprint_id") or blueprint_id
+
+    # QUERY_TAG tracking is SQL-only.
+    inject_query_tags = (lang == "sql")
 
     # Create Jinja2 environment once for all steps
     jinja_env = create_jinja_env(base_dir)
@@ -1037,7 +1089,24 @@ def render_blueprint_code(blueprint_dir, lang, answers, base_dir, blueprint_meta
             "",
         ]
         rendered_sections.append("\n".join(step_header))
+        if inject_query_tags:
+            rendered_sections.append(
+                render_set_query_tag_sql(blueprint_tag_id, step_id) + "\n"
+            )
         rendered_sections.append(rendered_code)
+        if inject_query_tags:
+            rendered_sections.append(
+                "\n".join(
+                    [
+                        "",
+                        f"{comment_char} ------------------------------------------------------------",
+                        f"{comment_char} End of step: clear QUERY_TAG.",
+                        f"{comment_char} ------------------------------------------------------------",
+                        render_unset_query_tag_sql(),
+                        "",
+                    ]
+                )
+            )
         rendered_count += 1
 
     return "\n".join(rendered_sections), rendered_count, skipped_count
