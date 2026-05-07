@@ -25,8 +25,10 @@ USE ROLE ACCOUNTADMIN;
 SELECT CURRENT_ORGANIZATION_NAME() AS organization_name;
 
 -- Verify your account edition (must be Enterprise or higher)
+-- Note: Account edition is visible in Snowsight under Admin > Accounts,
+-- or via SHOW ORGANIZATION ACCOUNTS (requires ORGADMIN role).
 SELECT CURRENT_ACCOUNT() AS account,
-       SYSTEM$GET_ACCOUNT_EDITION() AS edition;
+       CURRENT_ORGANIZATION_NAME() AS organization_name;
 
 -- Check if ORGADMIN role exists (may not exist yet in all accounts)
 SHOW ROLES LIKE 'ORGADMIN';
@@ -64,10 +66,11 @@ enabling the Organization Account for seamless expansion.
 */
 
 -- Verify current account configuration for standalone operation
+-- Note: Account edition is visible in Snowsight under Admin > Accounts,
+-- or via SHOW ORGANIZATION ACCOUNTS (requires ORGADMIN role).
 SELECT 
   CURRENT_ACCOUNT() AS current_account,
   CURRENT_ACCOUNT_NAME() AS account_name,
-  CURRENT_ORGANIZATION_NAME() AS organization_name,
-  SYSTEM$GET_ACCOUNT_EDITION() AS edition;
+  CURRENT_ORGANIZATION_NAME() AS organization_name;
 
 {%- endif %}
