@@ -123,14 +123,10 @@ GRANT ROLE _AR_APPLY_TAG TO ROLE {{ prefix }}_CREATE;
 SHOW ROLES LIKE '%{{ prefix }}%';
 
 -- Verify role hierarchy
-SELECT 
-  grantee_name AS child_role,
-  role AS parent_role,
-  granted_by
-FROM TABLE(INFORMATION_SCHEMA.ROLE_GRANTS())
-WHERE role LIKE '%{{ prefix }}%'
-   OR grantee_name LIKE '%{{ prefix }}%'
-ORDER BY parent_role, child_role;
+SHOW GRANTS OF ROLE {{ prefix }}_ADMIN;
+SHOW GRANTS OF ROLE {{ prefix }}_CREATE;
+SHOW GRANTS OF ROLE {{ prefix }}_RBAC;
+SHOW GRANTS TO ROLE {{ prefix }}_ADMIN;
 
 /*
 CORE ROLES CREATED
