@@ -12,6 +12,10 @@ List all existing projects in the blueprint-manager workspace.
 blueprints projects list
 ```
 
+## Options
+
+- `--projects-dir <path>`: Directory containing project subdirectories. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory).
+
 ## Instructions
 
 Scan the `projects/` directory and list all project subdirectories with their status information.

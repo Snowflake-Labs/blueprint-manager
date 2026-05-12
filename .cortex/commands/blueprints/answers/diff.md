@@ -76,6 +76,7 @@ Comparing answer files:
 - `--format <table|yaml|json>`: Output format (default: table)
 - `--only <added|removed|changed>`: Only show specific changes
 - `--ignore <key1,key2>`: Ignore specific keys in comparison
+- `--projects-dir <path>`: Directory containing project subdirectories with answer files. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory).
 
 ## Error Handling
 
