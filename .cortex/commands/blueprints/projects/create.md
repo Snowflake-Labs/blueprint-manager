@@ -16,6 +16,10 @@ Create a new project directory structure for organizing blueprint work.
 
 - `<name>`: Project name (alphanumeric, underscores, and hyphens only)
 
+## Options
+
+- `--projects-dir <path>`: Directory where the project subdirectory will be created. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory).
+
 ## Instructions
 
 Create a new project directory with the standard structure:
