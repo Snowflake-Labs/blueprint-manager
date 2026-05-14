@@ -19,6 +19,7 @@ Check an answer file for missing or invalid values without needing to specify a 
 ## Options
 
 - `--blueprint <name>`: Blueprint to validate against (auto-detected from file if not specified)
+- `--projects-dir <path>`: Directory containing project subdirectories with answer files. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory). The `blueprints/` and `definitions/` directories are always resolved relative to the script.
 
 ## Instructions
 

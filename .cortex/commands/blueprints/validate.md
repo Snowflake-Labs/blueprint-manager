@@ -17,6 +17,10 @@ Check an answer file for completeness against blueprint requirements and validat
 - `<answer-file>`: Path to the YAML answer file to validate
 - `--blueprint <blueprint-name>`: The blueprint ID to validate against
 
+## Options
+
+- `--projects-dir <path>`: Directory containing project subdirectories with answer files. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory). The `blueprints/` and `definitions/` directories are always resolved relative to the script.
+
 ## Instructions
 
 Validate an answer file by checking:

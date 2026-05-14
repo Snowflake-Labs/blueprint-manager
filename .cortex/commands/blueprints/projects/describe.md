@@ -16,6 +16,10 @@ Show detailed status of a project, including answer files, outputs, and history.
 
 - `<name>`: Project name to describe
 
+## Options
+
+- `--projects-dir <path>`: Directory containing project subdirectories. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory).
+
 ## Instructions
 
 Display comprehensive information about a project:
