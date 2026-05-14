@@ -23,6 +23,7 @@ Generate a skeleton answer file with all questions for a blueprint.
 - `--format <full|minimal>`: Output format (default: full)
   - `full`: Include question text and guidance as comments
   - `minimal`: Just variable names with null values
+- `--projects-dir <path>`: Directory where the skeleton answer file is written. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory). The `blueprints/` and `definitions/` directories are always resolved relative to the script.
 
 ## Instructions
 

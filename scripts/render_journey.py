@@ -17,6 +17,7 @@ Steps with missing variables are skipped entirely.
 
 import argparse
 import json
+import os
 import re
 import sys
 from datetime import datetime
@@ -35,6 +36,36 @@ except ImportError as e:
     sys.stderr.write(f"Error: Required library not found: {e}\n")
     sys.stderr.write("Please install dependencies: pip install pyyaml jinja2\n")
     sys.exit(1)
+
+PROJECTS_DIR_ENV_VAR = "BLUEPRINT_MANAGER_PROJECTS_DIR"
+
+
+def resolve_projects_dir(arg_value: str | None, default: Path) -> Path:
+    """Resolve the projects directory using CLI > env var > default precedence.
+
+    Priority:
+      1. ``arg_value`` (from ``--projects-dir`` CLI flag)
+      2. ``BLUEPRINT_MANAGER_PROJECTS_DIR`` environment variable
+      3. ``default`` (typically ``cwd / "projects"``)
+
+    The parent of the resolved path must exist; the directory itself will be
+    created later by ``setup_project_directories`` if needed.
+    """
+    if arg_value is not None:
+        projects = Path(arg_value)
+    elif os.environ.get(PROJECTS_DIR_ENV_VAR):
+        projects = Path(os.environ[PROJECTS_DIR_ENV_VAR])
+    else:
+        projects = default
+
+    projects = projects.resolve()
+
+    if projects.exists() and not projects.is_dir():
+        raise NotADirectoryError(
+            f"Projects directory path is not a directory: {projects}\n"
+            f"Set --projects-dir or {PROJECTS_DIR_ENV_VAR} to a directory."
+        )
+    return projects
 
 
 class NullTracker:
@@ -733,6 +764,16 @@ def parse_args():
         "--project",
         help="Project/workspace name to organize artifacts by customer or use case",
     )
+    parser.add_argument(
+        "--projects-dir",
+        help=(
+            "Directory where rendered project artifacts are written. "
+            "Resolution priority: --projects-dir flag > "
+            "BLUEPRINT_MANAGER_PROJECTS_DIR env var > <cwd>/projects "
+            "(current working directory). The blueprints/ and definitions/ "
+            "directories are always resolved relative to the script."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -1361,7 +1402,7 @@ def validate_name(name, name_type="name"):
         )
 
 
-def setup_project_directories(base_dir, project_name, blueprint_id):
+def setup_project_directories(projects_dir, project_name, blueprint_id):
     """
     Ensure project directory structure exists for the given project name and blueprint.
     
@@ -1369,7 +1410,7 @@ def setup_project_directories(base_dir, project_name, blueprint_id):
     is not specified, the default project name 'default-project' is used.
     
     Creates:
-        projects/<project_name>/
+        <projects_dir>/<project_name>/
         ├── answers/
         │   └── <blueprint_id>/
         └── output/
@@ -1378,7 +1419,7 @@ def setup_project_directories(base_dir, project_name, blueprint_id):
             └── documentation/
     
     Args:
-        base_dir: Base directory of the repository
+        projects_dir: Root directory containing all project subdirectories
         project_name: Name of the project (user-specified or 'default-project')
         blueprint_id: ID of the blueprint being rendered
     
@@ -1387,7 +1428,7 @@ def setup_project_directories(base_dir, project_name, blueprint_id):
     """
     validate_name(project_name, "project name")
     validate_name(blueprint_id, "blueprint ID")
-    project_dir = base_dir / "projects" / project_name
+    project_dir = projects_dir / project_name
     
     (project_dir / "answers" / blueprint_id).mkdir(parents=True, exist_ok=True)
     (project_dir / "output" / "iac" / "sql").mkdir(parents=True, exist_ok=True)
@@ -1406,13 +1447,16 @@ def main():
         sys.stderr.write(f"Error: Answers file not found: {answers_path}\n")
         sys.exit(1)
 
-    # Determine base directory (assume script is in scripts/)
+    # Determine base directory (script-relative, for blueprints/ + definitions/)
     script_dir = Path(__file__).parent
     base_dir = script_dir.parent
 
+    # Resolve projects directory (CLI flag > env var > <cwd>/projects)
+    projects_dir = resolve_projects_dir(args.projects_dir, Path.cwd() / "projects")
+
     try:
         project_name = args.project if args.project else DEFAULT_PROJECT_NAME
-        project_dir = setup_project_directories(base_dir, project_name, args.blueprint)
+        project_dir = setup_project_directories(projects_dir, project_name, args.blueprint)
         print(f"Using project: {project_name}")
         print(f"Project directory: {project_dir}")
         
@@ -1424,7 +1468,9 @@ def main():
         # Find workflow directory (external repo structure)
         blueprint_dir = blueprints_dir / args.blueprint
         if not blueprint_dir.exists() or not blueprint_dir.is_dir():
-            sys.stderr.write(f"Error: Blueprint directory not found: {blueprint_dir}\n")
+            sys.stderr.write(
+                f"Error: Blueprint directory not found: {blueprint_dir}\n"
+            )
             sys.exit(1)
 
         # Load answers
