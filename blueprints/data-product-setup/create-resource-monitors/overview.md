@@ -267,3 +267,47 @@ Choose how often the credit quota resets.
 - Quarterly
 - Yearly
 - Never (lifetime limit)
+
+#### Define the warehouses for your data product. (`warehouse_configuration`: object-list)
+**What is this asking?**
+Define compute warehouses for your data product workloads.
+
+**Field Descriptions:**
+- **name**: Short identifier used in Snowflake object names (e.g. `ETL` → `PREFIX_WH_ETL`). Uppercase, no spaces.
+- **workload**: Functional label describing the workload type (e.g. `ETL`, `ANALYTICS`, `INTERACTIVE`). Used in planning summaries and warehouse tags.
+- **size**: Warehouse size (X-Small, Small, Medium, Large, X-Large, 2X-Large).
+- **min_cluster_count** / **max_cluster_count**: Multi-cluster range. Use 1/1 for single-cluster.
+- **auto_suspend_seconds**: Seconds of inactivity before auto-suspend (60–600 recommended).
+- **timeout_minutes**: Query timeout in minutes. Queries exceeding this are cancelled (e.g. `30`).
+- **comment**: Human-readable description of the warehouse's purpose.
+
+**Common Patterns:**
+
+**Simple (1 warehouse):**
+| Name | Workload | Size | Min/Max | Auto-Suspend | Timeout (min) | Comment |
+|------|----------|------|---------|--------------|---------------|---------|
+| GENERAL | GENERAL | Small | 1/1 | 300 | 30 | General purpose warehouse |
+
+**Standard (2-3 warehouses):**
+| Name | Workload | Size | Min/Max | Auto-Suspend | Timeout (min) | Comment |
+|------|----------|------|---------|--------------|---------------|---------|
+| ETL | ETL | Medium | 1/3 | 60 | 120 | Batch ingestion and transformation |
+| QUERY | INTERACTIVE | Small | 1/2 | 300 | 30 | Ad-hoc and BI queries |
+
+**Advanced (workload isolation):**
+| Name | Workload | Size | Min/Max | Auto-Suspend | Timeout (min) | Comment |
+|------|----------|------|---------|--------------|---------------|---------|
+| INGEST | INGEST | Large | 1/3 | 60 | 240 | High-volume data loading |
+| TRANSFORM | ETL | Medium | 1/3 | 120 | 120 | dbt and transformation jobs |
+| INTERACTIVE | INTERACTIVE | Small | 1/2 | 300 | 30 | Analyst queries |
+| REPORTING | REPORTING | Medium | 1/4 | 300 | 60 | BI tool queries |
+
+**Sizing Guidelines:**
+- X-Small/Small: Development, light queries
+- Medium: Standard production workloads
+- Large+: Heavy ETL, complex analytics
+
+**Auto-Suspend Guidelines:**
+- Batch workloads: 60 seconds
+- Interactive: 300-600 seconds
+

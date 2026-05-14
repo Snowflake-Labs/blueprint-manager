@@ -168,3 +168,27 @@ Your Snowflake organization name is the first part of your account URL and conne
 - Every 30 minutes
 - Every hour
 - Manual only
+
+#### What do you want to name the governance schema? (`governance_name`: text)
+**What is the Governance Schema?**  
+  The Governance schema is created within the Infrastructure Database and contains objects related to security, compliance, and platform governance. This includes platform and FinOps tags, network rules, audit views, and administrative procedures.  
+
+  **Recommended Name:** GOVERNANCE  
+
+  This is a straightforward, self-descriptive name that clearly communicates the schema's purpose. Alternative options include:  
+  * ADMIN — Administration  
+  * SECURITY — Security-focused objects  
+  * PLATFORM — Platform-level objects  
+
+**Schema Configuration:**  
+  This schema will be created with **Managed Access** enabled, which means:  
+  * Only the schema owner (typically [SYSADMIN](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system) - aka System Administrator) can grant privileges on objects  
+  * Prevents "shadow" security configurations where object creators grant their own access  
+  * Provides centralized control over who can access governance objects  
+
+**Best Practice:** Use a simple, single-word name that represents the functional purpose.  
+  
+**More Information:**  
+  * [CREATE SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/create-schema)  
+  * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)  
+  * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)

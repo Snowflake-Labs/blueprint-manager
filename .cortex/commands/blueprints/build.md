@@ -17,6 +17,10 @@ Start the interactive blueprint building process. This command wraps the `bluepr
 - `<blueprint-name>`: The blueprint ID to build (e.g., `platform-foundation-setup`)
 - `--project <project-name>`: Optional project name to organize answers and outputs
 
+## Options
+
+- `--projects-dir <path>`: Directory where rendered project artifacts are written. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory). The `blueprints/` and `definitions/` directories are always resolved relative to the script.
+
 ## Instructions
 
 This command invokes the `blueprint-builder` skill with the specified blueprint. The skill will:

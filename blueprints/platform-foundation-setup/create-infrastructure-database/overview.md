@@ -90,3 +90,38 @@ Once you've executed this step, you can check to ensure it worked with the follo
   * [CREATE SCHEMA](https://docs.snowflake.com/en/sql-reference/sql/create-schema)  
   * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)  
   * [System Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system)
+
+#### What account strategy do you wish to implement? (`account_strategy`: single-select)
+Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
+  **Single Account:**  
+  * Best for: Small to medium organizations, centralized teams, simpler governance  
+  * Naming: Domain \+ Environment \+ Data Product at database level  
+  * Pros: Lower operational overhead, easier cross-database queries, centralized management  
+  * Cons: Less isolation, shared resource limits, single security boundary  
+  * Recommendation: Consider setting up an organization account even for single-account deployments to enable future growth  
+* **Multi-Account (Environment-based):**  
+  * Best for: Organizations requiring strong environment isolation (dev/test/prod)  
+  * Naming: Environment at account level, Domain \+ Data Product at database level  
+  * Pros: Complete environment isolation, independent security controls, separate billing  
+  * Cons: More complex data sharing, higher operational overhead  
+  * Requirement: Organization account required  
+* **Multi-Account (Domain-based):**  
+  * Best for: Large enterprises with autonomous business units/domains  
+  * Naming: Domain at account level, Environment \+ Data Product at database level  
+  * Pros: Clear cost allocation per domain, independent governance, domain autonomy  
+  * Cons: Higher complexity, requires data sharing for cross-domain analytics  
+  * Requirement: Organization account required  
+* **Multi-Account (Domain \+ Environment):**  
+  * Best for: Large organizations needing both domain and environment isolation  
+  * Naming: Domain \+ Environment at account level, Data Product at database level  
+  * Pros: Maximum isolation, clear ownership and environment separation  
+  * Cons: Highest complexity and operational overhead, most accounts to manage  
+  * Requirement: Organization account required  
+* **More Information:**  
+  * [Organizations](https://docs.snowflake.com/en/user-guide/organizations)  
+  * [Managing Multiple Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts)  
+**Options:**
+- Single Account
+- Multi-Account (Environment-based)
+- Multi-Account (Domain-based)
+- Multi-Account (Domain + Environment)

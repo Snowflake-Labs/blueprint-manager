@@ -22,6 +22,7 @@ Generate SQL/Terraform/Documentation from an answer file. This command wraps the
 - `--lang <sql|terraform>`: Output language (default: sql)
 - `--project <name>`: Project name for organizing outputs
 - `--skip-guidance`: Skip rendering documentation, only generate IaC code
+- `--projects-dir <path>`: Directory where rendered project artifacts are written. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory). The `blueprints/` and `definitions/` directories are always resolved relative to the script.
 
 ## Instructions
 
@@ -55,7 +56,8 @@ python scripts/render_journey.py \
   <answer-file> \
   --blueprint <blueprint-name> \
   --lang <language> \
-  --project <project-name>
+  --project <project-name> \
+  [--projects-dir <path>]
 ```
 
 ## Output Format

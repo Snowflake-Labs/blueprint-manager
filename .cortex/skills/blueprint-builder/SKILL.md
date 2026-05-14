@@ -36,7 +36,8 @@ python scripts/render_journey.py \
   [answer_file_path] \
   --blueprint [blueprint_slug] \
   --lang sql \
-  --project [project_name]
+  --project [project_name] \
+  [--projects-dir <path>]  # optional, override projects/ output location
 ```
 
 **WHY:** The `render_journey.py` script uses Jinja2 templates from the blueprint's step directories (`code.sql.jinja`, `dynamic.md.jinja`) to ensure:
@@ -74,6 +75,18 @@ Invoke this skill when users:
    - Each blueprint has a `meta.yaml` with blueprint metadata
    - Steps have `overview.md` files with context and guidance
    - Questions are defined with types: `multi-select`, `list`, or `text`
+
+## Working Directory & Projects Path
+
+The `blueprints/` and `definitions/` directories are always resolved relative to the script — they are not configurable.
+
+The `projects/` directory (where rendered artifacts are written) is configurable via this priority:
+
+1. `--projects-dir <path>` CLI flag (highest, passed to `render_journey.py`)
+2. `BLUEPRINT_MANAGER_PROJECTS_DIR` environment variable
+3. `<cwd>/projects` (current working directory, default)
+
+When writing or reading project artifacts (e.g. `projects/<name>/answers/<blueprint>/<file>.yaml`), resolve the projects directory using this precedence and prefix paths accordingly. Bare relative paths to `blueprints/` and `definitions/` always work because they are script-relative.
 
 ## Workflow
 
