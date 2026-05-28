@@ -280,3 +280,28 @@ Set the maximum credit consumption for this data product's warehouses.
 - `1000` — Medium workload
 - `5000` — Heavy ETL and analytics
 
+
+#### How often should the resource monitor credit quota reset? (`resource_monitor_frequency`: single-select)
+**What is this asking?**
+Choose how often the credit quota resets.
+
+**Recommendations:**
+- **Daily**: Tight cost control, experimental workloads
+- **Weekly**: Development environments
+- **Monthly**: Most production data products (recommended)
+- **Quarterly/Yearly**: Stable, predictable workloads
+- **Never**: Hard lifetime cap
+
+**Why does this matter?**
+- Too frequent resets may interrupt legitimate work
+- Too infrequent may allow cost overruns before detection
+
+**Recommendation:** Monthly for most use cases.
+
+**Options:**
+- Daily
+- Weekly
+- Monthly
+- Quarterly
+- Yearly
+- Never (lifetime limit)

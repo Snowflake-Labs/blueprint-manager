@@ -1,3 +1,6 @@
+---
+description: "Manage Snowflake blueprints, projects, and answer files."
+---
 <!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
      Licensed under the Snowflake Skills License. 
      Refer to the LICENSE file in the root of this repository for full terms. -->
@@ -26,16 +29,16 @@ Manage Snowflake blueprints, projects, and answer files.
 ### Project Management
 | Command | Description |
 |---------|-------------|
-| `/blueprints:projects:list` | List existing projects |
-| `/blueprints:projects:create <name>` | Create a new project directory structure |
-| `/blueprints:projects:describe <name>` | Show project status (answers, outputs, history) |
+| `/blueprints:projects-list` | List existing projects |
+| `/blueprints:projects-create <name>` | Create a new project directory structure |
+| `/blueprints:projects-describe <name>` | Show project status (answers, outputs, history) |
 
 ### Answer File Operations
 | Command | Description |
 |---------|-------------|
-| `/blueprints:answers:init <blueprint-name>` | Generate a skeleton answer file with all questions |
-| `/blueprints:answers:validate <file>` | Check for missing/invalid values |
-| `/blueprints:answers:diff <file1> <file2>` | Compare two answer files |
+| `/blueprints:answers-init <blueprint-name>` | Generate a skeleton answer file with all questions |
+| `/blueprints:answers-validate <file>` | Check for missing/invalid values |
+| `/blueprints:answers-diff <file1> <file2>` | Compare two answer files |
 
 ## Examples
 
@@ -50,10 +53,10 @@ Manage Snowflake blueprints, projects, and answer files.
 /blueprints:build platform-foundation-setup
 
 # Create a new project
-/blueprints:projects:create my-customer-project
+/blueprints:projects-create my-customer-project
 
 # Generate a skeleton answer file
-/blueprints:answers:init platform-foundation-setup --output answers.yaml
+/blueprints:answers-init platform-foundation-setup --output answers.yaml
 
 # Validate an answer file
 /blueprints:validate answers.yaml --blueprint platform-foundation-setup
@@ -65,8 +68,8 @@ Manage Snowflake blueprints, projects, and answer files.
 ## Getting Started
 
 1. **List available blueprints**: `/blueprints:list`
-2. **Create a project**: `/blueprints:projects:create <project-name>`
-3. **Initialize answers**: `/blueprints:answers:init <blueprint-name>`
+2. **Create a project**: `/blueprints:projects-create <project-name>`
+3. **Initialize answers**: `/blueprints:answers-init <blueprint-name>`
 4. **Build interactively**: `/blueprints:build <blueprint-name>` (or edit answers manually)
 5. **Validate answers**: `/blueprints:validate <answer-file>`
 6. **Generate outputs**: `/blueprints:render <answer-file>`

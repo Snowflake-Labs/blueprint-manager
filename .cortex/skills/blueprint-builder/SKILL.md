@@ -36,7 +36,8 @@ python scripts/render_journey.py \
   [answer_file_path] \
   --blueprint [blueprint_slug] \
   --lang sql \
-  --project [project_name]
+  --project [project_name] \
+  [--projects-dir <path>]  # optional, override projects/ output location
 ```
 
 **WHY:** The `render_journey.py` script uses Jinja2 templates from the blueprint's step directories (`code.sql.jinja`, `dynamic.md.jinja`) to ensure:
@@ -73,7 +74,248 @@ Invoke this skill when users:
 2. **Blueprint components:**
    - Each blueprint has a `meta.yaml` with blueprint metadata
    - Steps have `overview.md` files with context and guidance
-   - Questions are defined with types: `multi-select`, `list`, or `text`
+   - Questions are defined with types: `single-select`, `multi-select`, `text`, `list`, or `object-list`
+
+## Working Directory & Projects Path
+
+The `blueprints/` and `definitions/` directories are always resolved relative to the script — they are not configurable.
+
+The `projects/` directory (where rendered artifacts are written) is configurable via this priority:
+
+1. `--projects-dir <path>` CLI flag (highest, passed to `render_journey.py`)
+2. `BLUEPRINT_MANAGER_PROJECTS_DIR` environment variable
+3. `<cwd>/projects` (current working directory, default)
+
+When writing or reading project artifacts (e.g. `projects/<name>/answers/<blueprint>/<file>.yaml`), resolve the projects directory using this precedence and prefix paths accordingly. Bare relative paths to `blueprints/` and `definitions/` always work because they are script-relative.
+
+## Experience-Level Rendering Profiles
+
+This skill adapts verbosity to the user's stated familiarity with Snowflake. The level is captured once (Step 2.5) and persisted in the user's cortex memory so it applies across all blueprints and sessions.
+
+Every text-heavy block (blueprint overview, task overview, step overview, summaries, recovery, transitions) maps the experience level to one of three rendering profiles:
+
+| Tier | Profile | Length budget for prose blocks | Concept framing | Prerequisites |
+|------|---------|---------------------------------|------------------|---------------|
+| Beginner | **Verbose** | 4–8 sentences per block + concept primer | Always include "why this matters" + plain-language definitions | Full list with explanations |
+| Intermediate | **Standard** | 2–4 sentences per block | Brief context only | Full list, no explanation |
+| Advanced | **Concise** | 1 sentence + bulleted facts | Skip unless asked | Compact checklist |
+
+These profiles are guidance for prose density. Structural elements (option lists, configuration questions, prerequisites bullets, persona tables, IaC commands) are rendered identically at every level — only the surrounding narrative scales.
+
+### "Show Full Overview" Affordance
+
+At every overview block (blueprint, task, step), the user may at any time say "show full overview", "show me the raw overview", "expand", or similar. When they do, the skill MUST:
+
+1. Read and render the underlying source (`overview.md` for blueprint and step; `tasks/<task_slug>.md` for task) verbatim.
+2. After displaying, return to the same menu/state the user came from — do not advance.
+
+This affordance is available regardless of experience level so power users at any tier can drill into detail on demand.
+
+### Changing the Level Mid-Session
+
+If the user asks to change their experience level (e.g., "switch to advanced", "be more concise", "explain more"), update cortex memory immediately and apply the new profile to all subsequent output:
+```bash
+cortex ctx remember "Blueprint experience level: [new level]"
+```
+
+### Blueprint Overview Templates
+
+**Beginner (Verbose):**
+```
+======================================================================
+ Blueprint Overview: [Blueprint Name]
+======================================================================
+
+## What This Blueprint Will Do
+
+[3–5 sentence conversational summary of overview.md, in your own words.
+ Lead with the user-visible outcome ("By the end of this you'll have…"),
+ then explain what gets built and why each piece matters. Use plain
+ language and avoid Snowflake jargon without a quick definition.]
+
+## How It's Structured
+
+This blueprint has [N] tasks made up of [M] total configuration steps.
+We'll go through them together, and at each task boundary I'll give you
+a heads-up about what's coming.
+
+## Before We Start — Things to Have Ready
+
+**Snowflake roles you'll need access to:**
+- [aggregated role_requirements, with a 1-line plain-language note for each]
+
+**Things outside Snowflake you'll need:**
+- [aggregated external_requirements, with a 1-line plain-language note for each]
+
+**People who should be involved:**
+- [aggregated personas with a 1-line note on what each typically reviews]
+
+---
+
+Ready to begin, or want me to expand any part of this overview?
+```
+
+**Intermediate (Standard):**
+```
+======================================================================
+ Blueprint Overview: [Blueprint Name]
+======================================================================
+
+[2-sentence summary of overview.md.]
+
+**Structure:** [N] tasks across [M] steps.
+
+**Prerequisites:**
+- Roles: [comma-separated role_requirements]
+- External: [comma-separated external_requirements]
+- Reviewers: [comma-separated personas]
+
+Ready to begin?
+```
+
+**Advanced (Concise):**
+```
+======================================================================
+ [Blueprint Name] — [meta.yaml `summary` line]
+======================================================================
+[N] tasks · [M] steps · Roles: [...] · External: [...] · Reviewers: [...]
+
+Begin?
+```
+
+### Task Overview Templates
+
+The structural sections (Prerequisites, Who Should Be Involved) are identical at every level — only the prose density and inclusion of supplementary content varies.
+
+**Beginner (Verbose):**
+```
+======================================================================
+ Starting Task [N] of [Total]: [Task Title]
+======================================================================
+
+## What You Will Accomplish
+[Task `summary` field, plus 2–3 sentences explaining why this task block
+ matters in the broader blueprint and what the user will have at the end.]
+
+## Prerequisites
+
+**Snowflake Role Requirements:**
+- [role_requirement_1] — [1-line plain-language note on what this role does]
+- [role_requirement_2] — [...]
+
+**External Requirements:**
+- [external_requirement_1] — [1-line plain-language note]
+- [external_requirement_2] — [...]
+
+## Who Should Be Involved
+- [persona_1] — [1-line note on what they typically review or own]
+- [persona_2] — [...]
+
+[Include the FULL contents of tasks/<task_slug>.md if it exists, verbatim,
+ after the structured fields above.]
+
+---
+
+This task contains [N] steps. Let's begin with the first one.
+```
+
+**Intermediate (Standard):**
+```
+======================================================================
+ Starting Task [N] of [Total]: [Task Title]
+======================================================================
+
+## What You Will Accomplish
+[Task `summary` field, as-is.]
+
+## Prerequisites
+
+**Snowflake Role Requirements:**
+- [role_requirement_1]
+- [role_requirement_2]
+
+**External Requirements:**
+- [external_requirement_1]
+- [external_requirement_2]
+
+## Who Should Be Involved
+- [persona_1]
+- [persona_2]
+
+[If tasks/<task_slug>.md exists, include only its "Key Decisions" and
+ "Deliverables" sections (omit the rest). If neither exists, omit the
+ supplementary block entirely.]
+
+---
+
+This task contains [N] steps. Let's begin with the first one.
+```
+
+**Advanced (Concise):**
+```
+======================================================================
+ Task [N]/[Total]: [Task Title] — [Task `summary` field]
+======================================================================
+Roles: [comma-separated role_requirements]
+External: [comma-separated external_requirements]
+Reviewers: [comma-separated personas]
+[N] steps · Say "show full task overview" to see tasks/<task_slug>.md.
+
+Beginning step 1.
+```
+
+### Step Overview Templates
+
+Level-specific templates for the "## Step Overview" block (the Configuration Questions block is unaffected):
+
+**Beginner (Verbose):**
+```
+**Concept Primer:** [1–2 sentences explaining the underlying Snowflake
+concept(s) this step touches, in plain language. Skip if the step is
+purely procedural with no new concept.]
+
+**Why this step matters:** [1–2 sentences on why we do this and what
+it unlocks for the rest of the blueprint.]
+
+**What we're doing here:** [3–5 sentence summary of overview.md, in
+your own words. Cover the key decision points without dumping the
+raw markdown.]
+
+*Want the full original write-up for this step? Say "show full step overview".*
+```
+
+**Intermediate (Standard):**
+```
+[1–2 sentence summary of overview.md, in your own words.]
+
+*Say "show full step overview" for the complete write-up.*
+```
+
+**Advanced (Concise):**
+```
+[Step name and a 1-line purpose, then jump straight to the
+ Configuration Questions block. No prose summary; the questions
+ speak for themselves.]
+
+*Say "show full step overview" if you want the original write-up.*
+```
+
+**At every level**, honor the "show full step overview" affordance: when the user requests it, dump the full contents of `blueprints/<blueprint_slug>/<step_id>/overview.md` verbatim, then redisplay the step menu.
+
+### Step 6 Summary Verbosity
+
+Apply the rendering profile based on the user's experience level:
+- **Beginner (Verbose):** keep the full prose template — show full reasoning paragraphs for every answered question, multi-line "what's needed" / "how to find it" guidance for required values, and full "missing context" explanations for insufficient-context items.
+- **Intermediate (Standard):** keep the section structure, but compress reasoning to one short clause per answered question (e.g., `enable_mfa: 'Yes' — SOC2 compliance`). Required-value entries keep their "what's needed" line but drop "how to find it" unless non-obvious.
+- **Advanced (Concise):** render answered questions as a compact table (`question | answer | reasoning`); list required values as a single bulleted checklist with one-line asks; list insufficient-context items as a one-line bulleted checklist.
+
+### Context Recovery Verbosity
+
+The structural sections (current task name, current step, progress percentages, list of remaining steps) are identical at every level. The "What You Will Accomplish" prose, role/external requirement notes, and previously-completed-task summaries scale: full plain-language sentences at Beginner; raw `summary` strings at Intermediate; compact one-line variants at Advanced (e.g., "Resuming task 3/5 — [task title]; on step 7/12; remaining: …").
+
+### Task Boundary Transitions Verbosity
+
+The structural elements (task counts, "Up Next" task title, progress numbers) are identical at every level. The "Up Next" task summary and prerequisites scale: at Beginner, include a 2–3 sentence framing of why the next task matters and what new context it introduces; at Intermediate, show the next task's `summary` field as-is; at Advanced, condense the entire transition to a single line (e.g., `✓ Task 2/5 complete · Up next: Task 3/5 — [title]. Continue?`).
 
 ## Workflow
 
@@ -109,7 +351,7 @@ Invoke this skill when users:
 
 **If user selects existing project:**
 - Note the project name for use in subsequent steps
-- Proceed to Step 2 (Discover Available Blueprints)
+- Proceed to Step 2 (Discover and Recommend Blueprint)
 
 **If user wants to create a new project:**
 1. **Prompt for project name:**
@@ -145,44 +387,141 @@ Invoke this skill when users:
        └── documentation/ (for generated docs)
    ```
 
-6. **Proceed to Step 2** (Discover Available Blueprints)
+6. **Proceed to Step 2** (Discover and Recommend Blueprint)
 
 **Output:** Selected or created project name
 
-### Step 2: Discover Available Blueprints
+### Step 2: Discover and Recommend Blueprint
 
-**Goal:** Identify which blueprints are available and which one the user wants to work with
+**Goal:** Identify which blueprint best matches the user's intent, recommend it, and confirm selection.
 
 **Actions:**
 
-1. **List blueprints** in the repository:
+1. **Load all blueprint metadata:**
    ```bash
    find blueprints -name "meta.yaml" -type f
    ```
+   For each blueprint, load `blueprints/<blueprint_slug>/meta.yaml` and extract: `name`, `summary`, `tasks` (titles), `steps`, `is_repeatable`.
 
-2. **Read blueprint metadata** for each blueprint:
-   - Load `blueprints/<blueprint_slug>/meta.yaml`
-   - Extract: `name`, `summary`, `overview`, `is_repeatable`, `steps`
+2. **Match intent to blueprint.** If the user's initial prompt or earlier conversation provides context about what they want to do (e.g., "set up my Snowflake account", "create a data product", "harden RBAC"), recommend the best-matching blueprint directly:
 
-3. **Present blueprints** to user:
+   ```
+   Based on what you've described, I'd recommend:
+
+   → [Blueprint Name]
+     [Brief summary]
+
+     Tasks:
+     - [Task 1 Title]
+     - [Task 2 Title]
+     - [Task 3 Title]
+     - [Task 4 Title]
+
+   There are also [N] other blueprints available.
+   Would you like to proceed with this one, or see the full list?
+   ```
+
+   **If no clear intent** (user just said "set up a blueprint" or "what's available"), skip the recommendation and go directly to the full list (action 3).
+
+3. **Full list (fallback or on request).** Present a compact table, then expand on request:
+
    ```
    Available blueprints:
-   
-   1. [Blueprint Name]
-      Summary: [Brief description]
-      Steps: [Number of steps]
-   
-   2. [Blueprint Name 2]
-      ...
-   
-   Which blueprint would you like to work with?
+
+   | # | Blueprint                         | Tasks |
+   |---|-----------------------------------|-------|
+   | 1 | [Name]                            | [N]   |
+   | 2 | [Name]                            | [N]   |
+   | ...                                           |
+
+   Say a number to see details, or type a name to select.
    ```
 
-**⚠️ MANDATORY STOPPING POINT**: Wait for user to select a blueprint.
+   When the user picks a number or asks for details, show the full summary + task list for that blueprint before confirming selection.
+
+**⚠️ MANDATORY STOPPING POINT**: Wait for user to confirm blueprint selection.
 
 **Output:** Selected blueprint slug (directory name) and metadata
 
 > **Note:** The blueprint slug is the directory name under `blueprints/` (e.g., `platform-foundation-setup`). This is **different** from the `blueprint_id` field inside `meta.yaml` (e.g., `blueprint_4d563df2`). All file path operations in subsequent steps use the slug.
+
+### Step 2.5: Capture Experience Level
+
+**Goal:** Determine the user's familiarity with Snowflake and data platforms so every subsequent overview, summary, and explanation can be rendered at the right depth.
+
+This step runs immediately after blueprint selection and BEFORE the blueprint overview (Step 2.6) so that overview can already be scaled appropriately.
+
+**Actions:**
+
+1. **Check cortex memory for an existing preference.**
+   Search the user's memory for a "Blueprint experience level" entry. If found, acknowledge it and offer to change:
+   ```
+   Your experience level is set to [level]. I'll tailor my explanations accordingly.
+   (Say "switch to beginner/intermediate/advanced" anytime to change this.)
+   ```
+   Then proceed directly to Step 2.6.
+
+2. **If no level found in memory, ask the intro question:**
+   ```
+   Before we go further, one quick question so I can pitch this at the right level.
+
+   How would you describe your familiarity with Snowflake and data platforms?
+
+   1. Beginner — New to Snowflake or data platforms. I'd like concepts
+      explained and "why this matters" framing along the way.
+   2. Intermediate — I'm comfortable with the basics (accounts, roles,
+      warehouses, RBAC). Give me enough context to make good decisions.
+   3. Advanced — I know Snowflake well. Keep it concise and
+      action-oriented.
+
+   Enter your choice (1-3):
+   ```
+
+3. **⚠️ MANDATORY STOPPING POINT:** Wait for the user's choice.
+
+4. **Persist to cortex memory:**
+   ```bash
+   cortex ctx remember "Blueprint experience level: [chosen level]"
+   ```
+
+5. **Confirm to the user (one line, scaled to chosen level):**
+   - Beginner: "Got it — I'll explain Snowflake concepts as we go and walk you through the reasoning at each step. You can say 'switch to advanced' anytime to dial it back."
+   - Intermediate: "Got it — I'll keep context tight but include the key reasoning. Say 'be more concise' or 'explain more' anytime."
+   - Advanced: "Got it — concise and action-oriented. Say 'explain more' anytime to expand."
+
+**Changing the level mid-session:** If the user says "switch to advanced", "be more concise", "explain more", or similar at any point, update cortex memory immediately:
+```bash
+cortex ctx remember "Blueprint experience level: [new level]"
+```
+Then apply the new profile to all subsequent output. (See "Experience-Level Rendering Profiles" near the top of this skill for the per-tier templates.)
+
+**Output:** Experience level known and stored in cortex memory.
+
+### Step 2.6: Present Blueprint Overview
+
+**Goal:** Give the user a CoCo-summarized, conversational sense of what this blueprint will accomplish — derived from `overview.md` and `meta.yaml`, scaled to the experience level captured in Step 2.5.
+
+**Inputs:**
+- `blueprints/<blueprint_slug>/overview.md` — full overview text
+- `blueprints/<blueprint_slug>/meta.yaml` — `name`, `summary`, `tasks` (count + per-task `summary`, `personas`, `role_requirements`, `external_requirements`), `steps` (count)
+- Optional `blueprints/<blueprint_slug>/tasks/<task_slug>.md` files — used only for "show full overview" expansion
+
+**Actions:**
+
+1. **Load all inputs.**
+
+2. **Aggregate prerequisites across tasks:**
+   - Union of `role_requirements` across all tasks
+   - Union of `external_requirements` across all tasks
+   - Union of `personas` across all tasks (so the user knows up-front who needs to be involved)
+
+3. **Render the overview** using the level-specific Blueprint Overview template from the "Experience-Level Rendering Profiles" section above.
+
+4. **Honor the "show full overview" affordance.** If the user says "show full overview", "show the raw overview", "expand", or similar, dump `overview.md` verbatim and then redisplay the level-appropriate "Ready to begin?" prompt.
+
+5. **⚠️ MANDATORY STOPPING POINT:** Wait for the user to confirm they're ready to proceed (or to expand).
+
+**Output:** User has read the blueprint overview and is ready to proceed to Step 3.
 
 ### Step 3: Initialize or Select Answer File
 
@@ -244,11 +583,11 @@ Invoke this skill when users:
 
 3. **Run the migration script** to ensure the file is compatible with the current schema before loading:
    ```bash
-   .venv/bin/python scripts/migration/migrate_answers.py [selected_file_path] --dry-run
+   python3 scripts/migration/migrate_answers.py [selected_file_path] --dry-run
    ```
    - If the dry-run reports changes, apply them:
      ```bash
-     .venv/bin/python scripts/migration/migrate_answers.py [selected_file_path]
+     python3 scripts/migration/migrate_answers.py [selected_file_path]
      ```
    - If the script reports errors or the file cannot be parsed, direct the user to `scripts/TROUBLESHOOTING.md` for resolution before continuing.
    - If no changes are needed, proceed immediately.
@@ -306,45 +645,40 @@ Invoke this skill when users:
 
 2. **Parse questions** to understand what information is needed across the entire blueprint
 
-3. **Present open-ended request with suggested topics AND step-by-step option:**
-   
-   **Request Template - Adapt based on workflow:**
-   
+3. **Generate topic suggestions from the blueprint's questions.** Scan the loaded questions and group them by theme (e.g., by their parent task or by semantic similarity). Produce 3–5 topic categories that are specific to *this* blueprint, with 2–3 example questions per category. Do NOT use a hardcoded topic list — derive it from the actual questions.
+
+   **How to derive topic categories:** Group the blueprint's questions by their parent task title. For each task, summarize what kind of information the questions in that task are asking for. Use the task title as the topic header and the question `guidance` fields to identify 2–3 representative information needs. Skip tasks where questions are purely procedural (e.g., "confirm you've completed X").
+
+4. **Present open-ended request with the dynamically generated topics AND step-by-step option:**
+
    ```
-   I can help you configure your Snowflake Blueprint in one of two ways:
+   I can help you configure [Blueprint Name] in one of two ways:
    
    ---
    
    **Option A: Provide a Description (Recommended)**
    
-   Share an open-ended description of your organization, and I'll intelligently 
+   Share an open-ended description of your situation, and I'll intelligently 
    configure as many settings as possible based on what you tell me.
    
-   Consider including information about:
+   To help me answer the most questions, consider including information about:
    
-   **Organization Profile**
-   - Organization size (small startup, mid-size, large enterprise)
-   - Primary Snowflake use case (analytics, data engineering, ML, application, multiple)
-   - Number of users/teams that will use Snowflake
+   [Dynamically generated topic categories based on this blueprint's questions.
+    Each category is a bold header with 2-3 bullet points showing the kind of
+    information that would be helpful.]
    
-   **Security & Compliance**
-   - Existing SSO/identity provider (Okta, Azure AD, none, other)
-   - Compliance requirements (SOC2, HIPAA, GDPR, PCI-DSS, none)
-   - Network access controls (strict corporate only, VPN, cloud services, flexible)
+   **[Topic 1 derived from task/question themes]**
+   - [Relevant consideration from this blueprint's questions]
+   - [Another relevant consideration]
    
-   **Cost & Scale**
-   - Expected monthly budget/usage (under $1K, $1-10K, $10-50K, $50K+, unknown)
-   - Cost control level (strict - prevent overruns, moderate - alerts, flexible - track only)
-   - Deployment approach (start small/dev, straight to production, phased rollout)
+   **[Topic 2]**
+   - [...]
+   - [...]
    
-   **Technical Environment** (if applicable)
-   - Cloud provider preference (AWS, Azure, GCP, multi-cloud)
-   - Existing data sources (databases, cloud storage, APIs, streaming)
-   - Data governance maturity (just starting, have some policies, mature governance)
+   **[Topic 3]**
+   - [...]
    
-   **Organizational Structure** (if applicable for complex workflows)
-   - Team structure (centralized data team, distributed, hybrid)
-   - Data product approach (single product, multiple domains, not sure yet)
+   [3-5 topic groups total. Keep each concise.]
    
    Share as much or as little as feels relevant.
    
@@ -360,7 +694,7 @@ Invoke this skill when users:
    
    **How would you like to proceed?**
    
-   - Type your organization description to use Option A
+   - Type your description to use Option A
    - Or type "step-by-step" to go through questions one at a time
    ```
 
@@ -464,6 +798,8 @@ Invoke this skill when users:
 
 **Goal:** Show user exactly what was configured, what wasn't, and why
 
+**Verbosity:** Apply the rendering profile based on the user's experience level — see "Step 6 Summary Verbosity" in the "Experience-Level Rendering Profiles" section above. The full prose template below is the Beginner (Verbose) form; compress per the profile guidance for Intermediate and Advanced.
+
 **Actions:**
 
 1. **Present detailed configuration summary with transparency:**
@@ -565,8 +901,8 @@ Before presenting a step's details, check whether this step is the **first step 
 **Actions:**
 
 1. **Determine if this is a task boundary:**
-   - Use `get_current_task(current_step_slug, tasks)` to get the parent task
-   - Check if the current step is the first step in that task (i.e., `step_index == 0` in the task's steps list)
+   - Find which task in `meta.yaml` contains the current step slug
+   - Check if the current step is the first step in that task (i.e., index 0 in the task's steps list)
 
 2. **If this is the first step in a new task, display the task overview:**
 
@@ -575,45 +911,17 @@ Before presenting a step's details, check whether this step is the **first step 
    read blueprints/<blueprint_slug>/tasks/<task_slug>.md
    ```
 
-   Then present the task overview:
+   Render the task overview using the rendering profile that matches the user's experience level. The structural sections (Prerequisites, Who Should Be Involved) are identical at every level — only the prose density and inclusion of supplementary content varies.
 
-   ```
-   ======================================================================
-    Starting Task [N] of [Total]: [Task Title]
-   ======================================================================
+   See "Task Overview Templates" in the "Experience-Level Rendering Profiles" section above for the per-tier templates.
 
-   ## What You Will Accomplish
-   [Task summary from the task's `summary` field]
-
-   ## Prerequisites
-
-   **Snowflake Role Requirements:**
-   - [role_requirement_1]
-   - [role_requirement_2]
-
-   **External Requirements:**
-   - [external_requirement_1]
-   - [external_requirement_2]
-
-   ## Who Should Be Involved
-   - [persona_1]
-   - [persona_2]
-
-   [If task overview markdown file exists, include the Details, Steps in This Task,
-    Key Decisions, and Deliverables sections from it]
-
-   ---
-
-   This task contains [N] steps. Let's begin with the first one.
-   ```
-
-   **Rules for displaying the task overview:**
+   **Rules common to all levels:**
    - **Summary** comes from the task's `summary` field in meta.yaml
-   - **Role Requirements** comes from the task's `role_requirements` field — show each as a bullet point. If empty, omit this section.
-   - **External Requirements** comes from the task's `external_requirements` field — show each as a bullet point. If empty, omit this section.
-   - **Personas** comes from the task's `personas` field — show each as a bullet point. If empty, omit this section.
-   - If a `tasks/<task_slug>.md` file exists, include its supplementary content (step tables, key decisions, deliverables, execution context, etc.) after the structured overview fields.
-   - If this is the first task in the blueprint, also display a brief introduction to the overall blueprint.
+   - **Role Requirements** comes from the task's `role_requirements` field. If empty, omit this section.
+   - **External Requirements** comes from the task's `external_requirements` field. If empty, omit this section.
+   - **Personas** comes from the task's `personas` field. If empty, omit this section.
+   - Honor the "show full overview" affordance: at any tier, if the user says "show full task overview" / "expand", read and dump `tasks/<task_slug>.md` verbatim, then resume the same flow.
+   - If this is the first task in the blueprint, do NOT re-display the blueprint-level overview here — Step 2.6 has already shown it. Proceed directly to the task overview.
 
 3. **If this is NOT the first step in a task**, skip the task overview and proceed directly to Step 7.1.
 
@@ -695,7 +1003,8 @@ Before presenting a step's details, check whether this step is the **first step 
        → Render question normally using resolved_options and resolved_source
    ```
 
-5. **Present step information:**
+5. **Present step information.** Render the "## Step Overview" block according to the user's experience level — see "Step Overview Templates" in the "Experience-Level Rendering Profiles" section above. The Configuration Questions block stays identical at every level (questions, options, guidance, reasoning are always shown in full).
+
    ```
    ======================================================================
     Step [N] of [Total]: [Step Name]
@@ -703,7 +1012,9 @@ Before presenting a step's details, check whether this step is the **first step 
    
    ## Step Overview
    
-   [Full content from overview.md - ALL paragraphs and details]
+   [Render this block per the level-specific template (Beginner / Intermediate / Advanced).
+    Honor the "show full step overview" affordance: when the user requests it, dump the
+    full contents of overview.md verbatim, then redisplay the step menu.]
    
    ---
    
@@ -716,7 +1027,7 @@ Before presenting a step's details, check whether this step is the **first step 
     **Reasoning:** [why this answer was chosen based on user context]
     
     **Question Details:**
-    - **Type:** [answer_type: single-select, multi-select, list, or text]
+    - **Type:** [answer_type: single-select, multi-select, text, list, or object-list]
     - **Guidance:** 
       [Full guidance text from definitions - all paragraphs and formatting]
      [For single-select / multi-select questions — Stage 1a/1b or Stage 2 resolved options:]
@@ -731,38 +1042,14 @@ Before presenting a step's details, check whether this step is the **first step 
      [For single-select / multi-select questions — Stage 3 blocked (no dynamic source configured):]
      ⚠️ This question has no available options and no dynamic source is configured. Check the question definition.
      
-     ---
-     
-     ### Question 2: [question_text]
-     
-     **Answer:** [your answer]
-     
-     **Reasoning:** [why this answer was chosen based on user context]
-     
-     **Question Details:**
-     - **Type:** [answer_type]
-     - **Guidance:**
-       [Full guidance text from definitions - all paragraphs and formatting]
-     [For single-select / multi-select questions — Stage 1a/1b or Stage 2 resolved options:]
-     - **Available Options** (from `[resolved_source]`):
-       1. [option 1 text]
-       2. [option 2 text]
-       ...
-     [For single-select / multi-select questions — Stage 3 blocked (source not found anywhere):]
-     ⚠️ This question cannot be answered yet. '[source_title]' was not found in the current session or in any saved answer files for project '<project_name>'. Complete the blueprint that defines '[source_title]' first, then return to this question.
-     [For single-select / multi-select questions — Stage 3 blocked (source answered, no usable values):]
-     ⚠️ This question has no available options. '[source_title]' was answered but produced no selectable values.
-     [For single-select / multi-select questions — Stage 3 blocked (no dynamic source configured):]
-     ⚠️ This question has no available options and no dynamic source is configured. Check the question definition.
-   
-   ---
-   
-   [Continue for all questions in this step...]
-   
-   ---
+      ---
+      
+      [Continue for additional questions in this step using the same Question 1 template above...]
+    
+    ---
    ```
 
-5. **Present step menu:**
+6. **Present step menu:**
    ```
    What would you like to do?
    
@@ -836,28 +1123,21 @@ Before presenting a step's details, check whether this step is the **first step 
 
 ### Handling Navigation and Progress Questions During Walkthrough
 
-During any point in the walkthrough (Step 7), users may ask navigation and progress questions. Use the functions in `scripts/render_journey.py` to answer them accurately.
+During any point in the walkthrough (Step 7), users may ask navigation and progress questions. Answer these using the `meta.yaml` task structure already loaded in this phase.
 
-**Available Navigation Functions:**
+**How to derive navigation info from `meta.yaml`:**
 
-The following functions from `render_journey.py` are available for answering navigation queries. Load the blueprint's task metadata first:
-
-```python
-from scripts.render_journey import load_task_metadata, get_current_task, get_remaining_steps, get_task_progress
-
-tasks = load_task_metadata(blueprint_dir)
-```
-
-- **`get_current_task(step_slug, tasks)`** — Returns the parent task metadata (slug, title, summary, personas, role_requirements, external_requirements, steps) for a given step
-- **`get_remaining_steps(step_slug, tasks)`** — Returns the list of remaining steps within the current task (respects task boundaries)
-- **`get_task_progress(step_slug, tasks)`** — Returns task-level and blueprint-level completion percentages and counts
+The `tasks` list in `meta.yaml` contains the full structure: each task has a `title`, `summary`, and `steps` list. The current step's position in this structure tells you everything:
+- **Parent task:** find which task's `steps` list contains the current step slug
+- **Remaining steps:** all steps after the current one in that task's list
+- **Progress:** count completed steps (those with answers) vs. total steps across all tasks
 
 #### Responding to "What's next?" queries
 
 When a user asks "what's next?", "what comes after this?", or similar:
 
-1. Use `get_current_task(current_step_slug, tasks)` to identify the parent task
-2. Use `get_remaining_steps(current_step_slug, tasks)` to get the remaining steps in the current task
+1. Find the current step in `meta.yaml`'s task structure
+2. List remaining steps in the current task
 3. Present the response:
 
 ```
@@ -878,7 +1158,7 @@ The next task is "[Next Task Title]": [Next task summary]
 
 When a user asks "how much is left?", "what's my progress?", "how far along am I?", or similar:
 
-1. Use `get_task_progress(current_step_slug, tasks)` to get progress data
+1. Count completed steps (those with non-null answers) vs. total steps
 2. Present the response:
 
 ```
@@ -892,9 +1172,11 @@ When a user asks "how much is left?", "what's my progress?", "how far along am I
 
 When a user returns to an in-progress blueprint (e.g., they resume a previous session or say "where was I?"):
 
+**Verbosity:** Apply the rendering profile based on the user's experience level — see "Context Recovery Verbosity" in the "Experience-Level Rendering Profiles" section above.
+
 1. Identify the current step from the answer file (the last step with answers provided, or the first step with null/missing answers)
-2. Use `get_current_task(current_step_slug, tasks)` to get the task context
-3. Use `get_task_progress(current_step_slug, tasks)` to show overall progress
+2. Find the parent task in `meta.yaml`'s task structure
+3. Calculate progress (completed steps vs. total)
 4. Load the task overview for the current task: `read blueprints/<blueprint_slug>/tasks/<task_slug>.md`
 5. Present a recovery summary that includes the current task's overview context:
 
@@ -948,7 +1230,7 @@ Would you like to continue from here, or jump to a different step?
 **Rules for context recovery:**
 - **Always show the current task's overview** (summary, prerequisites, personas) so the user understands the context of where they are
 - **List previously completed tasks** with a brief summary of each, so the user can recall what was already done. Use the `summary` field from each completed task.
-- **Show remaining steps** in the current task using `get_remaining_steps(current_step_slug, tasks)`
+- **Show remaining steps** in the current task by listing all steps after the current one in that task's `steps` list in `meta.yaml`
 - **Omit prerequisite sections** (role requirements, external requirements, personas) if they are empty for the current task
 - If the user is on the very first step of the very first task, skip the "Previously Completed Tasks" section
 
@@ -956,8 +1238,10 @@ Would you like to continue from here, or jump to a different step?
 
 When the user completes the last step in a task (the current step is the final step in its task), proactively inform them about the transition:
 
-1. Use `get_current_task(current_step_slug, tasks)` — check if this is the last step in the task by comparing position to total steps
-2. Use `get_task_progress(current_step_slug, tasks)` — get blueprint-level progress
+**Verbosity:** Apply the rendering profile based on the user's experience level — see "Task Boundary Transitions Verbosity" in the "Experience-Level Rendering Profiles" section above.
+
+1. In `meta.yaml`'s task structure, check if the current step is the last entry in its task's `steps` list
+2. Calculate blueprint-level progress (completed tasks vs. total tasks)
 3. Present the transition:
 
 ```
@@ -1103,13 +1387,7 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
 
 **Actions:**
 
-1. **Check if Python environment is available:**
-   ```bash
-   which python3
-   ls -la venv/bin/python
-   ```
-
-2. **Present generation options:**
+1. **Present generation options:**
    ```
    ======================================================================
     Generate Infrastructure Code
@@ -1134,27 +1412,18 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
 
 1. **Run the migration script** to ensure the answer file is compatible with the current schema before rendering:
    ```bash
-   .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path] --dry-run
+   python3 scripts/migration/migrate_answers.py [answer_file_path] --dry-run
    ```
    - If the dry-run reports changes, apply them:
      ```bash
-     .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path]
+     python3 scripts/migration/migrate_answers.py [answer_file_path]
      ```
    - If the script reports errors or the file cannot be parsed, direct the user to `scripts/TROUBLESHOOTING.md` for resolution before continuing.
    - If no changes are needed, proceed immediately.
 
 2. **Run render script with project flag:**
    ```bash
-   python scripts/render_journey.py \
-     [answer_file_path] \
-     --blueprint [blueprint_slug] \
-     --lang sql \
-     --project [project_name]
-   ```
-   
-   OR if venv exists:
-   ```bash
-   ./venv/bin/python scripts/render_journey.py \
+   python3 scripts/render_journey.py \
      [answer_file_path] \
      --blueprint [blueprint_slug] \
      --lang sql \
@@ -1188,25 +1457,15 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
    Before rendering, ensure your answer file is compatible with the current schema:
 
    ```bash
-   .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path] --dry-run
+   python3 scripts/migration/migrate_answers.py [answer_file_path] --dry-run
    # If changes are reported, apply them:
-   .venv/bin/python scripts/migration/migrate_answers.py [answer_file_path]
+   python3 scripts/migration/migrate_answers.py [answer_file_path]
    ```
 
    Then run this command to generate your infrastructure code:
    
    ```bash
-   python scripts/render_journey.py \
-     [answer_file_path] \
-     --blueprint [blueprint_slug] \
-     --lang sql \
-     --project [project_name]
-   ```
-   
-   Or if you have a virtual environment:
-   
-   ```bash
-   ./venv/bin/python scripts/render_journey.py \
+   python3 scripts/render_journey.py \
      [answer_file_path] \
      --blueprint [blueprint_slug] \
      --lang sql \
@@ -1357,12 +1616,11 @@ enable_feature: 'Yes'  # Reasoning: user mentioned SOC2 compliance requirement
 **When generating IaC (Step 9):**
 
 1. ✅ **ALWAYS use `render_journey.py`** — NEVER generate SQL manually or via ad-hoc logic
-2. ✅ **Check environment** verify Python availability
-3. ✅ **Handle errors gracefully** provide manual command if script fails
-4. ✅ **Confirm output** show where SQL file was created
-5. ✅ **Give clear next steps** what to do with the SQL
-6. ✅ **Warn about incomplete answers** — if many questions are unanswered, the generated code may be incomplete
-7. ✅ **For previews/display requests** — run the script first, then read the output file
+2. ✅ **Handle errors gracefully** provide manual command if script fails
+3. ✅ **Confirm output** show where SQL file was created
+4. ✅ **Give clear next steps** what to do with the SQL
+5. ✅ **Warn about incomplete answers** — if many questions are unanswered, the generated code may be incomplete
+6. ✅ **For previews/display requests** — run the script first, then read the output file
 
 **What NOT to do when generating output:**
 
@@ -1383,8 +1641,8 @@ Dynamically produce this at the initiation of the workflow based on the current 
 - For a full explanation of what changed and manual fix instructions, refer the user to `scripts/TROUBLESHOOTING.md`.
 - To migrate all answer files in the project at once:
   ```bash
-  .venv/bin/python scripts/migration/migrate_answers.py --all --dry-run
-  .venv/bin/python scripts/migration/migrate_answers.py --all
+  python3 scripts/migration/migrate_answers.py --all --dry-run
+  python3 scripts/migration/migrate_answers.py --all
   ```
 
 **User gives vague answers:**

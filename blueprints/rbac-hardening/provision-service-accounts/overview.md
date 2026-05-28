@@ -51,6 +51,37 @@ The public key (contents of `rsa_key.pub`, without headers) is stored in Snowfla
 - Monitor service account activity with the views in Task 4
 - Never assign ACCOUNTADMIN or SECURITYADMIN to a service account
 - Set `DAYS_TO_EXPIRY` for temporary service accounts
+- **Apply a user-level network policy** to restrict each service account to its expected IP range (see below)
+
+## Network Policies for Service Accounts
+
+Snowflake supports network policies at two levels:
+
+| Level | Scope | Precedence |
+|-------|-------|-----------|
+| Account-level | All users in the account | Lower |
+| User-level | A specific user | **Higher — overrides account-level** |
+
+**Snowflake explicitly recommends user-level network policies for service accounts** (and other highly privileged users). If the account-level policy allows office or VPN IP ranges, a leaked service account credential could be used from those addresses. A user-level policy scoped to ETL or BI tool IPs eliminates that exposure.
+
+**Recommended approach:**
+1. Create a network rule scoped to the expected source IPs (e.g., your ETL cluster's egress CIDR):
+   ```sql
+   CREATE NETWORK RULE etl_network_rule
+     TYPE = IPV4
+     VALUE_LIST = ('203.0.113.0/24')
+     MODE = INGRESS;
+   ```
+2. Create a network policy referencing the rule:
+   ```sql
+   CREATE NETWORK POLICY etl_network_policy
+     ALLOWED_NETWORK_RULE_LIST = ('etl_network_rule');
+   ```
+3. Provide the policy name as `network_policy_name` in the service account configuration. The step generates `ALTER USER ... SET NETWORK_POLICY` automatically.
+
+If your `platform-foundation-setup` blueprint already created network rules, reuse them rather than creating duplicates.
+
+If `network_policy_name` is omitted for a service account, that account inherits the account-level network policy — no error, just lower restriction.
 
 ## How to Test
 
@@ -88,6 +119,9 @@ Service accounts should:
 - **role_level**: One of READ, WRITE, CREATE (avoid ADMIN for service accounts)
 - **data_product_prefix**: The data product role prefix for access
 - **warehouse**: The warehouse this account should use
+- **network_policy_name** *(optional)*: Name of an existing Snowflake network policy
+  to attach to this service account. User-level policies override account-level
+  policies. Omit to inherit the account-level policy.
 
 **Naming Convention:**
 Use `SVC_<TOOL>_<DATAPRODUCT>` format:
@@ -102,6 +136,7 @@ Use `SVC_<TOOL>_<DATAPRODUCT>` format:
   role_level: WRITE
   data_product_prefix: SALES_ANALYTICS_PROD
   warehouse: SALES_ANALYTICS_PROD_WH_INGEST
+  network_policy_name: ETL_NETWORK_POLICY
 - account_name: SVC_TABLEAU_SALES
   purpose: Tableau reporting dashboard connection
   role_level: READ

@@ -106,17 +106,17 @@ The following commands are available when using Cortex Code in this repository:
 
 | Command | Description |
 |---------|-------------|
-| `/blueprints:projects:list` | List existing projects |
-| `/blueprints:projects:create <name>` | Create a new project directory structure |
-| `/blueprints:projects:describe <name>` | Show project status (answers, outputs, history) |
+| `/blueprints:projects-list` | List existing projects |
+| `/blueprints:projects-create <name>` | Create a new project directory structure |
+| `/blueprints:projects-describe <name>` | Show project status (answers, outputs, history) |
 
 ### Answer File Operations
 
 | Command | Description |
 |---------|-------------|
-| `/blueprints:answers:init <name>` | Generate a skeleton answer file with all questions |
-| `/blueprints:answers:validate <file>` | Check for missing/invalid values |
-| `/blueprints:answers:diff <file1> <file2>` | Compare two answer files |
+| `/blueprints:answers-init <name>` | Generate a skeleton answer file with all questions |
+| `/blueprints:answers-validate <file>` | Check for missing/invalid values |
+| `/blueprints:answers-diff <file1> <file2>` | Compare two answer files |
 
 ### Example Workflow
 
@@ -125,13 +125,13 @@ The following commands are available when using Cortex Code in this repository:
 /blueprints:list
 
 # 2. Create a project for your work
-/blueprints:projects:create my-company
+/blueprints:projects-create my-company
 
 # 3. Start building interactively
 /blueprints:build platform-foundation-setup --project my-company
 
 # 4. Or generate a skeleton and fill manually
-/blueprints:answers:init platform-foundation-setup --project my-company
+/blueprints:answers-init platform-foundation-setup --project my-company
 
 # 5. Validate your answers
 /blueprints:validate answers.yaml --blueprint platform-foundation-setup
@@ -281,7 +281,29 @@ ls blueprints/
 
 Review the blueprint's `meta.yaml` and step `overview.md` files to understand what will be configured.
 
-### 2. Create a project and answer file
+### 2. Configuring the projects directory
+
+By default, rendered project artifacts are written to `projects/` under the current working directory. The `blueprints/` and `definitions/` directories are always resolved script-relatively. If you want to write project outputs somewhere else, override the projects directory using one of:
+
+1. **`--projects-dir <path>`** CLI flag (highest priority)
+2. **`BLUEPRINT_MANAGER_PROJECTS_DIR`** environment variable
+3. **`<cwd>/projects`** (current working directory, default)
+
+For example:
+
+```bash
+# Using --projects-dir flag
+python scripts/render_journey.py answers.yaml \
+  --blueprint platform-foundation-setup --lang sql \
+  --projects-dir /path/to/projects
+
+# Using the environment variable
+export BLUEPRINT_MANAGER_PROJECTS_DIR=/path/to/projects
+python scripts/render_journey.py answers.yaml \
+  --blueprint platform-foundation-setup --lang sql
+```
+
+### 3. Create a project and answer file
 
 Create a project directory structure:
 
@@ -294,7 +316,7 @@ mkdir -p projects/my-project/output/documentation
 
 Create an answer file (e.g., `projects/my-project/answers/<blueprint_id>/my_answers.yaml`) and provide values for each question. See `definitions/questions.yaml` for question details and valid options.
 
-### 3. Generate infrastructure code
+### 4. Generate infrastructure code
 
 ```bash
 python scripts/render_journey.py \
@@ -308,12 +330,13 @@ python scripts/render_journey.py \
 - `--lang sql` or `--lang terraform` — choose output language
 - `--project <name>` — project name for organizing outputs
 - `--skip-guidance` — skip generating documentation
+- `--projects-dir <path>` — projects directory (see [Configuring the projects directory](#2-configuring-the-projects-directory))
 
 **Output:**
 - SQL/Terraform files in `projects/<project>/output/iac/sql/`
 - Documentation in `projects/<project>/output/documentation/`
 
-### 4. Execute the generated code
+### 5. Execute the generated code
 
 Review the generated SQL file, then execute it in your Snowflake worksheet. The SQL is idempotent — safe to run multiple times.
 

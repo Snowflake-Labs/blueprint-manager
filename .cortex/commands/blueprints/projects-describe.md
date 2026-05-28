@@ -1,3 +1,6 @@
+---
+description: "Show project status, answer files, and history."
+---
 <!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
      Licensed under the Snowflake Skills License. 
      Refer to the LICENSE file in the root of this repository for full terms. -->
@@ -9,12 +12,16 @@ Show detailed status of a project, including answer files, outputs, and history.
 ## Usage
 
 ```
-/blueprints:projects:describe <name>
+/blueprints:projects-describe <name>
 ```
 
 ## Arguments
 
 - `<name>`: Project name to describe
+
+## Options
+
+- `--projects-dir <path>`: Directory containing project subdirectories. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory).
 
 ## Instructions
 

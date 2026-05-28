@@ -12,6 +12,7 @@ Templates should only be skipped when a null/missing variable would actually
 be needed during rendering, taking into account conditional logic.
 """
 
+import os
 import shutil
 import sys
 import tempfile
@@ -23,7 +24,7 @@ import yaml
 # Add the scripts directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from render_journey import check_template_renderable, create_jinja_env
+from render_journey import check_template_renderable, create_jinja_env, resolve_projects_dir
 
 
 class BlueprintTestCase(TestCase):
@@ -1926,7 +1927,7 @@ class TestSetupProjectDirectories(BlueprintTestCase):
         from render_journey import setup_project_directories
 
         project_dir = setup_project_directories(self.base_dir, "test-proj", "bp-1")
-        expected = self.base_dir / "projects" / "test-proj"
+        expected = self.base_dir / "test-proj"
         self.assertEqual(project_dir, expected)
 
 
@@ -2859,6 +2860,60 @@ class TestQueryTagInjection(BlueprintTestCase):
 
         # Directory name is "test-blueprint"
         self.assertIn('"bp":"test-blueprint"', rendered)
+
+
+class TestResolveProjectsDir(TestCase):
+    """Tests for resolve_projects_dir() helper."""
+
+    ENV_VAR = "BLUEPRINT_MANAGER_PROJECTS_DIR"
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.default = Path(tempfile.mkdtemp())
+        # Clean env var before each test
+        self._orig_env = os.environ.pop(self.ENV_VAR, None)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+        shutil.rmtree(self.default, ignore_errors=True)
+        if self._orig_env is not None:
+            os.environ[self.ENV_VAR] = self._orig_env
+        else:
+            os.environ.pop(self.ENV_VAR, None)
+
+    def test_cli_overrides_env(self):
+        """--projects-dir (arg_value) takes precedence over env var."""
+        env_dir = tempfile.mkdtemp()
+        try:
+            os.environ[self.ENV_VAR] = env_dir
+            result = resolve_projects_dir(self.tmpdir, self.default)
+            self.assertEqual(result, Path(self.tmpdir).resolve())
+        finally:
+            shutil.rmtree(env_dir)
+
+    def test_env_overrides_default(self):
+        """Env var takes precedence over the default."""
+        os.environ[self.ENV_VAR] = self.tmpdir
+        result = resolve_projects_dir(None, self.default)
+        self.assertEqual(result, Path(self.tmpdir).resolve())
+
+    def test_default_when_no_arg_or_env(self):
+        """When no arg and no env var, falls back to the provided default."""
+        result = resolve_projects_dir(None, self.default)
+        self.assertEqual(result, self.default.resolve())
+
+    def test_nonexistent_path_is_allowed(self):
+        """Non-existent projects dir is allowed (created later by setup)."""
+        missing = Path(self.tmpdir) / "does-not-exist"
+        result = resolve_projects_dir(str(missing), self.default)
+        self.assertEqual(result, missing.resolve())
+
+    def test_raises_on_file_not_dir(self):
+        """Path pointing to a file (not directory) raises NotADirectoryError."""
+        filepath = os.path.join(self.tmpdir, "a-file.txt")
+        Path(filepath).touch()
+        with self.assertRaises(NotADirectoryError):
+            resolve_projects_dir(filepath, self.default)
 
 
 if __name__ == "__main__":

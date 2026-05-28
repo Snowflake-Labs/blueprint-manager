@@ -1,3 +1,6 @@
+---
+description: "Render SQL/Terraform/Docs from an answer file."
+---
 <!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
      Licensed under the Snowflake Skills License. 
      Refer to the LICENSE file in the root of this repository for full terms. -->
@@ -22,6 +25,7 @@ Generate SQL/Terraform/Documentation from an answer file. This command wraps the
 - `--lang <sql|terraform>`: Output language (default: sql)
 - `--project <name>`: Project name for organizing outputs
 - `--skip-guidance`: Skip rendering documentation, only generate IaC code
+- `--projects-dir <path>`: Directory where rendered project artifacts are written. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory). The `blueprints/` and `definitions/` directories are always resolved relative to the script.
 
 ## Instructions
 
@@ -55,7 +59,8 @@ python scripts/render_journey.py \
   <answer-file> \
   --blueprint <blueprint-name> \
   --lang <language> \
-  --project <project-name>
+  --project <project-name> \
+  [--projects-dir <path>]
 ```
 
 ## Output Format

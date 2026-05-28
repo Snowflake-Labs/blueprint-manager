@@ -1,3 +1,6 @@
+---
+description: "Generate a skeleton answer file for a blueprint."
+---
 <!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
      Licensed under the Snowflake Skills License. 
      Refer to the LICENSE file in the root of this repository for full terms. -->
@@ -9,7 +12,7 @@ Generate a skeleton answer file with all questions for a blueprint.
 ## Usage
 
 ```
-/blueprints:answers:init <blueprint-name> [options]
+/blueprints:answers-init <blueprint-name> [options]
 ```
 
 ## Arguments
@@ -23,6 +26,7 @@ Generate a skeleton answer file with all questions for a blueprint.
 - `--format <full|minimal>`: Output format (default: full)
   - `full`: Include question text and guidance as comments
   - `minimal`: Just variable names with null values
+- `--projects-dir <path>`: Directory where the skeleton answer file is written. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory). The `blueprints/` and `definitions/` directories are always resolved relative to the script.
 
 ## Instructions
 

@@ -1,6 +1,13 @@
 {#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
 # Assign Functional Roles
 
+{% if not rbac_user_role_assignments %}
+> **No user role assignments configured.**
+> Phase 3 requires data product roles to exist before users can be assigned.
+> If you have not yet run the **data-product-setup** blueprint, do that first to create the
+> role hierarchy for each data product (`{PREFIX}_ADMIN`, `{PREFIX}_CREATE`, `{PREFIX}_WRITE`,
+> `{PREFIX}_READ`), then return here to configure user-to-role assignments.
+{% else %}
 ## User Role Assignments
 
 The following users will be assigned to functional roles:
@@ -40,3 +47,4 @@ After applying grants, run the verification query to confirm:
 ## Next Steps
 
 - Proceed to **Step 3.2: Provision Service Accounts**
+{% endif %}

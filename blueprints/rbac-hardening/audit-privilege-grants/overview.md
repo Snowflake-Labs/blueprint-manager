@@ -1,5 +1,5 @@
 <!-- Author: Richie Bachala (richie.bachala@snowflake.com) -->
-In this step, you'll generate diagnostic queries that discover privilege grant issues across your account. These queries find direct user-level grants (which should be on roles instead), PUBLIC role exposure, users with ACCOUNTADMIN, and roles with powerful account-level privileges.
+In this step, you'll generate diagnostic queries that discover privilege grant issues across your account. These queries find direct user-level grants (which should be on roles instead), PUBLIC role exposure, users with ACCOUNTADMIN, roles with powerful account-level privileges, and a warehouse-size visibility check for non-admin roles.
 
 **Account Context:** Execute these queries from the target account with ACCOUNTADMIN role.
 
@@ -41,6 +41,18 @@ High-risk privileges include:
 - ACCOUNTADMIN should be limited to 2-3 break-glass users
 - MANAGE GRANTS should only be on SECURITYADMIN
 - Audit privilege grants quarterly at minimum
+
+## Warehouse-Size Visibility Check
+
+This step includes a query that surfaces non-admin roles with USAGE on warehouses larger than X-Small. This is a **visibility check**, not an enforcement prescription.
+
+**Resource monitors are Snowflake's primary cost-control mechanism** — they hard-suspend warehouses when a credit quota is reached, regardless of which roles have USAGE. The warehouse-size audit is a defense-in-depth measure to confirm that large warehouses have appropriate per-warehouse resource monitors configured.
+
+**Why SHOW WAREHOUSES instead of `SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSES`?**
+`SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSES` does not exist. Warehouse configuration metadata (including size) is only available via `SHOW WAREHOUSES`. This step uses `SHOW WAREHOUSES` followed by `RESULT_SCAN(LAST_QUERY_ID())` to join warehouse metadata against `GRANTS_TO_ROLES`.
+
+**Recommended next step if large warehouses appear without a resource monitor:**
+Configure per-warehouse resource monitors via the **data-product-setup** blueprint to enforce hard credit limits.
 
 ## How to Test
 

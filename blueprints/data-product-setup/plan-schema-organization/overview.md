@@ -119,3 +119,33 @@ Define schemas for each zone in your data product. Each row represents one zone,
 - Group by source system in RAW, by subject in CURATED
 - Keep schema count manageable (2-5 per zone)
 
+
+#### Define the data zones for your data product. (`data_zones`: object-list)
+**What is this asking?**
+Define each data zone (logical layer) for your data product. Zones represent 
+stages in your data pipeline.
+
+**Common Zone Patterns:**
+
+**Three-Zone (Medallion):**
+| Zone | Purpose | Time Travel |
+|------|---------|-------------|
+| RAW | Landing zone for source data | 1 day |
+| CURATED | Cleansed and validated data | 7 days |
+| CONSUMPTION | Business-ready analytics | 7 days |
+
+**Four-Zone:**
+| Zone | Purpose | Time Travel |
+|------|---------|-------------|
+| LANDING | Raw ingestion | 1 day |
+| BRONZE | Light transformation | 1 day |
+| SILVER | Business logic applied | 7 days |
+| GOLD | Aggregated/consumption | 7 days |
+
+**Why does this matter?**
+- Each zone becomes a separate database
+- Zone structure affects data lineage and access patterns
+- Time travel settings impact storage costs
+
+**Recommendation:** Start with 3 zones. You can add more later.
+

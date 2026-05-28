@@ -63,6 +63,46 @@ A clear description helps team members understand the account's purpose at a gla
 - "Finance domain account for financial reporting and analytics"
 - "HR domain account for people analytics and workforce planning"
 
+#### What prefix (if any) should be added to all account names? (`account_name_prefix`: text)
+An account name prefix is an optional string added to the beginning of every account name for consistency and organization identification.  
+
+**When to use a prefix:**  
+* If your organization name is system-generated (e.g., `XY12345`) and you want your company name visible in account names  
+* If you want to enforce consistent naming across all accounts  
+* If you have multiple organizations or business units sharing Snowflake and need differentiation  
+
+**Example with prefix:**  
+* Prefix: `acme`  
+* Account names become: `acme_prod`, `acme_dev`, `acme_finance`  
+* URL: `https://XY12345-acme_prod.snowflakecomputing.com`  
+
+**Example without prefix:**  
+* Account names: `prod`, `dev`, `finance`  
+* URL: `https://ACME-prod.snowflakecomputing.com`  
+
+**Recommendations:**  
+* If you have a **custom organization name** (like `ACME`), a prefix is typically unnecessary since your identity is already in the URL  
+* If you have a **system-generated name**, consider using an abbreviated company name as a prefix  
+* Keep prefixes short (3-8 characters) with no underscores  
+
+**Enter `NONE` if you do not want to use an account name prefix.**  
+
+**More Information:**  
+* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
+
+#### What is your Snowflake organization name? (`snowflake_org_name`: text)
+Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
+  **How to find your organization name:**  
+  Look at your current Snowflake URL. The organization name is the portion before the dash:  
+  * https://\*\*ACME\*\*-prod.snowflakecomputing.com → Organization name is ACME  
+  * https://\*\*XY12345\*\*-prod.snowflakecomputing.com → Organization name is XY12345  
+* **Types of Organization Names:**  
+  * **Custom Name:** A human-readable name like ACME or INITECH that was requested from Snowflake. These provide better branding and more readable URLs.  
+  * **System-Generated:** An auto-assigned alphanumeric code like XY12345 or AB98765, created automatically during self-service sign up. Companies typically keep this name if transparency of your organization name in the URL is unnecessary or undesirable.   
+* **To request a custom name:** If you have a system-generated name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge) or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
+  **More Information:**  
+  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
+
 #### What account strategy do you wish to implement? (`account_strategy`: single-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
   **Single Account:**  

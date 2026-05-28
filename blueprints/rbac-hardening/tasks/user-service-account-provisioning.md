@@ -7,7 +7,7 @@ users with least-privilege roles, key-pair authentication, and warehouse
 restrictions.
 
 ## External Requirements
-- Data Product Setup completed (functional roles exist)
+- Requires: data-product-setup blueprint completed — functional roles (e.g., {PREFIX}_ADMIN, {PREFIX}_READ) must exist before users can be assigned. Run data-product-setup once per data product, then return to this task.
 - User roster with required access levels documented
 - Service account requirements documented (name, purpose, access level)
 - SCIM prefix configured (if using SCIM for role assignment)

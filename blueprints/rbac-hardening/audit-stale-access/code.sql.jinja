@@ -163,6 +163,36 @@ GROUP BY grantee_name
 HAVING COUNT(*) > 10
 ORDER BY role_count DESC;
 
+-- ============================================================
+-- STEP 6: MFA ENROLLMENT GAPS
+-- ============================================================
+-- Finds active human users who have not enrolled in any MFA method.
+-- Context: Snowflake BCR 2025_06 is rolling out mandatory MFA enforcement
+-- in three phases. Phase 1 (Sep 2025–Jan 2026, currently active) enforces
+-- MFA only for Snowsight password logins. Phase 3 (Aug–Oct 2026) will extend
+-- enforcement to all password-based interfaces (drivers, BI tools, etc.).
+-- Until Phase 3 completes, non-Snowsight auth is still a gap.
+-- Additionally, even with MFA_ENROLLMENT = 'REQUIRED' set in an auth policy,
+-- users who haven't logged in since the policy was applied won't have enrolled
+-- yet. BYPASS_MFA_UNTIL may also create temporary exemptions worth flagging.
+--
+-- Use HAS_MFA (not the legacy EXT_AUTHN_DUO, which is Duo-specific).
+SELECT
+    u.name                                              AS user_name,
+    u.login_name,
+    u.email,
+    u.has_mfa,
+    u.bypass_mfa_until,
+    u.last_success_login,
+    u.type,
+    DATEDIFF('day', u.last_success_login, CURRENT_TIMESTAMP) AS days_since_login
+FROM SNOWFLAKE.ACCOUNT_USAGE.USERS u
+WHERE u.deleted_on IS NULL
+  AND u.disabled   = 'false'
+  AND u.has_mfa    = FALSE
+  AND u.type       NOT IN ('SERVICE', 'LEGACY_SERVICE')
+ORDER BY u.last_success_login DESC NULLS LAST;
+
 -- ============================================================================
 -- VERIFICATION
 -- ============================================================================
@@ -185,6 +215,7 @@ Queries generated:
 3. Unused roles (no direct user assignments)
 4. User access health summary by login activity bucket
 5. Role accumulation per user (>10 roles)
+6. MFA enrollment gaps (active human users without MFA enrolled)
 
 Audit Scope: {{ rbac_audit_scope }}
 

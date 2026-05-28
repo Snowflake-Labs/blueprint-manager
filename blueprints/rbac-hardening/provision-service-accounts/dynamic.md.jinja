@@ -5,10 +5,10 @@
 
 The following service accounts will be created:
 
-| # | Account Name | Purpose | Role | Data Product | Warehouse |
-|---|-------------|---------|------|-------------|-----------|
+| # | Account Name | Purpose | Role | Data Product | Warehouse | Network Policy |
+|---|-------------|---------|------|-------------|-----------|---------------|
 {%- for svc in rbac_service_accounts %}
-| {{ loop.index }} | `{{ svc.account_name | upper }}` | {{ svc.purpose }} | {{ svc.role_level | upper }} | {{ svc.data_product_prefix | upper }} | `{{ svc.warehouse | upper }}` |
+| {{ loop.index }} | `{{ svc.account_name | upper }}` | {{ svc.purpose }} | {{ svc.role_level | upper }} | {{ svc.data_product_prefix | upper }} | `{{ svc.warehouse | upper }}` | {{ svc.network_policy_name if svc.network_policy_name is defined and svc.network_policy_name else 'None (account-level)' }} |
 {%- endfor %}
 
 ## Actions Generated
@@ -18,6 +18,7 @@ The following service accounts will be created:
 | 1 | CREATE USER | {{ rbac_service_accounts | length }} service account(s) |
 | 2 | GRANT ROLE | Assign functional role to each service account |
 | 3 | GRANT WAREHOUSE | Grant USAGE on designated warehouse |
+| 4 | SET NETWORK_POLICY | {{ rbac_service_accounts | selectattr('network_policy_name', 'defined') | selectattr('network_policy_name') | list | length }} account(s) with user-level network policy |
 
 ## Authentication
 

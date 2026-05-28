@@ -8,6 +8,7 @@
 4. [YAML Syntax Errors](#4-yaml-syntax-errors)
 5. [Python Environment Issues](#5-python-environment-issues)
 6. [Missing or Mismatched Question Definitions](#6-missing-or-mismatched-question-definitions)
+7. [Projects Directory Resolution](#7-projects-directory-resolution)
 
 ---
 
@@ -221,4 +222,44 @@ However, if you are auditing your answer file, run:
 
 ```bash
 blueprints answers validate path/to/answers.yaml --blueprint <blueprint_id>
+```
+
+---
+
+## 7. Projects Directory Resolution
+
+Both `render_journey.py` and `migrate_answers.py` resolve the projects directory
+(where rendered project artifacts live) using this priority:
+
+1. **`--projects-dir <path>`** CLI flag (highest priority)
+2. **`BLUEPRINT_MANAGER_PROJECTS_DIR`** environment variable
+3. **`<cwd>/projects`** (current working directory, default)
+
+The `blueprints/` and `definitions/` directories are always resolved relative to
+the script — they are not configurable.
+
+### `Blueprint directory not found`
+
+This means the `blueprints/<id>` directory does not exist relative to the script.
+Make sure you are running the script from inside the repo (or that the repo
+layout is intact). This is independent of `--projects-dir`.
+
+### `No answer files found` / projects directory missing
+
+If `migrate_answers.py` cannot find answer files, you will see:
+
+```
+No answer files found under: /some/path/projects
+```
+
+**Fix:** Point at the correct projects directory:
+
+```bash
+# Option 1: pass --projects-dir
+python scripts/render_journey.py answers.yaml --blueprint <id> --lang sql \
+  --projects-dir /path/to/projects
+
+# Option 2: set the environment variable
+export BLUEPRINT_MANAGER_PROJECTS_DIR=/path/to/projects
+python scripts/render_journey.py answers.yaml --blueprint <id> --lang sql
 ```
