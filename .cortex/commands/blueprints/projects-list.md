@@ -1,3 +1,6 @@
+---
+description: "List all existing blueprint projects."
+---
 <!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
      Licensed under the Snowflake Skills License. 
      Refer to the LICENSE file in the root of this repository for full terms. -->
@@ -11,6 +14,10 @@ List all existing projects in the blueprint-manager workspace.
 ```
 blueprints projects list
 ```
+
+## Options
+
+- `--projects-dir <path>`: Directory containing project subdirectories. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory).
 
 ## Instructions
 
@@ -51,7 +58,7 @@ If no projects exist:
 ```
 No projects found.
 
-Create a new project with: /blueprints:projects:create <name>
+Create a new project with: /blueprints:projects-create <name>
 ```
 
 Now execute this by scanning the projects directory and presenting the information.

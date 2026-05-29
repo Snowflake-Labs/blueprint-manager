@@ -221,3 +221,227 @@ Users need time to download authenticator apps and enroll in MFA. Too short a ti
 - 7 Days - Allow one week for enrollment
 - 14 Days - Allow two weeks for enrollment
 - 30 Days - Allow one month for enrollment
+
+#### What is your organization's preferred MFA method? (`preferred_mfa_method`: single-select)
+**What is this asking?**
+Select your organization's recommended MFA method for documentation and user guidance.
+
+**Why does this matter?**
+Consistent MFA methods simplify support and user training. However, allowing choice provides flexibility for user preferences.
+
+**Options explained:**
+- **TOTP (Authenticator Apps)**: Use apps like Duo Mobile, Google Authenticator, Microsoft Authenticator. Works on any smartphone.
+- **Passkey (Security Keys/Biometrics)**: Use hardware keys (YubiKey) or platform biometrics (fingerprint, Face ID). Most secure but requires compatible hardware.
+- **User's Choice**: Users can select their preferred method. Most flexible.
+
+**Recommendation:**
+- If your organization issues security keys: **Passkey**
+- If users have diverse devices: **User's Choice**
+- For simplicity: **TOTP** is universally supported
+
+**More Information:**
+* [Supported MFA Methods](https://docs.snowflake.com/en/user-guide/security-mfa#supported-mfa-methods)
+**Options:**
+- TOTP (Authenticator Apps)
+- Passkey (Security Keys/Biometrics)
+- User's Choice
+
+#### Who should users contact for MFA enrollment help? (`mfa_support_contact`: text)
+**What is this asking?**
+Provide a contact (email, Slack channel, help desk) for users who need assistance with MFA enrollment.
+
+**Why does this matter?**
+Users may encounter issues during MFA enrollment. Having a clear support path prevents frustration and access issues.
+
+**Recommendations:**
+- Use a team email or distribution list
+- Consider a Slack/Teams channel for quick support
+- Provide help desk ticket option for complex issues
+
+**Format:**
+Email address, Slack channel, or help desk URL.
+
+**Examples:**
+- `snowflake-support@company.com`
+- `#snowflake-help` (Slack)
+- `https://helpdesk.company.com/snowflake`
+
+**More Information:**
+* [MFA Troubleshooting](https://docs.snowflake.com/en/user-guide/security-mfa#troubleshooting-mfa-issues)
+
+#### What is your Snowflake organization name? (`snowflake_org_name`: text)
+Your Snowflake organization name is the first part of your account URL and connection identifiers. This is a required component of all Account Identifiers.  
+  **How to find your organization name:**  
+  Look at your current Snowflake URL. The organization name is the portion before the dash:  
+  * https://\*\*ACME\*\*-prod.snowflakecomputing.com → Organization name is ACME  
+  * https://\*\*XY12345\*\*-prod.snowflakecomputing.com → Organization name is XY12345  
+* **Types of Organization Names:**  
+  * **Custom Name:** A human-readable name like ACME or INITECH that was requested from Snowflake. These provide better branding and more readable URLs.  
+  * **System-Generated:** An auto-assigned alphanumeric code like XY12345 or AB98765, created automatically during self-service sign up. Companies typically keep this name if transparency of your organization name in the URL is unnecessary or undesirable.   
+* **To request a custom name:** If you have a system-generated name and want to change it, [contact Snowflake Support](https://community.snowflake.com/s/article/How-To-Submit-a-Support-Case-in-Snowflake-Lodge) or your account team. Custom names must be globally unique, start with a letter, and contain only letters and numbers.  
+  **More Information:**  
+  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) 
+
+#### What prefix (if any) should be added to all account names? (`account_name_prefix`: text)
+An account name prefix is an optional string added to the beginning of every account name for consistency and organization identification.  
+
+**When to use a prefix:**  
+* If your organization name is system-generated (e.g., `XY12345`) and you want your company name visible in account names  
+* If you want to enforce consistent naming across all accounts  
+* If you have multiple organizations or business units sharing Snowflake and need differentiation  
+
+**Example with prefix:**  
+* Prefix: `acme`  
+* Account names become: `acme_prod`, `acme_dev`, `acme_finance`  
+* URL: `https://XY12345-acme_prod.snowflakecomputing.com`  
+
+**Example without prefix:**  
+* Account names: `prod`, `dev`, `finance`  
+* URL: `https://ACME-prod.snowflakecomputing.com`  
+
+**Recommendations:**  
+* If you have a **custom organization name** (like `ACME`), a prefix is typically unnecessary since your identity is already in the URL  
+* If you have a **system-generated name**, consider using an abbreviated company name as a prefix  
+* Keep prefixes short (3-8 characters) with no underscores  
+
+**Enter `NONE` if you do not want to use an account name prefix.**  
+
+**More Information:**  
+* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
+
+#### What do you want to name your organization account? (`org_account_name`: text)
+**Recommended Name:** ORG  
+  Since there can be only one Organization Account per organization, the name should clearly indicate this special purpose. We recommend simply naming it ORG.  
+  
+  **Example URLs with Organization Account name ORG:**  
+  * With Custom Org Name: [https://ACME-ORG.snowflakecomputing.com](https://ACME-ORG.snowflakecomputing.com)  
+    * Org Name \= ACME  
+    * Org Account Name \= Org  
+  * System-generated Org Name: [https://XY12345-ORG.snowflakecomputing.com](https://XY12345-ORG.snowflakecomputing.com)  
+    * Org Name \= XY12345  
+    * Org Account Name \= Org  
+* **Requirements:**  
+  * Snowflake Enterprise Edition or higher  
+  * ORGADMIN role granted in the existing account  
+* **More Information:**  
+  * [Organization Accounts](https://docs.snowflake.com/en/user-guide/organization-accounts)  
+  * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier)
+
+#### Will you configure SAML/SSO for single sign-on? (`configure_saml`: single-select)
+**What is this asking?**
+Decide whether to configure SAML-based Single Sign-On (SSO) as part of this setup, or defer it for later.
+
+**Why does this matter?**
+SAML/SSO allows users to authenticate to Snowflake using your Identity Provider, providing a seamless login experience and centralized authentication control.
+
+**Options explained:**
+
+**Yes - Configure SAML now:**
+- A dedicated step will guide you through SAML configuration
+- Recommended if your IdP is ready and you want SSO from day one
+
+**No - Configure later:**
+- Skip SAML configuration for now
+- Users will authenticate with username/password + MFA
+- You can configure SAML later without rebuilding
+
+**When to choose "Configure later":**
+- Your IdP isn't fully set up yet
+- You want to get the basics working first
+- You need to coordinate with your identity team
+- You're doing a proof-of-concept
+
+**Note:** Even without SAML, password + MFA provides strong authentication. SAML adds convenience and centralized control, not necessarily more security.
+
+**Recommendation:**
+If you selected a SCIM provider and your IdP is ready, configure SAML now for a complete SSO experience. Otherwise, defer and configure later.
+
+**More Information:**
+* [SAML/SSO Configuration](https://docs.snowflake.com/en/user-guide/admin-security-fed-auth) — Federated authentication setup
+**Options:**
+- Yes - Configure SAML now
+- No - Configure later or use password authentication
+
+#### What name would you like to use for the SAML integration? (`saml_integration_name`: text)
+**What is this asking?**
+Provide a name for the SAML security integration that will be created in Snowflake.
+
+**Why does this matter?**
+The integration name is used to reference the SAML configuration and appears in the login URL for IdP-initiated SSO.
+
+**Format:**
+- Use uppercase letters and underscores
+- Include the IdP name for clarity
+- Examples: `OKTA_SSO`, `AZURE_AD_SAML`, `PING_SSO`
+
+**Recommendation:**
+Use a format like `<IDP>_SSO` or `<IDP>_SAML` where `<IDP>` is your Identity Provider name.
+
+**More Information:**
+* [CREATE SECURITY INTEGRATION (SAML2)](https://docs.snowflake.com/en/sql-reference/sql/create-security-integration-saml2)
+
+#### Should the network policy be applied at the account level? (`enable_account_network_policy`: single-select)
+**What is this asking?**
+Decide whether to apply the network policy to all users in the account by default, or only to specific users.
+
+**Why does this matter?**
+- **Yes (Account-level)**: All users must connect from allowed networks. More secure but requires complete IP list upfront.
+- **No (User-level only)**: Network policy only applies to users you explicitly assign it to. More flexible during rollout.
+
+**Recommendation:**
+- Start with **No** during initial setup and testing
+- Move to **Yes** once you've validated all required IPs are included
+- Always ensure break-glass accounts can bypass the policy
+
+**Caution:**
+If you enable account-level policy without including all necessary IPs, you could lock yourself out!
+
+**More Information:**
+* [Activating Network Policies](https://docs.snowflake.com/en/user-guide/network-policies#activating-a-network-policy)
+**Options:**
+- Yes - Apply to all users by default
+- No - Apply only to specific users
+
+#### What authentication methods should be allowed for human users in this account? (`human_auth_methods`: multi-select)
+**What is this asking?**
+Choose how human users (interactive users) should authenticate to this account. The value from Platform Foundation is pre-populated—accept it for consistency or change it if this account has different requirements.
+
+**Why does this matter?**
+Authentication policies are the gateway to your data. The right balance between security and usability ensures:
+- Protection against unauthorized access
+- Compliance with security requirements
+- Good user experience for legitimate users
+- Alignment with your organization's security posture
+
+**Inherited Value:**
+This answer is pre-populated from your Platform Foundation configuration. Most organizations keep authentication consistent across accounts, but you may want different settings for:
+- Development accounts (less strict for agility)
+- Production accounts (stricter requirements)
+- External-facing accounts (stricter or different IdP)
+
+**Options explained:**
+
+**SAML Only (SSO required):** *(Only visible if SAML is configured)*
+- Users must authenticate via your Identity Provider
+- Provides strongest centralized control
+- Recommended for production accounts
+- **Note:** Requires break-glass accounts for emergency access
+
+**SAML or Password with MFA:** *(Only visible if SAML is configured)*
+- Users can use SSO or password + MFA
+- Provides flexibility while maintaining security
+- Good for accounts where SSO might not always be available
+
+**Password with MFA Only:**
+- Users authenticate with Snowflake password plus MFA
+- Strong security without SSO dependency
+- Use if this account doesn't integrate with your IdP
+
+**Recommendation:**
+Accept the Platform Foundation value unless this account has specific requirements that differ from your standard.
+
+**More Information:**
+* [Authentication Policies](https://docs.snowflake.com/en/user-guide/authentication-policies) — Policy configuration guide
+**Options:**
+- SAML (SSO)
+- Password with MFA

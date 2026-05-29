@@ -57,6 +57,10 @@ GRANT USAGE ON WAREHOUSE {{ svc.warehouse | upper }}
   TO ROLE {{ svc.data_product_prefix | upper }}_{{ svc.role_level | upper }};
 GRANT OPERATE ON WAREHOUSE {{ svc.warehouse | upper }}
   TO ROLE {{ svc.data_product_prefix | upper }}_{{ svc.role_level | upper }};
+{%- if svc.network_policy_name is defined and svc.network_policy_name %}
+ALTER USER {{ svc.account_name | upper }}
+  SET NETWORK_POLICY = '{{ svc.network_policy_name }}';
+{%- endif %}
 {%- endfor %}
 
 -- ============================================================================

@@ -25,6 +25,7 @@ import os
 import re
 import shutil
 import sys
+from pathlib import Path
 
 try:
     import yaml
@@ -33,13 +34,42 @@ except ImportError:
     sys.exit(1)
 
 # ---------------------------------------------------------------------------
-# Paths
+# Projects directory resolution
 # ---------------------------------------------------------------------------
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
-QUESTIONS_FILE = os.path.join(REPO_ROOT, "definitions", "questions.yaml")
-PROJECTS_DIR = os.path.join(REPO_ROOT, "projects")
+PROJECTS_DIR_ENV_VAR = "BLUEPRINT_MANAGER_PROJECTS_DIR"
+
+
+def resolve_projects_dir(arg_value: str | None) -> Path:
+    """Resolve the projects directory using CLI > env var > cwd precedence.
+
+    Priority:
+      1. ``arg_value`` (from ``--projects-dir`` CLI flag)
+      2. ``BLUEPRINT_MANAGER_PROJECTS_DIR`` environment variable
+      3. ``<cwd>/projects`` (current working directory)
+
+    The resolved path must exist and be a directory.
+    """
+    if arg_value is not None:
+        projects = Path(arg_value)
+    elif os.environ.get(PROJECTS_DIR_ENV_VAR):
+        projects = Path(os.environ[PROJECTS_DIR_ENV_VAR])
+    else:
+        projects = Path.cwd() / "projects"
+
+    projects = projects.resolve()
+
+    if not projects.exists():
+        raise FileNotFoundError(
+            f"Projects directory does not exist: {projects}\n"
+            f"Set --projects-dir or {PROJECTS_DIR_ENV_VAR} to a valid directory."
+        )
+    if not projects.is_dir():
+        raise NotADirectoryError(
+            f"Projects directory path is not a directory: {projects}\n"
+            f"Set --projects-dir or {PROJECTS_DIR_ENV_VAR} to a directory."
+        )
+    return projects
 
 # ---------------------------------------------------------------------------
 # Questions that changed from multi-select to single-select.
@@ -415,8 +445,8 @@ def process_file(path: str, dry_run: bool = False) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def find_all_answer_files() -> list[str]:
-    pattern = os.path.join(PROJECTS_DIR, "**", "answers", "**", "*.yaml")
+def find_all_answer_files(projects_dir: str) -> list[str]:
+    pattern = os.path.join(projects_dir, "**", "answers", "**", "*.yaml")
     return sorted(f for f in glob.glob(pattern, recursive=True) if not f.endswith(".bak"))
 
 
@@ -443,19 +473,29 @@ def main() -> None:
     group.add_argument(
         "--all",
         action="store_true",
-        help=f"Migrate all answer files found under {PROJECTS_DIR}.",
+        help="Migrate all answer files found under projects/.",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Preview changes without writing any files.",
     )
+    parser.add_argument(
+        "--projects-dir",
+        help=(
+            "Directory containing project subdirectories with answer files. "
+            "Resolution priority: --projects-dir flag > "
+            "BLUEPRINT_MANAGER_PROJECTS_DIR env var > <cwd>/projects "
+            "(current working directory)."
+        ),
+    )
     args = parser.parse_args()
 
     if args.all:
-        files = find_all_answer_files()
+        projects_dir = str(resolve_projects_dir(args.projects_dir))
+        files = find_all_answer_files(projects_dir)
         if not files:
-            print(f"No answer files found under: {PROJECTS_DIR}")
+            print(f"No answer files found under: {projects_dir}")
             sys.exit(0)
         print(f"Found {len(files)} answer file(s) to inspect.")
         changed = sum(

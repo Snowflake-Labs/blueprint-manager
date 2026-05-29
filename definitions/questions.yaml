@@ -144,230 +144,6 @@
     \ and capabilities of organization accounts  \n  * [ORGADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#orgadmin-role)\
     \ — Permissions and responsibilities  \n  * [Snowflake Editions](https://docs.snowflake.com/en/user-guide/intro-editions)\
     \ – Snowflake Edition options "
-- answer_title: resource_monitor_action
-  question_text: What should happen when the credit limit is reached?
-  answer_type: single-select
-  is_org_scope: false
-  options:
-  - text: Notify Only (continue running)
-  - text: Suspend (stop warehouse gracefully)
-  - text: Suspend Immediately (kill queries and stop)
-  guidance: 'Choose the action when 100% of credits are consumed:
-
-
-    - **Notify Only**: Warehouses continue running. Use for non-critical data products or when you''ll
-    manually intervene.
-
-    - **Suspend**: Warehouses stop after current queries complete. Recommended for most data products.
-
-    - **Suspend Immediately**: Kills in-flight queries and stops warehouses. Use for strict budget enforcement.
-
-
-    **Why does this matter?**
-
-    - Too aggressive → Queries fail unexpectedly
-
-    - Too permissive → Costs exceed budget
-
-
-    **Recommendation:** Start with "Suspend" for production, "Notify Only" for development.'
-- answer_title: resource_monitor_limit
-  question_text: How many credits should be the monthly limit for this data product?
-  answer_type: text
-  is_org_scope: false
-  guidance: 'Enter the maximum monthly credit consumption allowed for this data product''s warehouses.
-
-
-    Examples:
-
-    - `100` — Small data product, limited queries
-
-    - `500` — Medium workload
-
-    - `1000` — Heavy ETL and analytics
-
-    - `5000` — Large-scale data product
-
-
-    **How to estimate:**
-
-    - X-Small warehouse = ~1 credit/hour
-
-    - Small warehouse = ~2 credits/hour
-
-    - Medium warehouse = ~4 credits/hour
-
-    - Estimate hours of use × warehouse size × days
-
-
-    **Why does this matter?**
-
-    Setting appropriate limits prevents:
-
-    - Bill shock from runaway queries
-
-    - Budget overruns
-
-    - Unexpected cloud costs
-
-
-    Start conservative — you can always increase the limit.'
-- answer_title: cost_center
-  question_text: What cost center code should be applied to this data product's resources? (enter NONE
-    if not applicable)
-  answer_type: text
-  is_org_scope: false
-  guidance: 'Enter the cost center or charge code for billing purposes.
-
-
-    Examples:
-
-    - `CC-12345`
-
-    - `FINANCE-OPS`
-
-    - `NONE` (if not using cost centers)
-
-
-    **Why does this matter?**
-
-    Cost centers enable:
-
-    - Chargeback to specific departments
-
-    - Budget tracking against allocations
-
-    - Financial reporting alignment
-
-
-    If your organization doesn''t use cost centers, enter `NONE`.'
-- answer_title: warehouse_definitions
-  question_text: Define the warehouses for your data product.
-  answer_type: object-list
-  is_org_scope: false
-  object_name: Warehouse Definition
-  keys:
-  - warehouse_name
-  - purpose
-  - size
-  - auto_suspend_seconds
-  - modifier
-  guidance: '**What is this asking?**
-
-    Define each warehouse that will be created for your data product. For each warehouse, specify:
-
-    - Name (used in object naming)
-
-    - Purpose (workload type)
-
-    - Size (compute capacity)
-
-    - Auto-suspend timeout
-
-    - Modifier (optional - use when you need multiple warehouses of the same workload type)
-
-
-    **Why does this matter?**
-
-    Warehouse configuration directly impacts:
-
-    - Query performance (size)
-
-    - Cost (size × usage time)
-
-    - Resource contention (separate warehouses = isolation)
-
-
-    **Common Warehouse Patterns:**
-
-
-    **Simple (1 warehouse):**
-
-    | Warehouse | Purpose | Size | Auto-Suspend | Modifier |
-
-    |-----------|---------|------|--------------|----------|
-
-    | `general` | general | Small | 300 | (leave blank) |
-
-
-    **Standard (2-3 warehouses):**
-
-    | Warehouse | Purpose | Size | Auto-Suspend | Modifier |
-
-    |-----------|---------|------|--------------|----------|
-
-    | `ingest` | ingest | Medium | 60 | (leave blank) |
-
-    | `transform` | transform | Medium | 300 | (leave blank) |
-
-    | `report` | report | Small | 300 | (leave blank) |
-
-
-    **Advanced (4+ warehouses):**
-
-    | Warehouse | Purpose | Size | Auto-Suspend | Modifier |
-
-    |-----------|---------|------|--------------|----------|
-
-    | `ingest` | ingest | Large | 60 | (leave blank) |
-
-    | `transform` | transform | Large | 300 | (leave blank) |
-
-    | `report` | report | Medium | 300 | (leave blank) |
-
-    | `analytics` | analytics | Medium | 600 | (leave blank) |
-
-
-    **With Modifiers (multiple warehouses of same type):**
-
-    | Warehouse | Purpose | Size | Auto-Suspend | Modifier |
-
-    |-----------|---------|------|--------------|----------|
-
-    | `query` | report | Medium | 300 | `bi` |
-
-    | `query` | report | Large | 300 | `powerbi` |
-
-    | `transform` | transform | Large | 300 | `batch` |
-
-    | `transform` | transform | Medium | 60 | `stream` |
-
-
-    The modifier is appended to the warehouse name to create unique identifiers when you need multiple
-    warehouses of the same workload type (e.g., `SALES_QUERY_BI_WH` and `SALES_QUERY_POWERBI_WH`).
-
-
-    **Sizing Guidelines:**
-
-    - **Development**: X-Small or Small
-
-    - **Standard Production**: Small or Medium
-
-    - **Heavy Workloads**: Large or X-Large
-
-
-    **Auto-Suspend Guidelines:**
-
-    - **Batch jobs** (ingest, transform): 60 seconds — save costs between runs
-
-    - **Interactive queries** (report, analytics): 300-600 seconds — balance UX and cost
-
-    - **Continuous workloads**: Higher values to avoid resume latency
-
-
-    **Note:** All warehouses are created with multi-cluster scaling enabled (1-3 clusters). Additional
-    clusters only spin up when needed.
-
-
-    **Recommendation:**
-
-    Start with 2-3 warehouses. You can always add more or resize as you learn your workload patterns.
-
-
-    **More Information:**
-
-    * [Warehouse Sizing](https://docs.snowflake.com/en/user-guide/warehouses-overview#warehouse-size)
-    — Size comparison'
 - answer_title: data_product_description
   question_text: Provide a brief description of this data product.
   answer_type: text
@@ -3761,98 +3537,6 @@
     \ Organization account required  \n* **More Information:**  \n  * [Organizations](https://docs.snowflake.com/en/user-guide/organizations)\
     \  \n  * [Managing Multiple Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts)\
     \  "
-- answer_title: zone_list
-  question_text: What zones will this data product use?
-  answer_type: list
-  is_org_scope: false
-  guidance: '**What is this asking?**
-
-    Define the data zones for your data product. Each zone will become a database (or database prefix,
-    depending on your naming convention).
-
-
-    **Why does this matter?**
-
-    Zones organize your data pipeline:
-
-    - Each zone has clear ownership and purpose
-
-    - Access controls are applied at the zone level
-
-    - Data lineage flows from zone to zone
-
-
-    **Common Zone Patterns:**
-
-
-    **Standard Three-Zone (Recommended for most):**
-
-    - `raw` - Ingested data, minimal transformation
-
-    - `curated` - Cleaned and standardized
-
-    - `consumption` - Business-ready models
-
-
-    **Extended Four-Zone (For complex pipelines):**
-
-    - `raw` - Ingested data
-
-    - `staging` - Intermediate processing
-
-    - `curated` - Cleaned and standardized
-
-    - `consumption` - Business-ready models
-
-
-    **Simplified Two-Zone (For simple use cases):**
-
-    - `raw` - Ingested data
-
-    - `consumption` - Business-ready models
-
-
-    **Custom Zones (Industry-specific):**
-
-    - `bronze`, `silver`, `gold` - Medallion architecture
-
-    - `landing`, `refined`, `published` - ETL terminology
-
-    - `ingest`, `transform`, `serve` - Process-oriented
-
-
-    **Naming Guidelines:**
-
-    - Use lowercase, single words
-
-    - Keep zone names short (5-10 characters)
-
-    - Be consistent with your organization''s terminology
-
-
-    **Examples:**
-
-    ```
-
-    raw
-
-    curated
-
-    consumption
-
-    ```
-
-
-    **Recommendation:**
-
-    Start with the standard three-zone pattern unless you have specific requirements for more or fewer
-    zones.
-
-
-    **More Information:**
-
-    * [Data Zones Best Practices](https://docs.snowflake.com/en/user-guide/databases-best-practices) —
-    Database organization'
 - answer_title: environment_list
   question_text: What abbreviations will you use for environments?
   answer_type: list
@@ -3919,42 +3603,6 @@
     - Each zone becomes a separate database\n- Zone structure affects data lineage and access patterns\n\
     - Time travel settings impact storage costs\n\n**Recommendation:** Start with 3 zones. You can add\
     \ more later.\n"
-- answer_title: default_time_travel_days
-  question_text: What is the default time travel retention for databases?
-  answer_type: single-select
-  is_org_scope: false
-  options:
-  - text: 1 day (minimal)
-  - text: 7 days (standard)
-  - text: 14 days (extended)
-  - text: 30 days (long retention)
-  - text: 90 days (maximum)
-  guidance: '**What is this asking?**
-
-    Choose the default Time Travel retention period for data product databases.
-
-
-    **Recommendations by zone type:**
-
-    - **Landing/Raw zones**: 1 day (data is reloadable from source)
-
-    - **Curated/Transformed**: 7 days (standard protection)
-
-    - **Consumption/Production**: 7-30 days (business-critical)
-
-
-    **Cost considerations:**
-
-    - Higher retention = more storage costs
-
-    - Time Travel storage is charged at standard rates
-
-
-    **More Information:**
-
-    * [Time Travel](https://docs.snowflake.com/en/user-guide/data-time-travel)
-
-    '
 - answer_title: schema_configuration
   question_text: Define the schemas for each zone in your data product.
   answer_type: object-list
@@ -4445,6 +4093,123 @@
     **More Information:**
     * [ACCOUNTADMIN Role](https://docs.snowflake.com/en/user-guide/security-access-control-overview#accountadmin-role)
 
+- answer_title: rbac_reassign_ownership
+  question_text: Do you want to transfer object ownership from non-hierarchy roles to a standard role?
+  answer_type: single-select
+  is_org_scope: false
+  options:
+    - text: 'Yes'
+    - text: 'No'
+  guidance: |
+    **What is this asking?**
+    Choose whether to generate SQL that transfers OWNERSHIP of objects (tables, views,
+    stages, functions, procedures, dynamic tables) from ad-hoc or personal roles to
+    roles within the standard hierarchy.
+
+    **Why does this matter?**
+    In Snowflake, OWNERSHIP is a role-level privilege — the active role at creation
+    time owns new objects, not the user. When an ad-hoc or personal role that owns
+    objects is dropped, Snowflake silently reassigns ownership to the executing role
+    with no COPY CURRENT GRANTS. Existing downstream grants (shares, dependent views)
+    may silently break.
+
+    Step 1.1 (audit-role-hierarchy) Sections 5 and 6 surface these gaps. This step
+    generates the remediation SQL.
+
+    **Options explained:**
+    - **Yes**: Generate discovery and bulk GRANT OWNERSHIP ... COPY CURRENT GRANTS
+      statements for all configured schemas.
+    - **No**: Skip ownership transfer. Choose this if ownership is already consolidated
+      into hierarchy roles or if you prefer to handle transfers manually.
+
+    **Important:** This step must run BEFORE Step 2.4 (Enforce Managed Access Schemas).
+    After a schema is converted to managed access, ownership transfers are restricted
+    to roles subordinate to the schema owner.
+
+    **Recommendation:** Yes. Even if no immediate action is needed, running the
+    discovery query surfaces any ownership outside the hierarchy.
+
+    **More Information:**
+    * [GRANT OWNERSHIP](https://docs.snowflake.com/en/sql-reference/sql/grant-ownership)
+
+- answer_title: rbac_target_owner_role
+  question_text: Which role should receive ownership when no per-schema target is specified?
+  answer_type: text
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    Provide the fallback role name used as the ownership transfer target when
+    `rbac_ownership_scope` is not configured or for schemas not listed in scope.
+
+    **Why does this matter?**
+    When no per-schema scope is provided, the generated SQL comment uses this role
+    as the placeholder for manual execution. When scope is configured but a schema
+    entry omits a target, this role is used as the default.
+
+    **Examples:**
+    - `SYSADMIN` — Snowflake best-practice default; owns infrastructure objects
+    - `FINAJ_PROD_ADMIN` — Domain ADMIN role for a specific data product
+    - `DATA_PLATFORM_ADMIN` — Centralized platform team ownership role
+
+    **Recommendation:** Use `SYSADMIN` for production accounts unless your organization
+    uses a dedicated platform-admin role. Avoid ACCOUNTADMIN — it is a break-glass
+    role and should not own data objects.
+
+    **More Information:**
+    * [System-Defined Roles](https://docs.snowflake.com/en/user-guide/security-access-control-overview#system-defined-roles)
+
+- answer_title: rbac_ownership_scope
+  question_text: Which schemas should have ownership transferred, and to which role?
+  answer_type: object-list
+  is_org_scope: false
+  object_name: Ownership Scope
+  keys:
+    - database
+    - schema
+    - target_role
+  guidance: |
+    **What is this asking?**
+    Define the list of schemas whose objects should have ownership transferred,
+    and specify the target role for each schema. This is optional: if left empty,
+    the generated SQL provides commented-out templates using `rbac_target_owner_role`
+    as the default.
+
+    **Why does this matter?**
+    Different schemas may be owned by different domain-level ADMIN roles. Specifying
+    per-schema targets lets the generated SQL be executed directly without manual
+    substitution.
+
+    **Fields:**
+    - **database**: The Snowflake database name (e.g., SALES_ANALYTICS_PROD_DB)
+    - **schema**: The schema name within that database (e.g., RAW, CURATED, PUBLISHED)
+    - **target_role**: The role that should receive ownership (e.g., SALES_ANALYTICS_PROD_ADMIN)
+
+    **Managed Access Constraint:**
+    If a schema is already in managed access mode, `target_role` must be a role
+    subordinate to the schema owner. The sanity-check query in the generated SQL
+    will flag incompatible combinations before any transfers are executed.
+
+    **Examples:**
+    ```yaml
+    - database: SALES_ANALYTICS_PROD_DB
+      schema: RAW
+      target_role: SALES_ANALYTICS_PROD_ADMIN
+    - database: SALES_ANALYTICS_PROD_DB
+      schema: CURATED
+      target_role: SALES_ANALYTICS_PROD_ADMIN
+    - database: FINANCE_REPORTING_DB
+      schema: PUBLISHED
+      target_role: SYSADMIN
+    ```
+
+    **Recommendation:** Populate this list using the discovery query output from
+    Step 1.1 (audit-role-hierarchy) Section 6. Match each schema to the ADMIN
+    role of the owning data product.
+
+    **More Information:**
+    * [GRANT OWNERSHIP](https://docs.snowflake.com/en/sql-reference/sql/grant-ownership)
+    * [Managed Access Schemas](https://docs.snowflake.com/en/user-guide/security-access-control-overview#managed-access-schemas)
+
 - answer_title: rbac_enforce_managed_access
   question_text: Do you want to convert existing schemas to managed access?
   answer_type: single-select
@@ -4539,6 +4304,7 @@
     - role_level
     - data_product_prefix
     - warehouse
+    - network_policy_name
   guidance: |
     **What is this asking?**
     Define service accounts (non-human users) that need Snowflake access for
@@ -4559,6 +4325,9 @@
     - **role_level**: One of READ, WRITE, CREATE (avoid ADMIN for service accounts)
     - **data_product_prefix**: The data product role prefix for access
     - **warehouse**: The warehouse this account should use
+    - **network_policy_name** *(optional)*: Name of an existing Snowflake network policy
+      to attach to this service account. User-level policies override account-level
+      policies. Omit to inherit the account-level policy.
 
     **Naming Convention:**
     Use `SVC_<TOOL>_<DATAPRODUCT>` format:
@@ -4573,6 +4342,7 @@
       role_level: WRITE
       data_product_prefix: SALES_ANALYTICS_PROD
       warehouse: SALES_ANALYTICS_PROD_WH_INGEST
+      network_policy_name: ETL_NETWORK_POLICY
     - account_name: SVC_TABLEAU_SALES
       purpose: Tableau reporting dashboard connection
       role_level: READ
@@ -4719,3 +4489,4 @@
 
     **More Information:**
     * [SOC 2 Access Reviews](https://docs.snowflake.com/en/user-guide/security-access-control-overview)
+

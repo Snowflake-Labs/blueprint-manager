@@ -228,3 +228,53 @@ Since you're using an environment-based strategy, domains will be organized **wi
 
 **More Information:**
 * [Managing Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts) — Account management overview
+
+#### What are your domain abbreviations? (`domain_list`: list)
+**What is a Domain?**  
+A domain represents a logical grouping of business functions, data, or ownership. Domains define boundaries for governance, cost allocation, and data stewardship.  
+
+**How Domains Are Used:**  
+Depending on your account strategy, domains appear at either the account level or database level:  
+* Multi-Account (Domain-based): Each domain gets its own Snowflake account  
+* Single Account: Domains appear as prefixes in database/warehouse/role names  
+
+**Examples by Type:**  
+* **Business Units:** `fin` (Finance), `mkt` (Marketing), `ops` (Operations), `hr` (Human Resources)  
+* **Entities:** `retail`, `wholesale`, `mfg` (Manufacturing)  
+* **Departments:** `sales`, `sc` (Supply Chain), `custsvc` (Customer Service)  
+* **Technical Teams:** `data`, `plat` (Platform), `eng` (Engineering)  
+
+**Best Practices:**  
+* Use short abbreviations (3-8 characters) for readability  
+* Avoid underscores within domain names—use concatenated abbreviations  
+* Choose intuitive names that are self-descriptive to users  
+* Consider future growth—add domains you may need later  
+
+**More Information:**  
+* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  
+
+#### What abbreviations will you use for environments? (`environment_list`: list)
+**What is an Environment?**  
+An environment represents a stage in the Software Development Lifecycle (SDLC). Environments isolate data and applications based on their maturity and stability.  
+
+**How Environments Are Used:**  
+Depending on your account strategy, environments appear at either the account level or database level:  
+* Multi-Account (Environment-based): Each environment gets its own Snowflake account  
+* Single Account: Environments appear as suffixes in database/warehouse/role names  
+
+**Common Environment Abbreviations:**  
+* `dev` — Development: Where developers build and test code  
+* `test` or `qa` — Testing/QA: For quality assurance and integration testing  
+* `stg` or `stage` — Staging: Pre-production environment mirroring production  
+* `prod` — Production: Live environment serving end users  
+* `sbx` — Sandbox: Isolated environments for experimentation  
+* `uat` — User Acceptance Testing: For business user validation  
+* `dr` — Disaster Recovery: Failover environment for business continuity  
+
+**Best Practices:**  
+* Use short abbreviations (3-4 characters) for consistency  
+* Keep abbreviations intuitive and recognizable  
+* Include all environments you'll need—adding later requires renaming objects  
+
+**More Information:**  
+* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  

@@ -161,6 +161,35 @@ WHERE created_on > DATEADD('day', -30, CURRENT_TIMESTAMP())
 GROUP BY grant_date
 ORDER BY grant_date DESC;
 
+-- ============================================================
+-- WAREHOUSE ACCESS BY NON-ADMIN ROLES (COST VISIBILITY CHECK)
+-- ============================================================
+-- Surfaces roles with USAGE on warehouses larger than X-Small that are
+-- not ACCOUNTADMIN or SYSADMIN. This is an audit/visibility check, not
+-- an enforcement recommendation — resource monitors are the primary cost
+-- control (they hard-suspend at quota). Use this output to verify that
+-- large warehouses have appropriate per-warehouse resource monitors.
+--
+-- NOTE: SNOWFLAKE.ACCOUNT_USAGE.WAREHOUSES does not exist.
+-- This query uses SHOW WAREHOUSES + RESULT_SCAN to get warehouse metadata.
+SHOW WAREHOUSES;
+
+SELECT
+    g.grantee_name                                          AS role_name,
+    g.name                                                  AS warehouse_name,
+    wh."size"                                               AS warehouse_size,
+    wh."auto_suspend"                                       AS auto_suspend_seconds,
+    wh."resource_monitor"                                   AS resource_monitor
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES g
+JOIN TABLE(RESULT_SCAN(LAST_QUERY_ID())) wh
+  ON UPPER(wh."name") = UPPER(g.name)
+WHERE g.granted_on   = 'WAREHOUSE'
+  AND g.privilege    = 'USAGE'
+  AND g.deleted_on   IS NULL
+  AND wh."size"      NOT IN ('X-Small')
+  AND g.grantee_name NOT IN ('ACCOUNTADMIN', 'SYSADMIN')
+ORDER BY wh."size" DESC, g.grantee_name;
+
 -- ============================================================================
 -- VERIFICATION
 -- ============================================================================
@@ -181,6 +210,7 @@ Queries generated:
 4. Roles with powerful account-level privileges
 5. Summary statistics
 6. Recent grant velocity (last 30 days)
+7. Warehouse access by non-admin roles (cost visibility / resource monitor check)
 
 Audit Scope: {{ rbac_audit_scope }}
 

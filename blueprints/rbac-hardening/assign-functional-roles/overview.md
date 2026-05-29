@@ -3,6 +3,16 @@ In this step, you'll assign users to functional roles in the Data Product role h
 
 **Account Context:** Execute from the target account with SECURITYADMIN role.
 
+> **PREREQUISITE: Data product roles must already exist.**
+> This step assigns existing functional roles to users. It requires that data product roles
+> (e.g., `MARKETING_ANALYTICS_DEV_READ`, `FINANCE_ORDERS_PROD_ADMIN`) already exist in the
+> account. These roles are created by the **data-product-setup** blueprint — one run per data
+> product.
+>
+> **If no data products have been configured yet**, run the **data-product-setup** blueprint
+> first to create the role hierarchy for each data product (`{PREFIX}_ADMIN`, `{PREFIX}_CREATE`,
+> `{PREFIX}_WRITE`, `{PREFIX}_READ`), then return to this step.
+
 ## Why is this important?
 
 Functional roles are the foundation of scalable RBAC:

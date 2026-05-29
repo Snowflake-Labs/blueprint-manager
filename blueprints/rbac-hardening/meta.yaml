@@ -46,6 +46,7 @@ steps:
 - restrict-public-role
 - enforce-admin-separation
 - revoke-direct-user-privileges
+- transfer-object-ownership
 - enforce-managed-access-schemas
 - assign-functional-roles
 - provision-service-accounts
@@ -107,6 +108,8 @@ tasks:
     title: Enforce Admin Separation of Duties
   - slug: revoke-direct-user-privileges
     title: Revoke Direct User Privileges
+  - slug: transfer-object-ownership
+    title: Transfer Object Ownership
   - slug: enforce-managed-access-schemas
     title: Enforce Managed Access Schemas
 - slug: user-service-account-provisioning
@@ -122,7 +125,9 @@ tasks:
 
     '
   external_requirements:
-  - Data Product Setup completed (functional roles exist)
+  - "Requires: data-product-setup blueprint completed \u2014 functional roles (e.g.,\
+    \ {PREFIX}_ADMIN, {PREFIX}_READ) must exist before users can be assigned. Run\
+    \ data-product-setup once per data product, then return to this task."
   - User roster with required access levels documented
   - Service account requirements documented (name, purpose, access level)
   - SCIM prefix configured (if using SCIM for role assignment)

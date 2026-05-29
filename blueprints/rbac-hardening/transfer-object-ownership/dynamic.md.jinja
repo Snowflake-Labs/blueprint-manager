@@ -1,0 +1,59 @@
+{#- Author: Richie Bachala (richie.bachala@snowflake.com) -#}
+# Transfer Object Ownership
+
+## Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| **Reassign Ownership** | {{ rbac_reassign_ownership }} |
+| **Default Target Role** | {{ rbac_target_owner_role | upper }} |
+{%- if rbac_ownership_scope is defined and rbac_ownership_scope %}
+| **Ownership Scope** | {{ rbac_ownership_scope | length }} schema(s) configured |
+{%- else %}
+| **Ownership Scope** | Not configured — review discovery query results |
+{%- endif %}
+
+{%- if rbac_reassign_ownership == 'Yes' %}
+
+## Ownership Scope
+
+{%- if rbac_ownership_scope is defined and rbac_ownership_scope %}
+
+The following schemas are configured for ownership transfer:
+
+| # | Database | Schema | Target Role |
+|---|----------|--------|-------------|
+{%- for scope in rbac_ownership_scope %}
+| {{ loop.index }} | `{{ scope.database | upper }}` | `{{ scope.schema | upper }}` | `{{ scope.target_role | upper }}` |
+{%- endfor %}
+
+{%- else %}
+
+No per-schema scope configured. The discovery query will surface all objects owned by roles outside the standard hierarchy. Review the findings and run ownership transfer statements manually, using `{{ rbac_target_owner_role | upper }}` as the default target role.
+
+{%- endif %}
+
+## Actions Generated
+
+| # | Action | Details |
+|---|--------|---------|
+| 1 | Discovery | Find all OWNERSHIP held by non-hierarchy roles |
+| 2 | Sanity check | Flag managed schemas where target role is not subordinate to schema owner |
+| 3 | Transfer | GRANT OWNERSHIP ON ALL ... COPY CURRENT GRANTS per configured scope |
+| 4 | Future grants | GRANT OWNERSHIP ON FUTURE to prevent regression on new objects |
+
+## Important Reminders
+
+- Run the sanity-check query (Step 2) before executing transfers — WARNING rows indicate incompatible target roles in managed-access schemas
+- `COPY CURRENT GRANTS` is only valid on the bulk `ON ALL` form, not `ON FUTURE`
+- This step **must complete before** Step 2.4 (Enforce Managed Access Schemas)
+
+{%- else %}
+
+## Skipped
+
+Ownership reassignment is disabled. No ownership transfers will be executed.
+
+To enable, set `rbac_reassign_ownership` to `Yes` in your answer file.
+
+{%- endif %}

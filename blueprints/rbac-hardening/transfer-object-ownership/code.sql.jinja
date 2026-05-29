@@ -1,0 +1,186 @@
+-- Author: Richie Bachala (richie.bachala@snowflake.com)
+-- ============================================================================
+-- TRANSFER OBJECT OWNERSHIP
+-- ============================================================================
+-- Reassign Ownership:  {{ rbac_reassign_ownership }}
+-- Default Target Role: {{ rbac_target_owner_role | upper }}
+-- ============================================================================
+-- EXECUTE FROM: Target Account
+-- REQUIRED ROLE: SECURITYADMIN
+-- NOTE: Run BEFORE enforce-managed-access-schemas (Step 2.4).
+--       COPY CURRENT GRANTS preserves existing downstream grants.
+-- ============================================================================
+
+{%- if rbac_reassign_ownership == 'Yes' %}
+
+USE ROLE SECURITYADMIN;
+
+-- ============================================================================
+-- STEP 1: OWNERSHIP DISCOVERY
+-- ============================================================================
+-- Find all OWNERSHIP grants held by roles outside the standard hierarchy.
+-- Review ALL results before executing any transfer statements.
+-- Any role appearing here that is not an approved hierarchy role is a
+-- candidate for ownership transfer.
+
+SELECT
+  grantee_name  AS owning_role,
+  granted_on    AS object_type,
+  name          AS object_name
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE privilege    = 'OWNERSHIP'
+  AND deleted_on   IS NULL
+  AND grantee_name NOT IN (
+    'ACCOUNTADMIN', 'SECURITYADMIN', 'SYSADMIN', 'USERADMIN', 'PUBLIC'
+  )
+ORDER BY grantee_name, granted_on, name;
+
+-- ============================================================================
+-- STEP 2: SANITY CHECK — MANAGED SCHEMA COMPATIBILITY
+-- ============================================================================
+-- Flag schemas where the proposed target role is NOT a subordinate of the
+-- schema owner.  In managed access schemas, GRANT OWNERSHIP will fail for
+-- non-subordinate target roles.  Resolve WARNING rows BEFORE running Step 3.
+
+SELECT
+  s.catalog_name   AS database_name,
+  s.schema_name,
+  s.schema_owner,
+  s.is_managed_access,
+  proposed.target_role,
+  CASE
+    WHEN s.is_managed_access = 'NO'
+      THEN 'OK — schema not yet in managed access'
+    WHEN EXISTS (
+      SELECT 1
+      FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES hier
+      WHERE hier.granted_on   = 'ROLE'
+        AND hier.privilege    = 'USAGE'
+        AND hier.grantee_name = s.schema_owner
+        AND hier.name         = proposed.target_role
+        AND hier.deleted_on   IS NULL
+    )
+      THEN 'OK — target role is subordinate to schema owner'
+    ELSE
+      'WARNING — target role is NOT subordinate to schema owner; transfer will fail'
+  END AS compatibility_check
+FROM SNOWFLAKE.ACCOUNT_USAGE.SCHEMATA s
+JOIN (
+{%- if rbac_ownership_scope is defined and rbac_ownership_scope %}
+  VALUES
+{%- for scope in rbac_ownership_scope %}
+    ('{{ scope.database | upper }}', '{{ scope.schema | upper }}', '{{ scope.target_role | upper }}'){% if not loop.last %},{% endif %}
+{%- endfor %}
+{%- else %}
+  -- No rbac_ownership_scope configured; insert target schemas manually.
+  VALUES ('-- CONFIGURE rbac_ownership_scope --', '--', '{{ rbac_target_owner_role | upper }}')
+{%- endif %}
+) AS proposed (db_name, schema_name, target_role)
+  ON  s.catalog_name = proposed.db_name
+  AND s.schema_name  = proposed.schema_name
+WHERE s.deleted IS NULL
+ORDER BY compatibility_check DESC, s.catalog_name, s.schema_name;
+
+-- ============================================================================
+-- STEP 3: OWNERSHIP TRANSFER
+-- ============================================================================
+-- IMPORTANT: Resolve any WARNING rows in Step 2 before executing.
+-- COPY CURRENT GRANTS preserves downstream shares and dependent grants.
+-- Note: COPY CURRENT GRANTS is NOT valid on the FUTURE form — this is expected.
+
+{%- if rbac_ownership_scope is defined and rbac_ownership_scope %}
+{%- for scope in rbac_ownership_scope %}
+
+-- ---- {{ scope.database | upper }}.{{ scope.schema | upper }} → {{ scope.target_role | upper }} ----
+GRANT OWNERSHIP ON ALL TABLES         IN SCHEMA {{ scope.database | upper }}.{{ scope.schema | upper }} TO ROLE {{ scope.target_role | upper }} COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON ALL VIEWS          IN SCHEMA {{ scope.database | upper }}.{{ scope.schema | upper }} TO ROLE {{ scope.target_role | upper }} COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON ALL STAGES         IN SCHEMA {{ scope.database | upper }}.{{ scope.schema | upper }} TO ROLE {{ scope.target_role | upper }} COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON ALL FUNCTIONS      IN SCHEMA {{ scope.database | upper }}.{{ scope.schema | upper }} TO ROLE {{ scope.target_role | upper }} COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON ALL PROCEDURES     IN SCHEMA {{ scope.database | upper }}.{{ scope.schema | upper }} TO ROLE {{ scope.target_role | upper }} COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON ALL DYNAMIC TABLES IN SCHEMA {{ scope.database | upper }}.{{ scope.schema | upper }} TO ROLE {{ scope.target_role | upper }} COPY CURRENT GRANTS;
+-- Future prevention (COPY CURRENT GRANTS is not valid on FUTURE form):
+GRANT OWNERSHIP ON FUTURE TABLES      IN SCHEMA {{ scope.database | upper }}.{{ scope.schema | upper }} TO ROLE {{ scope.target_role | upper }};
+GRANT OWNERSHIP ON FUTURE VIEWS       IN SCHEMA {{ scope.database | upper }}.{{ scope.schema | upper }} TO ROLE {{ scope.target_role | upper }};
+GRANT OWNERSHIP ON FUTURE STAGES      IN SCHEMA {{ scope.database | upper }}.{{ scope.schema | upper }} TO ROLE {{ scope.target_role | upper }};
+GRANT OWNERSHIP ON FUTURE FUNCTIONS   IN SCHEMA {{ scope.database | upper }}.{{ scope.schema | upper }} TO ROLE {{ scope.target_role | upper }};
+GRANT OWNERSHIP ON FUTURE PROCEDURES  IN SCHEMA {{ scope.database | upper }}.{{ scope.schema | upper }} TO ROLE {{ scope.target_role | upper }};
+{%- endfor %}
+
+{%- else %}
+-- rbac_ownership_scope not configured.
+-- Review the discovery query above (Step 1) and run the following pattern
+-- for each schema containing objects owned by non-hierarchy roles:
+--
+-- GRANT OWNERSHIP ON ALL TABLES         IN SCHEMA <db>.<schema> TO ROLE {{ rbac_target_owner_role | upper }} COPY CURRENT GRANTS;
+-- GRANT OWNERSHIP ON ALL VIEWS          IN SCHEMA <db>.<schema> TO ROLE {{ rbac_target_owner_role | upper }} COPY CURRENT GRANTS;
+-- GRANT OWNERSHIP ON ALL STAGES         IN SCHEMA <db>.<schema> TO ROLE {{ rbac_target_owner_role | upper }} COPY CURRENT GRANTS;
+-- GRANT OWNERSHIP ON ALL FUNCTIONS      IN SCHEMA <db>.<schema> TO ROLE {{ rbac_target_owner_role | upper }} COPY CURRENT GRANTS;
+-- GRANT OWNERSHIP ON ALL PROCEDURES     IN SCHEMA <db>.<schema> TO ROLE {{ rbac_target_owner_role | upper }} COPY CURRENT GRANTS;
+-- GRANT OWNERSHIP ON ALL DYNAMIC TABLES IN SCHEMA <db>.<schema> TO ROLE {{ rbac_target_owner_role | upper }} COPY CURRENT GRANTS;
+-- GRANT OWNERSHIP ON FUTURE TABLES      IN SCHEMA <db>.<schema> TO ROLE {{ rbac_target_owner_role | upper }};
+{%- endif %}
+
+-- ============================================================================
+-- STEP 4: VERIFICATION
+-- ============================================================================
+-- Re-run discovery after executing transfers.
+-- Expected result: zero rows for all in-scope schemas.
+
+SELECT
+  grantee_name  AS owning_role,
+  granted_on    AS object_type,
+  COUNT(*)      AS object_count
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE privilege    = 'OWNERSHIP'
+  AND deleted_on   IS NULL
+  AND grantee_name NOT IN (
+    'ACCOUNTADMIN', 'SECURITYADMIN', 'SYSADMIN', 'USERADMIN', 'PUBLIC'
+  )
+GROUP BY grantee_name, granted_on
+ORDER BY object_count DESC;
+
+{%- else %}
+
+-- ============================================================================
+-- OWNERSHIP TRANSFER: SKIPPED
+-- ============================================================================
+-- rbac_reassign_ownership is set to 'No'. No ownership will be transferred.
+-- To enable this step, set rbac_reassign_ownership to 'Yes'.
+
+-- Current ownership distribution (for reference):
+SELECT
+  grantee_name  AS owning_role,
+  granted_on    AS object_type,
+  COUNT(*)      AS object_count
+FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES
+WHERE privilege    = 'OWNERSHIP'
+  AND deleted_on   IS NULL
+GROUP BY grantee_name, granted_on
+ORDER BY object_count DESC;
+
+{%- endif %}
+
+/*
+OWNERSHIP TRANSFER {{ 'COMPLETE' if rbac_reassign_ownership == 'Yes' else 'SKIPPED' }}
+=========================
+{%- if rbac_reassign_ownership == 'Yes' %}
+
+Actions generated:
+1. Discovery: surfaced OWNERSHIP held by non-hierarchy roles
+2. Sanity check: validated target roles against managed-access schema owners
+3. Transfer: GRANT OWNERSHIP ON ALL ... COPY CURRENT GRANTS per configured scope
+4. Future grants: GRANT OWNERSHIP ON FUTURE to prevent regression
+
+IMPORTANT REMINDERS:
+- COPY CURRENT GRANTS preserves downstream shares and dependent grants
+- GRANT OWNERSHIP ON FUTURE does NOT support COPY CURRENT GRANTS (expected Snowflake behavior)
+- Transfers in managed-access schemas are restricted to subordinate roles of the schema owner
+- Resolve all WARNING rows from Step 2 before executing Step 3
+
+NEXT STEPS:
+- Verify Step 4 shows zero rows for in-scope schemas
+- Proceed to Step 2.4: Enforce Managed Access Schemas
+{%- else %}
+No ownership transfers performed.
+{%- endif %}
+*/

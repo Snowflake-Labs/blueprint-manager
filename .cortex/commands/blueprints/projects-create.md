@@ -1,3 +1,6 @@
+---
+description: "Create a project directory for blueprint work."
+---
 <!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
      Licensed under the Snowflake Skills License. 
      Refer to the LICENSE file in the root of this repository for full terms. -->
@@ -9,12 +12,16 @@ Create a new project directory structure for organizing blueprint work.
 ## Usage
 
 ```
-/blueprints:projects:create <name>
+/blueprints:projects-create <name>
 ```
 
 ## Arguments
 
 - `<name>`: Project name (alphanumeric, underscores, and hyphens only)
+
+## Options
+
+- `--projects-dir <path>`: Directory where the project subdirectory will be created. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory).
 
 ## Instructions
 
@@ -53,7 +60,7 @@ Project structure:
       └── documentation/
 
 Next steps:
-1. Initialize answers: /blueprints:answers:init <blueprint-name> --project my-project
+1. Initialize answers: /blueprints:answers-init <blueprint-name> --project my-project
 2. Build interactively: /blueprints:build <blueprint-name> --project my-project
 ```
 
@@ -61,7 +68,7 @@ Next steps:
 ```
 Error: Project 'my-project' already exists.
 
-Use '/blueprints:projects:describe my-project' to view its contents.
+Use '/blueprints:projects-describe my-project' to view its contents.
 ```
 
 ### Invalid Name

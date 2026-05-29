@@ -1,5 +1,5 @@
 <!-- Author: Richie Bachala (richie.bachala@snowflake.com) -->
-In this step, you'll generate diagnostic queries that detect stale access — unused roles, dormant users with active privileges, and users who have never logged in but hold role grants. Stale access is a security risk because it provides attack surface without business value.
+In this step, you'll generate diagnostic queries that detect stale access — unused roles, dormant users with active privileges, users who have never logged in but hold role grants, and active human users who have not enrolled in any MFA method. Stale access is a security risk because it provides attack surface without business value.
 
 **Account Context:** Execute these queries from the target account with ACCOUNTADMIN role.
 
@@ -44,11 +44,30 @@ Snowflake's LOGIN_HISTORY view provides login records for up to 365 days. Users 
 2. Cross-reference unused roles with the role hierarchy audit
 3. Confirm "never logged in" users are not pending onboarding
 
+## MFA Enrollment Gaps (Step 6)
+
+Step 6 identifies active human users (`TYPE NOT IN ('SERVICE', 'LEGACY_SERVICE')`) who have not enrolled in any MFA method.
+
+**Why `HAS_MFA` and not `EXT_AUTHN_DUO`?**
+`HAS_MFA` is the correct column to use. It reflects enrollment across all supported MFA methods — TOTP authenticator apps, passkeys, and Duo. `EXT_AUTHN_DUO` is a legacy Duo-specific field and will miss users enrolled via other methods.
+
+**Snowflake BCR 2025_06 — Phased MFA Enforcement**
+Snowflake is rolling out mandatory MFA enforcement in phases:
+- **Phase 1** (Sep 2025 – Jan 2026, currently active): MFA enforced for Snowsight password logins only.
+- **Phase 3** (Aug – Oct 2026): MFA extended to all password-based interfaces, including JDBC/ODBC drivers and BI tools.
+
+Until Phase 3 completes, non-Snowsight authentication pathways remain a gap even on accounts that appear policy-compliant.
+
+**`BYPASS_MFA_UNTIL` exemptions**
+Even when `MFA_ENROLLMENT = 'REQUIRED'` is set in an auth policy, users who have not logged in since the policy was applied will not yet have enrolled. The `BYPASS_MFA_UNTIL` column surfaces temporary exemptions that may have been granted and should be reviewed.
+
 ## More Information
 
 * [LOGIN_HISTORY](https://docs.snowflake.com/en/sql-reference/account-usage/login_history) — User login records
 * [ALTER USER](https://docs.snowflake.com/en/sql-reference/sql/alter-user) — Disabling users
 * [QUERY_HISTORY](https://docs.snowflake.com/en/sql-reference/account-usage/query_history) — Query activity
+* [USERS view](https://docs.snowflake.com/en/sql-reference/account-usage/users) — HAS_MFA, BYPASS_MFA_UNTIL columns
+* [BCR 2025_06](https://docs.snowflake.com/en/release-notes/bcr-bundles/2025_06/bcr-1680) — Mandatory MFA enforcement phased rollout
 
 
 ### Configuration Questions

@@ -1,3 +1,6 @@
+---
+description: "Compare two blueprint answer files and show differences."
+---
 <!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
      Licensed under the Snowflake Skills License. 
      Refer to the LICENSE file in the root of this repository for full terms. -->
@@ -9,7 +12,7 @@ Compare two answer files to show differences.
 ## Usage
 
 ```
-/blueprints:answers:diff <file1> <file2>
+/blueprints:answers-diff <file1> <file2>
 ```
 
 ## Arguments
@@ -76,6 +79,7 @@ Comparing answer files:
 - `--format <table|yaml|json>`: Output format (default: table)
 - `--only <added|removed|changed>`: Only show specific changes
 - `--ignore <key1,key2>`: Ignore specific keys in comparison
+- `--projects-dir <path>`: Directory containing project subdirectories with answer files. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory).
 
 ## Error Handling
 
