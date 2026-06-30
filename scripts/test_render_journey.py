@@ -2860,6 +2860,338 @@ class TestQueryTagInjection(BlueprintTestCase):
 
         # Directory name is "test-blueprint"
         self.assertIn('"bp":"test-blueprint"', rendered)
+class TestBlueprintPdfHelpers(TestCase):
+    """Helpers and optional PDF pipeline (requires reportlab when exercised)."""
+
+    def test_flatten_answers_nested(self):
+        from blueprint_pdf.answers_flat import flatten_answers
+
+        rows = flatten_answers(
+            {"account_strategy": "Multi", "zone_list": ["raw", "curated"], "nested": {"k": "v"}}
+        )
+        keys = [r[0] for r in rows]
+        self.assertIn("account_strategy", keys)
+        self.assertIn("zone_list[0]", keys)
+        self.assertIn("zone_list[1]", keys)
+        self.assertIn("nested.k", keys)
+
+    def test_prepare_guidance_strips_toc_and_header(self):
+        from blueprint_pdf.md_cleanup import prepare_guidance_markdown_for_pdf
+
+        md = (
+            "# Blueprint Name\n\n"
+            "> Generated: d\n"
+            "> Blueprint: id\n\n"
+            "---\n\n"
+            "Overview line\n\n"
+            "---\n\n"
+            "## Table of Contents\n\n"
+            "- [Task 1: A](#x)\n\n"
+            "---\n\n"
+            "# Task 1: A\n\nBody here.\n"
+        )
+        out = prepare_guidance_markdown_for_pdf(md)
+        self.assertNotIn("Table of Contents", out)
+        self.assertIn("Body here.", out)
+
+    def test_strip_thematic_breaks_keeps_fenced_yamlish_lines(self):
+        from blueprint_pdf.md_cleanup import strip_thematic_break_lines_for_pdf
+
+        md = "Intro\n\n---\n\n```yaml\nkey: ---\n```\n\n---\n\nOutro\n"
+        out = strip_thematic_break_lines_for_pdf(md)
+        self.assertIn("key: ---", out)
+        self.assertNotRegex(out, r"(?m)^---\s*$")
+
+    def test_markdown_task_list_renders_as_bullet_list_with_brackets(self):
+        from reportlab.platypus import Paragraph
+
+        from blueprint_pdf.branding import build_styles
+        from blueprint_pdf.html_flowables import markdown_to_flowables
+
+        md = "## Post-Creation Checklist\n\n- [ ] First thing\n- [ ] Second thing\n"
+        styles = build_styles()
+        fl = markdown_to_flowables(md, styles)
+        paras = [x for x in fl if isinstance(x, Paragraph)]
+        self.assertTrue(any("First thing" in x.text for x in paras))
+        self.assertTrue(any("Second thing" in x.text for x in paras))
+
+    def test_ordered_list_inline_numbering_no_leading_br(self):
+        from reportlab.platypus import Paragraph
+
+        from blueprint_pdf.branding import build_styles
+        from blueprint_pdf.html_flowables import markdown_to_flowables
+
+        md = "**What You Need to Do:**\n\n1. First item\n2. Second item\n"
+        styles = build_styles()
+        fl = markdown_to_flowables(md, styles)
+        paras = [x for x in fl if isinstance(x, Paragraph)]
+        texts = " ".join(p.text for p in paras)
+        self.assertRegex(texts, r"1\.\s*First")
+        self.assertRegex(texts, r"2\.\s*Second")
+        self.assertNotRegex(texts, r"1\.\s*<br")
+
+    def test_split_iac_by_step_sections_sql(self):
+        from blueprint_pdf.iac_sections import split_rendered_iac_by_step_sections
+
+        sql = (
+            "-- header\n\n"
+            "-- ------------------------------------------------------------\n"
+            "-- Step 1.1: Alpha\n"
+            "-- ------------------------------------------------------------\n"
+            "SELECT 1;\n"
+            "-- ------------------------------------------------------------\n"
+            "-- Step 1.2: Beta\n"
+            "-- ------------------------------------------------------------\n"
+            "SELECT 2;\n"
+        )
+        parts = split_rendered_iac_by_step_sections(sql)
+        self.assertEqual(len(parts), 3)
+        self.assertIsNone(parts[0][0])
+        self.assertIn("-- header", parts[0][1])
+        self.assertEqual(parts[1][0], "Step 1.1: Alpha")
+        self.assertIn("SELECT 1;", parts[1][1])
+        self.assertEqual(parts[2][0], "Step 1.2: Beta")
+        self.assertIn("SELECT 2;", parts[2][1])
+
+    def test_appendix_shaded_table_splits_into_multiple_rows(self):
+        from blueprint_pdf.branding import build_styles
+        from blueprint_pdf.html_flowables import shaded_preformatted_appendix_table
+
+        long = "\n".join(f"line {i}" for i in range(30))
+        t = shaded_preformatted_appendix_table(long, build_styles(), lines_per_subrow=5)
+        self.assertGreaterEqual(t._nrows, 6)
+
+    def test_wrap_text_to_mono_cell_width_keeps_long_tokens_inside_cell(self):
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+
+        from blueprint_pdf.branding import build_styles
+        from blueprint_pdf.html_flowables import appendix_cell_inner_width_pt, wrap_text_to_mono_cell_width
+
+        styles = build_styles()
+        mono = styles["BodyMono"]
+        max_w = appendix_cell_inner_width_pt()
+        token = "SNOWFLAKE.LOCAL.ACCOUNT_ROOT_BUDGET!ADD_NOTIFICATION_INTEGRATION"
+        long_line = "-- CALL " + token * 12 + " ('x');"
+        wrapped = wrap_text_to_mono_cell_width(long_line, styles)
+        for line in wrapped.split("\n"):
+            self.assertLessEqual(
+                stringWidth(line, mono.fontName, mono.fontSize),
+                max_w + 0.01,
+                msg=repr(line[:80]),
+            )
+
+    def test_split_iac_by_step_sections_no_markers(self):
+        from blueprint_pdf.iac_sections import split_rendered_iac_by_step_sections
+
+        sql = "SELECT 1;\nSELECT 2;\n"
+        parts = split_rendered_iac_by_step_sections(sql)
+        self.assertEqual(len(parts), 1)
+        self.assertIsNone(parts[0][0])
+        self.assertEqual(parts[0][1].strip(), sql.strip())
+
+    def test_fenced_code_renders_as_shaded_table_block(self):
+        from reportlab.platypus import Paragraph, Table
+
+        from blueprint_pdf.branding import build_styles
+        from blueprint_pdf.html_flowables import markdown_to_flowables
+
+        md = "Before\n\n```sql\nSELECT 1;\n```\n\nAfter\n"
+        styles = build_styles()
+        fl = markdown_to_flowables(md, styles)
+        tables = [x for x in fl if isinstance(x, Table)]
+        self.assertEqual(len(tables), 1)
+        texts = " ".join(x.text for x in fl if isinstance(x, Paragraph))
+        self.assertIn("Before", texts)
+        self.assertIn("After", texts)
+
+    def test_ensure_blank_line_before_pipe_table_after_bold_label(self):
+        from blueprint_pdf.md_cleanup import ensure_blank_line_before_pipe_tables
+
+        raw = "**Example URLs:**\n| A | B |\n| - | - |"
+        out = ensure_blank_line_before_pipe_tables(raw)
+        self.assertIn("Example URLs:**\n\n|", out)
+
+    def test_ensure_blank_line_before_table_after_colon_paragraph(self):
+        from blueprint_pdf.md_cleanup import ensure_blank_line_before_pipe_tables
+
+        raw = "Based on **Multi** strategy with `<x>`:\n| Object Type | Example |\n|---|---|"
+        out = ensure_blank_line_before_pipe_tables(raw)
+        self.assertIn("`<x>`:\n\n|", out)
+
+    def test_prepare_guidance_strips_details_and_emojis(self):
+        from blueprint_pdf.md_cleanup import prepare_guidance_markdown_for_pdf
+
+        md = (
+            "# BP\n\n"
+            "> Generated: d\n"
+            "> Blueprint: id\n\n"
+            "---\n\n"
+            "<details><summary>Task Overview (click to expand)</summary>\n\n"
+            "DUPLICATE_CONTENT\n\n"
+            "</details>\n\n"
+            "# Task 1: Hello\n\nBody \U0001F600 here.\n"
+        )
+        out = prepare_guidance_markdown_for_pdf(md)
+        self.assertNotIn("DUPLICATE_CONTENT", out)
+        self.assertNotIn("\U0001F600", out)
+        self.assertIn("Body", out)
+        self.assertIn("Task 1: Hello", out)
+
+    def test_parse_args_pdf_flag(self):
+        import sys
+
+        from render_journey import parse_args
+
+        old = sys.argv[:]
+        try:
+            sys.argv = [
+                "render_journey.py",
+                "answers.yaml",
+                "--blueprint",
+                "bp",
+                "--lang",
+                "sql",
+                "--pdf",
+            ]
+            args = parse_args()
+            self.assertTrue(args.pdf)
+        finally:
+            sys.argv = old
+
+    def test_build_blueprint_pdf_smoke(self):
+        import tempfile
+        from pathlib import Path
+
+        try:
+            from blueprint_pdf.build import build_blueprint_pdf
+        except ImportError:
+            self.skipTest("reportlab / markdown / beautifulsoup4 not installed")
+
+        p = Path(tempfile.mkdtemp()) / "smoke.pdf"
+        build_blueprint_pdf(
+            output_path=p,
+            blueprint_meta={"name": "Smoke", "blueprint_id": "bid"},
+            answers={"k": "v"},
+            rendered_guidance_md="# Hi\n\nText.\n",
+            rendered_iac="SELECT 1;",
+            iac_label="SQL",
+            project_display_name="Proj",
+            date_display="2026-01-01",
+            executive_summary_md=None,
+        )
+        self.assertTrue(p.exists())
+        self.assertGreater(p.stat().st_size, 100)
+
+    def test_build_blueprint_pdf_cover_page_escapes_xml_special_chars(self):
+        import tempfile
+        from pathlib import Path
+
+        try:
+            from blueprint_pdf.build import build_blueprint_pdf
+        except ImportError:
+            self.skipTest("reportlab / markdown / beautifulsoup4 not installed")
+
+        p = Path(tempfile.mkdtemp()) / "cover_escape.pdf"
+        build_blueprint_pdf(
+            output_path=p,
+            blueprint_meta={"name": 'Foo & Bar', "blueprint_id": "bp<id>"},
+            answers={
+                "customer_display_name": "AT&T",
+                "engagement_lead_name": "Jane <Doe>",
+            },
+            rendered_guidance_md="# Hi\n\nText.\n",
+            rendered_iac="SELECT 1;",
+            iac_label="SQL",
+            project_display_name="<internal>",
+            date_display="2026-01-01",
+            executive_summary_md=None,
+        )
+        self.assertTrue(p.exists())
+        self.assertGreater(p.stat().st_size, 100)
+
+    def test_pdf_toc_notifications_include_link_destinations(self):
+        """TableOfContents entries must receive a destination key for ReportLab <a href=\"#...\"> links."""
+        import tempfile
+        from pathlib import Path
+
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.lib.styles import ParagraphStyle
+            from reportlab.platypus import PageBreak, Paragraph, Spacer
+            from reportlab.platypus.tableofcontents import TableOfContents
+
+            from blueprint_pdf.build import BlueprintPDFTemplate
+            from blueprint_pdf.branding import (
+                MARGIN_BOTTOM,
+                MARGIN_LEFT,
+                MARGIN_RIGHT,
+                MARGIN_TOP,
+                build_styles,
+            )
+        except ImportError:
+            self.skipTest("reportlab not installed")
+
+        class RecordingTOC(TableOfContents):
+            def __init__(self):
+                super().__init__()
+                self.recorded = []
+
+            def beforeBuild(self):
+                super().beforeBuild()
+                self.recorded.clear()
+
+            def addEntry(self, level, text, pageNum, key=None):
+                self.recorded.append((level, text, pageNum, key))
+                return super().addEntry(level, text, pageNum, key)
+
+        styles = build_styles()
+        toc0 = ParagraphStyle(
+            name="TOC0Test",
+            parent=styles["TOCEntry"],
+            fontSize=11,
+            leading=14,
+            leftIndent=18,
+            firstLineIndent=-18,
+        )
+        toc1 = ParagraphStyle(
+            name="TOC1Test",
+            parent=styles["TOCEntry"],
+            fontSize=10,
+            leading=13,
+            leftIndent=36,
+            firstLineIndent=-18,
+        )
+        toc = RecordingTOC()
+        toc.levelStyles = [toc0, toc1]
+        toc.dotsMinLevel = 0
+
+        story = [
+            Spacer(1, 12),
+            toc,
+            PageBreak(),
+            Paragraph("Task 1: Alpha", styles["TaskHeading"]),
+            Paragraph("Step 1.1: Beta", styles["StepHeading"]),
+        ]
+        out = Path(tempfile.mkdtemp()) / "toc_links.pdf"
+        doc = BlueprintPDFTemplate(
+            str(out),
+            footer_left="test",
+            pagesize=letter,
+            rightMargin=MARGIN_RIGHT,
+            leftMargin=MARGIN_LEFT,
+            topMargin=MARGIN_TOP,
+            bottomMargin=MARGIN_BOTTOM,
+        )
+        doc.multiBuild(story)
+        with_keys = [e for e in toc.recorded if e[3]]
+        self.assertGreaterEqual(
+            len(with_keys),
+            2,
+            msg="expected at least Task + Step TOC entries with destination keys",
+        )
+        dest_keys = [e[3] for e in with_keys]
+        self.assertTrue(all(isinstance(k, str) and k.startswith("toc_") for k in dest_keys))
+        self.assertEqual(len(dest_keys), len(set(dest_keys)), msg="destination keys must be unique")
 
 
 class TestResolveProjectsDir(TestCase):

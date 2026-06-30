@@ -1,0 +1,6 @@
+# Blueprint Manager — Python dependencies (render_journey, tests, PDF output)
+pyyaml>=6.0
+jinja2>=3.0
+reportlab>=4.0
+markdown>=3.5
+beautifulsoup4>=4.12
