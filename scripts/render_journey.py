@@ -765,6 +765,14 @@ def parse_args():
         help="Project/workspace name to organize artifacts by customer or use case",
     )
     parser.add_argument(
+        "--pdf",
+        action="store_true",
+        help=(
+            "Also write a Snowflake-styled PDF under output/documentation/, "
+            "same basename and timestamp as the guidance .md file"
+        ),
+    )
+    parser.add_argument(
         "--projects-dir",
         help=(
             "Directory where rendered project artifacts are written. "
@@ -1535,6 +1543,12 @@ def main():
         print(f"  Total size: {len(rendered_code)} characters")
 
         # Render guidance documents (unless skipped)
+        if args.pdf and args.skip_guidance:
+            sys.stderr.write(
+                "Error: --pdf requires rendered guidance. Omit --skip-guidance or omit --pdf.\n"
+            )
+            sys.exit(1)
+
         if not args.skip_guidance:
             print("\nRendering guidance documents...")
             rendered_guidance, guide_rendered, guide_skipped = render_blueprint_guidance(
@@ -1557,6 +1571,42 @@ def main():
                 f"  Steps rendered: {guide_rendered}, skipped (missing vars): {guide_skipped}"
             )
             print(f"  Total size: {len(rendered_guidance)} characters")
+
+            if args.pdf:
+                try:
+                    from blueprint_pdf.build import build_blueprint_pdf
+                except ImportError as e:
+                    sys.stderr.write(
+                        "Error: PDF generation requires reportlab, markdown, and beautifulsoup4. "
+                        f"Install dependencies (see requirements.txt): {e}\n"
+                    )
+                    sys.exit(1)
+
+                executive_summary_md = None
+                exec_path = blueprint_dir / "executive_summary.md.jinja"
+                if exec_path.exists():
+                    jinja_env = create_jinja_env(base_dir)
+                    rendered_exec, _, _ = try_render_template(
+                        exec_path, answers, jinja_env, base_dir
+                    )
+                    if rendered_exec is not None:
+                        executive_summary_md = rendered_exec
+
+                iac_labels = {"sql": "SQL", "terraform": "Terraform"}
+                pdf_file = guidance_dir / f"{args.blueprint}_{date_file}.pdf"
+                print("\nGenerating PDF deliverable...")
+                build_blueprint_pdf(
+                    output_path=pdf_file,
+                    blueprint_meta=blueprint_meta,
+                    answers=answers,
+                    rendered_guidance_md=rendered_guidance,
+                    rendered_iac=rendered_code,
+                    iac_label=iac_labels.get(args.lang, args.lang.upper()),
+                    project_display_name=project_name,
+                    date_display=date_display,
+                    executive_summary_md=executive_summary_md,
+                )
+                print(f"✓ Successfully wrote PDF to: {pdf_file}")
 
     except (ValueError, OSError, yaml.YAMLError) as e:
         sys.stderr.write(f"Error: {e}\n")

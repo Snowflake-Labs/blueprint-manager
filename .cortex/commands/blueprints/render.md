@@ -1,5 +1,5 @@
 ---
-description: "Render SQL/Terraform/Docs from an answer file."
+description: "Render SQL/Terraform/Docs/PDF from an answer file."
 ---
 <!-- Copyright (c) 2026 Snowflake Inc. All rights reserved.
      Licensed under the Snowflake Skills License. 
@@ -7,7 +7,7 @@ description: "Render SQL/Terraform/Docs from an answer file."
 
 # Blueprints Render
 
-Generate SQL/Terraform/Documentation from an answer file. This command wraps the `render_journey.py` script.
+Generate SQL/Terraform/Documentation/PDF from an answer file. This command wraps the `render_journey.py` script.
 
 ## Usage
 
@@ -24,7 +24,7 @@ Generate SQL/Terraform/Documentation from an answer file. This command wraps the
 
 - `--lang <sql|terraform>`: Output language (default: sql)
 - `--project <name>`: Project name for organizing outputs
-- `--skip-guidance`: Skip rendering documentation, only generate IaC code
+- `--skip-guidance`: Skip rendering documentation, only generate IaC code (incompatible with PDF)
 - `--projects-dir <path>`: Directory where rendered project artifacts are written. Resolution priority: `--projects-dir` flag > `BLUEPRINT_MANAGER_PROJECTS_DIR` env var > `<cwd>/projects` (current working directory). The `blueprints/` and `definitions/` directories are always resolved relative to the script.
 
 ## Instructions
@@ -33,6 +33,9 @@ Execute the `render_journey.py` script with the provided arguments to generate:
 
 1. **IaC Code** (SQL or Terraform): Rendered templates from each step
 2. **Documentation**: Step-by-step guidance with filled-in values
+3. **PDF deliverable**: Snowflake-styled PDF alongside the Markdown file (unless `--skip-guidance` is set)
+
+Always pass `--pdf` unless the user explicitly requests IaC-only output via `--skip-guidance`.
 
 ## Output Structure
 
@@ -47,7 +50,8 @@ projects/<project-name>/
     │   └── sql/
     │       └── <blueprint-id>_<timestamp>.sql
     └── documentation/
-        └── <blueprint-id>_<timestamp>.md
+        ├── <blueprint-id>_<timestamp>.md
+        └── <blueprint-id>_<timestamp>.pdf
 ```
 
 ## Implementation
@@ -60,8 +64,11 @@ python scripts/render_journey.py \
   --blueprint <blueprint-name> \
   --lang <language> \
   --project <project-name> \
+  --pdf \
   [--projects-dir <path>]
 ```
+
+Omit `--pdf` only when `--skip-guidance` is set (PDF requires rendered guidance).
 
 ## Output Format
 
@@ -79,6 +86,7 @@ Processing steps...
 Output generated:
   IaC:    projects/my-project/output/iac/sql/platform-foundation-setup_20250210143022.sql
   Docs:   projects/my-project/output/documentation/platform-foundation-setup_20250210143022.md
+  PDF:    projects/my-project/output/documentation/platform-foundation-setup_20250210143022.pdf
 
 Summary:
   Steps rendered: 18/22
@@ -92,17 +100,18 @@ Tip: Run '/blueprints:validate <answer-file> --blueprint <blueprint>' to see mis
 - If answer file doesn't exist: `Error: Answer file not found: <path>`
 - If blueprint doesn't exist: `Error: Blueprint '<name>' not found`
 - If render fails: Display error message from render_journey.py
+- If `--pdf` and `--skip-guidance` are both set: `Error: --pdf requires rendered guidance`
 
 ## Examples
 
 ```bash
-# Render SQL with default project
+# Render SQL, docs, and PDF with default project
 /blueprints:render answers.yaml --blueprint platform-foundation-setup
 
 # Render to a specific project
 /blueprints:render answers.yaml --blueprint data-product-setup --project acme-corp --lang sql
 
-# Render only IaC (skip documentation)
+# Render only IaC (skip documentation and PDF)
 /blueprints:render answers.yaml --blueprint account-creation --skip-guidance
 ```
 

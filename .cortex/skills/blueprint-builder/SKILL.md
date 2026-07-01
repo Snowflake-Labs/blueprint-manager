@@ -25,7 +25,7 @@ When the user requests ANY of the following at ANY point during this skill's wor
 - Any variation of "generate", "render", "create", "build", "export" combined with "SQL", "code", "output", "infrastructure"
 
 **YOU MUST:**
-1. Use the `scripts/render_journey.py` script to generate ALL SQL and documentation output
+1. Use the `scripts/render_journey.py` script to generate ALL SQL, documentation, and PDF output
 2. NEVER generate SQL code directly using ad-hoc logic or LLM inference
 3. NEVER write SQL blocks manually based on answer file contents
 4. NEVER attempt to "preview" or "show" SQL by constructing it yourself
@@ -37,6 +37,7 @@ python scripts/render_journey.py \
   --blueprint [blueprint_slug] \
   --lang sql \
   --project [project_name] \
+  --pdf \
   [--projects-dir <path>]  # optional, override projects/ output location
 ```
 
@@ -44,7 +45,7 @@ python scripts/render_journey.py \
 - Consistent, tested, and validated SQL output
 - Proper variable substitution from the answer file
 - Correct handling of missing/null values (steps are skipped appropriately)
-- Accurate documentation generation alongside code
+- Accurate documentation and PDF deliverable generation alongside code
 
 **If user asks to "see the SQL" or "preview the code":**
 - Run the render script first
@@ -75,6 +76,11 @@ Invoke this skill when users:
    - Each blueprint has a `meta.yaml` with blueprint metadata
    - Steps have `overview.md` files with context and guidance
    - Questions are defined with types: `single-select`, `multi-select`, `text`, `list`, or `object-list`
+
+3. **PDF dependencies** (required when using `--pdf`):
+   - `reportlab`, `markdown`, and `beautifulsoup4` from `requirements.txt`
+   - Install with: `pip install -r requirements.txt`
+   - If render fails with a missing-library error, install these before retrying
 
 ## Working Directory & Projects Path
 
@@ -444,6 +450,16 @@ The structural elements (task counts, "Up Next" task title, progress numbers) ar
 **Output:** Selected blueprint slug (directory name) and metadata
 
 > **Note:** The blueprint slug is the directory name under `blueprints/` (e.g., `platform-foundation-setup`). This is **different** from the `blueprint_id` field inside `meta.yaml` (e.g., `blueprint_4d563df2`). All file path operations in subsequent steps use the slug.
+
+#### Hand-off Skill Detection (CXE-16082)
+
+When loading the selected blueprint's `meta.yaml`, also check for the optional top-level field **`hand_off_skill`**:
+
+- **If `hand_off_skill` is present** (a non-empty string), this blueprint is a **guidance-only** blueprint. Its sole purpose is to capture structured decisions through the conversation; the named downstream skill is responsible for whatever comes next (code generation, plan synthesis, deployment, etc.).
+  - Note the value of `hand_off_skill` for use in Step 6.
+  - **Do not** offer code/SQL generation in Step 6 or run Step 9 (`render_journey.py`) for this blueprint.
+  - Continue normally through Steps 2.5 → 6 (experience level, overview, answer collection, summary). The hand-off happens after the answers are saved.
+- **If `hand_off_skill` is absent or empty**, treat this as a normal blueprint and follow the existing flow (offer output generation in Step 6, run Step 9 on request). This is the default; existing blueprints are unaffected.
 
 ### Step 2.5: Capture Experience Level
 
@@ -886,6 +902,49 @@ Then apply the new profile to all subsequent output. (See "Experience-Level Rend
 - Option 2 → Proceed to Step 8 (Update user-specific values)
 - Option 3 → Proceed to Step 7 (Walkthrough)
 - Option 4 → Proceed to Step 9 (Generate IaC) — warn if many questions unanswered
+- Option 5 → End workflow
+
+#### Hand-off Skill Branch (CXE-16082)
+
+If the selected blueprint declared a `hand_off_skill` (see "Hand-off Skill Detection" in Step 2), **replace the menu above** with a hand-off-specific menu and skip the IaC generation option entirely. The blueprint's job ends with structured decisions; the named downstream skill takes the conversation from here.
+
+1. **Present hand-off-aware options:**
+   ```
+   You've completed the guidance for [blueprint name].
+
+   Your decisions are saved to:
+     [answer_file_path]
+
+   This blueprint hands off to the **[hand_off_skill]** skill, which will
+   take it from here using your project name and the answers you just
+   captured.
+
+   What would you like to do next?
+
+   1. Provide more context (I'll ask about unanswered questions)
+   2. Fill in required values now
+   3. Review all configuration step-by-step
+   4. Continue in the [hand_off_skill] skill (recommended)
+   5. Save and exit
+
+   Enter your choice (1-5):
+   ```
+
+**⚠️ MANDATORY STOPPING POINT**: Wait for user choice.
+
+**Route based on selection:**
+- Option 1 → Ask follow-up questions for Category C items, then regenerate
+- Option 2 → Proceed to Step 8 (Update user-specific values)
+- Option 3 → Proceed to Step 7 (Walkthrough)
+- Option 4 → **Hand off** — invoke the `<hand_off_skill>` skill, passing along:
+  - `project_name` — the project selected/created in Step 1
+  - `answer_file` — the path to the saved answer file from this blueprint
+  - any other structured decisions the downstream skill declares it
+    needs (the contract is owned by the downstream skill; this prototype
+    only guarantees the project name and answer file path)
+
+  Do **not** run `render_journey.py` for hand-off blueprints — output
+  generation is the downstream skill's responsibility.
 - Option 5 → End workflow
 
 ### Step 7: Interactive Step-by-Step Walkthrough
@@ -1379,9 +1438,13 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
 - Option 4 → Proceed to Step 9 (Generate IaC)
 - Option 5 → End workflow
 
-### Step 9: Generate Infrastructure Code
+### Step 9: Generate Deliverables
 
-**Goal:** Run the render_journey.py script to generate SQL infrastructure code
+Hand-off blueprints skip this step. If the selected blueprint declared
+a `hand_off_skill`, invoke that skill per Step 6's hand-off branch
+instead of running `render_journey.py`.
+
+**Goal:** Run the render_journey.py script to generate SQL, documentation, and PDF deliverables
 
 **⚠️ CRITICAL REMINDER: You MUST use `scripts/render_journey.py` for ALL code generation. NEVER generate SQL manually or use ad-hoc logic. This applies even if the user asks to "just show me" or "preview" the SQL.**
 
@@ -1390,16 +1453,16 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
 1. **Present generation options:**
    ```
    ======================================================================
-    Generate Infrastructure Code
+    Generate Deliverables
    ======================================================================
    
    Your answer file: [answer_file_path]
    Workflow: [workflow_name]
    
-   I can generate the SQL infrastructure code for you now.
+   I can generate SQL, documentation, and a PDF deliverable for you now.
    
    Options:
-   1. Generate SQL now (I'll run the script)
+   1. Generate deliverables now (I'll run the script)
    2. Show me the command to run manually
    3. Go back (don't generate yet)
    
@@ -1408,7 +1471,7 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
 
 **⚠️ MANDATORY STOPPING POINT**: Wait for user choice.
 
-**If user selects "Generate SQL now":**
+**If user selects "Generate deliverables now":**
 
 1. **Run the migration script** to ensure the answer file is compatible with the current schema before rendering:
    ```bash
@@ -1421,31 +1484,37 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
    - If the script reports errors or the file cannot be parsed, direct the user to `scripts/TROUBLESHOOTING.md` for resolution before continuing.
    - If no changes are needed, proceed immediately.
 
-2. **Run render script with project flag:**
+2. **Run render script with project and PDF flags:**
    ```bash
    python3 scripts/render_journey.py \
      [answer_file_path] \
      --blueprint [blueprint_slug] \
      --lang sql \
-     --project [project_name]
+     --project [project_name] \
+     --pdf
    ```
 
-3. **Check for output file:**
+3. **Check for output files:**
    ```bash
    ls -lt projects/[project_name]/output/iac/sql/ | head -5
+   ls -lt projects/[project_name]/output/documentation/ | head -5
    ```
 
 4. **Present results:**
    ```
-   ✓ SQL infrastructure code generated successfully!
+   ✓ Deliverables generated successfully!
    
-   Output file: projects/[project_name]/output/iac/sql/[workflow_id]_[timestamp].sql
+   Output files:
+   - SQL:  projects/[project_name]/output/iac/sql/[workflow_id]_[timestamp].sql
+   - Docs: projects/[project_name]/output/documentation/[workflow_id]_[timestamp].md
+   - PDF:  projects/[project_name]/output/documentation/[workflow_id]_[timestamp].pdf
    
    Next Steps:
    1. Review the generated SQL file
-   2. Connect to your Snowflake account
-   3. Execute the SQL in your Snowflake worksheet
-   4. Verify the infrastructure was created correctly
+   2. Review the PDF deliverable for customer-facing summary
+   3. Connect to your Snowflake account
+   4. Execute the SQL in your Snowflake worksheet
+   5. Verify the infrastructure was created correctly
    
    Note: The SQL is idempotent - you can run it multiple times safely.
    ```
@@ -1469,10 +1538,14 @@ When presenting questions during a walkthrough (Step 7) or summary (Step 6), gro
      [answer_file_path] \
      --blueprint [blueprint_slug] \
      --lang sql \
-     --project [project_name]
+     --project [project_name] \
+     --pdf
    ```
    
-   Output will be saved to: projects/[project_name]/output/iac/sql/[blueprint_slug]_[timestamp].sql
+   Output will be saved to:
+   - projects/[project_name]/output/iac/sql/[blueprint_slug]_[timestamp].sql
+   - projects/[project_name]/output/documentation/[blueprint_slug]_[timestamp].md
+   - projects/[project_name]/output/documentation/[blueprint_slug]_[timestamp].pdf
    ```
 
 **If user selects "Go back":**

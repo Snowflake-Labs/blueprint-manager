@@ -330,6 +330,7 @@ python scripts/render_journey.py \
 - `--lang sql` or `--lang terraform` — choose output language
 - `--project <name>` — project name for organizing outputs
 - `--skip-guidance` — skip generating documentation
+- `--pdf` — write a PDF deliverable alongside guidance (not with `--skip-guidance`)
 - `--projects-dir <path>` — projects directory (see [Configuring the projects directory](#2-configuring-the-projects-directory))
 
 **Output:**
@@ -393,6 +394,47 @@ GROUP  BY 1, 2;
 
 Because `QUERY_TAG` lands in a dedicated `TAG` column, these queries do
 not require `LIKE` / `ILIKE` scans over SQL text.
+
+## PDF Deliverable Output
+
+Pass `--pdf` to generate a Snowflake-styled PDF alongside the Markdown guidance file.
+The PDF is written to the same directory with the same `{blueprint}_{timestamp}` basename:
+
+```
+projects/<project>/output/documentation/
+├── <blueprint>_<timestamp>.md
+└── <blueprint>_<timestamp>.pdf   ← new when --pdf is set
+```
+
+### Dependencies
+
+PDF generation requires `reportlab`, `markdown`, and `beautifulsoup4`, all of which are included in `requirements.txt`. Install all dependencies with:
+
+```bash
+pip install -r blueprint-manager/requirements.txt
+```
+
+If these are not installed the CLI exits with a clear error message pointing to `requirements.txt`.
+
+### Incompatibility
+
+`--pdf` requires guidance rendering. Combining `--pdf` with `--skip-guidance` is an error:
+
+```bash
+# Error: --pdf requires rendered guidance. Omit --skip-guidance or omit --pdf.
+python scripts/render_journey.py answers.yaml --blueprint bp --pdf --skip-guidance
+```
+
+### Example
+
+```bash
+python scripts/render_journey.py \
+  projects/my-project/answers/<blueprint_id>/my_answers.yaml \
+  --blueprint <blueprint_id> \
+  --project my-project \
+  --lang sql \
+  --pdf
+```
 
 License
 Copyright (c) 2026 Snowflake Inc. All rights reserved.

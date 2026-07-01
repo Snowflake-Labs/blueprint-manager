@@ -1,1 +1,11 @@
-.vscode
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# OS
+.DS_Store
+
+# Local render outputs (timestamped .md / .sql / .pdf under projects)
+projects/**/output/
