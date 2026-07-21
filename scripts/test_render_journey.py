@@ -3058,6 +3058,34 @@ class TestBlueprintPdfHelpers(TestCase):
         finally:
             sys.argv = old
 
+    def test_main_terraform_lang_short_circuits_with_warning(self):
+        """Selecting --lang terraform exits non-zero with a not-implemented warning."""
+        import io
+        import sys
+
+        from render_journey import main
+
+        old_argv = sys.argv[:]
+        old_stderr = sys.stderr
+        captured = io.StringIO()
+        try:
+            sys.argv = [
+                "render_journey.py",
+                "answers.yaml",
+                "--blueprint",
+                "bp",
+                "--lang",
+                "terraform",
+            ]
+            sys.stderr = captured
+            with self.assertRaises(SystemExit) as ctx:
+                main()
+            self.assertNotEqual(ctx.exception.code, 0)
+            self.assertIn("Terraform rendering is not implemented yet", captured.getvalue())
+        finally:
+            sys.argv = old_argv
+            sys.stderr = old_stderr
+
     def test_build_blueprint_pdf_smoke(self):
         import tempfile
         from pathlib import Path

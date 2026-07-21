@@ -1449,6 +1449,13 @@ def main():
     """Main entry point."""
     args = parse_args()
 
+    if args.lang == "terraform":
+        sys.stderr.write(
+            "Error: Terraform rendering is not implemented yet. "
+            "Please choose a supported output format (e.g. --lang sql).\n"
+        )
+        sys.exit(1)
+
     # Resolve paths
     answers_path = Path(args.answers_file)
     if not answers_path.exists():
