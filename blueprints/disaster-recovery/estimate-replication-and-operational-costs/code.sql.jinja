@@ -1,0 +1,99 @@
+{%- set topology = dr_topology | default('Cross-Region Same-Cloud') %}
+{%- set credit_rate = dr_credit_rate | default('3.00') %}
+{%- set storage_rate = dr_storage_rate | default('23.00') %}
+{%- set change_rate = dr_daily_change_rate | default('2') %}
+{%- if topology == 'Same-Region' %}
+{%- set transfer_rate = '0.00' %}
+{%- elif topology == 'Cross-Cloud' %}
+{%- set transfer_rate = '40.00' %}
+{%- else %}
+{%- set transfer_rate = '20.00' %}
+{%- endif %}
+-- ============================================================================
+-- STEP: Estimate Replication and Operational Costs
+-- ============================================================================
+-- Query existing replication usage and serverless costs for estimation
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- Existing Replication Credits and Bytes (Last 30 Days)
+-- NOTE: On new or POC accounts where replication has not yet run, this query
+-- returns zero rows. Use the formula-based estimate block below instead.
+-- ----------------------------------------------------------------------------
+SELECT
+  REPLICATION_GROUP_NAME,
+  ROUND(SUM(CREDITS_USED), 2) AS TOTAL_CREDITS,
+  ROUND(SUM(BYTES_TRANSFERRED) / POWER(1024, 3), 2) AS TOTAL_GB,
+  ROUND(SUM(BYTES_TRANSFERRED) / POWER(1024, 4), 4) AS TOTAL_TB,
+  ROUND(SUM(CREDITS_USED) / NULLIF(SUM(BYTES_TRANSFERRED) / POWER(1024, 3), 0), 4) AS CREDITS_PER_GB
+FROM SNOWFLAKE.ACCOUNT_USAGE.REPLICATION_GROUP_USAGE_HISTORY
+WHERE START_TIME >= DATEADD('day', -30, CURRENT_TIMESTAMP())
+GROUP BY REPLICATION_GROUP_NAME
+ORDER BY TOTAL_CREDITS DESC;
+
+-- ----------------------------------------------------------------------------
+-- Serverless Feature Costs (Last 30 Days)
+-- These will be duplicated on the target account
+-- ----------------------------------------------------------------------------
+SELECT 'Materialized Views' AS SERVICE, ROUND(SUM(CREDITS_USED), 2) AS CREDITS_30D
+FROM SNOWFLAKE.ACCOUNT_USAGE.MATERIALIZED_VIEW_REFRESH_HISTORY
+WHERE START_TIME >= DATEADD('day', -30, CURRENT_TIMESTAMP())
+UNION ALL
+SELECT 'Search Optimization', ROUND(SUM(CREDITS_USED), 2)
+FROM SNOWFLAKE.ACCOUNT_USAGE.SEARCH_OPTIMIZATION_HISTORY
+WHERE START_TIME >= DATEADD('day', -30, CURRENT_TIMESTAMP())
+UNION ALL
+SELECT 'Automatic Clustering', ROUND(SUM(CREDITS_USED), 2)
+FROM SNOWFLAKE.ACCOUNT_USAGE.AUTOMATIC_CLUSTERING_HISTORY
+WHERE START_TIME >= DATEADD('day', -30, CURRENT_TIMESTAMP());
+
+-- ----------------------------------------------------------------------------
+-- Warehouse Inventory (for drill cost estimation)
+-- ----------------------------------------------------------------------------
+SHOW WAREHOUSES;
+
+-- ----------------------------------------------------------------------------
+-- Formula-Based Estimate (for new/POC accounts with no replication history)
+-- Use these calculated projections when the historical queries above return
+-- no rows. Inputs are drawn from your answer file parameters.
+--
+-- Topology:       {{ topology }}
+-- Transfer rate:  ${{ transfer_rate }}/TB
+-- Credit rate:    ${{ credit_rate }}/credit
+-- Storage rate:   ${{ storage_rate }}/TB/month
+-- Daily change:   {{ change_rate }}% of total storage
+-- ----------------------------------------------------------------------------
+-- Replace TOTAL_STORAGE_TB with the result from step 5.2 (Measure Storage Footprint)
+-- before running this query.
+SELECT
+  -- Initial one-time replication
+  ROUND(:TOTAL_STORAGE_TB * {{ transfer_rate }}, 2)
+    AS INITIAL_TRANSFER_COST_USD,
+  ROUND(:TOTAL_STORAGE_TB * 1024 * 0.5 * {{ credit_rate }}, 2)
+    AS INITIAL_COMPUTE_COST_USD,
+
+  -- Monthly incremental replication
+  ROUND(:TOTAL_STORAGE_TB * ({{ change_rate }} / 100) * 30 * {{ transfer_rate }}, 2)
+    AS MONTHLY_TRANSFER_COST_USD,
+  ROUND(:TOTAL_STORAGE_TB * ({{ change_rate }} / 100) * 30 * 1024 * 0.2 * {{ credit_rate }}, 2)
+    AS MONTHLY_COMPUTE_COST_USD,
+
+  -- Monthly target storage
+  ROUND(:TOTAL_STORAGE_TB * {{ storage_rate }}, 2)
+    AS MONTHLY_STORAGE_COST_USD,
+
+  -- Annual total (12x monthly + one-time initial)
+  ROUND(
+    (:TOTAL_STORAGE_TB * {{ transfer_rate }})
+    + (:TOTAL_STORAGE_TB * 1024 * 0.5 * {{ credit_rate }})
+    + ((:TOTAL_STORAGE_TB * ({{ change_rate }} / 100) * 30 * {{ transfer_rate }})
+       + (:TOTAL_STORAGE_TB * ({{ change_rate }} / 100) * 30 * 1024 * 0.2 * {{ credit_rate }})
+       + (:TOTAL_STORAGE_TB * {{ storage_rate }})) * 12
+  , 2) AS ESTIMATED_YEAR1_TOTAL_USD;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+SELECT 'Cost data collected — apply formulas from cost reference' AS STATUS;

@@ -1,0 +1,163 @@
+blueprint_id: blueprint_b0a9b52d
+name: Disaster Recovery
+summary: Configure cross-region failover groups, client redirect, replication schedules,
+  and validate DR readiness for Snowflake.
+overview: 'This blueprint guides you through implementing a complete Disaster Recovery
+  (DR) strategy
+
+  for your Snowflake environment using failover groups, replication, and client redirect.
+
+
+  **What You Will Create:**
+
+  - Failover groups with automated replication schedules
+
+  - Client redirect connections for transparent failover
+
+  - DR drill scripts for planned failover/failback testing
+
+  - Operational runbook with RACI matrix and communication plans
+
+  - Cost estimation for replication, data transfer, and storage
+
+
+  **Prerequisites:**
+
+  - Business Critical Edition or higher (for failover groups and client redirect)
+
+  - At least one additional Snowflake account in a different region
+
+  - ACCOUNTADMIN role on both source and target accounts
+
+  - Source and target accounts in the same Snowflake organization
+
+
+  Run this blueprint once per DR target topology (e.g., once per target account/region
+  pair).
+
+  '
+is_repeatable: true
+steps:
+- check-account-edition-and-info
+- audit-replication-and-failover-groups
+- audit-client-redirect-connections
+- check-replication-health-and-lag
+- identify-coverage-gaps
+- define-dr-requirements
+- create-failover-group-on-source
+- create-secondary-failover-group-on-target
+- set-up-client-redirect
+- pre-drill-validation
+- execute-failover
+- validate-on-new-primary
+- execute-failback
+- gather-organizational-context
+- generate-raci-matrix
+- generate-failover-runbook
+- gather-cost-parameters
+- measure-storage-footprint
+- estimate-replication-and-operational-costs
+tasks:
+- slug: dr-assessment
+  title: DR Assessment
+  summary: Audit current replication infrastructure, client redirect, replication
+    health, and identify coverage gaps.
+  external_requirements:
+  - Snowflake account exists in an organization with at least one other account
+  personas:
+  - Platform Administrator
+  - Security Team
+  role_requirements:
+  - ACCOUNTADMIN
+  steps:
+  - slug: check-account-edition-and-info
+    title: Check Account Edition and Info
+  - slug: audit-replication-and-failover-groups
+    title: Audit Replication and Failover Groups
+  - slug: audit-client-redirect-connections
+    title: Audit Client Redirect Connections
+  - slug: check-replication-health-and-lag
+    title: Check Replication Health and Lag
+  - slug: identify-coverage-gaps
+    title: Identify Coverage Gaps
+- slug: dr-implementation
+  title: DR Implementation
+  summary: Create failover groups with replication schedules and configure client
+    redirect for transparent failover.
+  external_requirements:
+  - DR Assessment completed (Task 1)
+  - Target account exists in same organization, different region
+  - Business Critical Edition on both accounts
+  personas:
+  - Platform Administrator
+  role_requirements:
+  - ACCOUNTADMIN
+  steps:
+  - slug: define-dr-requirements
+    title: Define DR Requirements
+  - slug: create-failover-group-on-source
+    title: Create Failover Group on Source
+  - slug: create-secondary-failover-group-on-target
+    title: Create Secondary Failover Group on Target
+  - slug: set-up-client-redirect
+    title: Set Up Client Redirect
+- slug: dr-testing-and-drills
+  title: DR Testing and Drills
+  summary: Execute a planned failover/failback drill to validate DR readiness and
+    measure actual RTO/RPO.
+  external_requirements:
+  - DR Implementation completed (Task 2)
+  - Failover group(s) actively replicating
+  - Coordination with stakeholders (failover temporarily redirects workloads)
+  personas:
+  - Platform Administrator
+  - Data Engineer
+  role_requirements:
+  - ACCOUNTADMIN
+  steps:
+  - slug: pre-drill-validation
+    title: Pre-Drill Validation
+  - slug: execute-failover
+    title: Execute Failover
+  - slug: validate-on-new-primary
+    title: Validate on New Primary
+  - slug: execute-failback
+    title: Execute Failback
+- slug: dr-runbook-generation
+  title: DR Runbook Generation
+  summary: Generate an operational runbook with RACI matrix, communication templates,
+    replication exceptions, and failover procedures.
+  external_requirements:
+  - DR Implementation completed (Task 2)
+  - Knowledge of team structure and incident management processes
+  personas:
+  - Platform Administrator
+  - Security Team
+  role_requirements:
+  - ACCOUNTADMIN
+  steps:
+  - slug: gather-organizational-context
+    title: Gather Organizational Context
+  - slug: generate-raci-matrix
+    title: Generate RACI Matrix
+  - slug: generate-failover-runbook
+    title: Generate Failover Runbook
+- slug: dr-cost-estimation
+  title: DR Cost Estimation
+  summary: Calculate initial replication, ongoing data transfer, target storage, and
+    operational costs for your DR topology.
+  external_requirements:
+  - Access to SNOWFLAKE.ACCOUNT_USAGE views
+  - Knowledge of target DR region and topology
+  personas:
+  - Platform Administrator
+  - Data Engineer
+  role_requirements:
+  - ACCOUNTADMIN
+  steps:
+  - slug: gather-cost-parameters
+    title: Gather Cost Parameters
+  - slug: measure-storage-footprint
+    title: Measure Storage Footprint
+  - slug: estimate-replication-and-operational-costs
+    title: Estimate Replication and Operational Costs

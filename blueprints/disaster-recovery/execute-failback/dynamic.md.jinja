@@ -1,0 +1,17 @@
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set enable_redirect = dr_enable_client_redirect | default('No') %}
+
+## Failback Procedure
+
+Restoring original primary for failover group `{{ fg_name }}`.
+
+### Steps
+1. Resume replication on original source (now secondary)
+2. Trigger refresh to sync drill changes back
+3. Wait for refresh to complete
+4. Suspend replication on original
+5. Promote original back to primary
+{%- if enable_redirect == 'Yes' %}
+6. Redirect client connection back to original
+{%- endif %}
+7. Resume scheduled replication on target

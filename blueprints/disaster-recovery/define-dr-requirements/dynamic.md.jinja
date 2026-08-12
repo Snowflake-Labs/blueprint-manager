@@ -1,0 +1,33 @@
+{%- set org = snowflake_org_name | default('YOUR_ORG') %}
+{%- set source = dr_source_account | default('SOURCE_ACCOUNT') %}
+{%- set target = dr_target_account | default('TARGET_ACCOUNT') %}
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set dbs = dr_databases | default([]) %}
+{%- set obj_types = dr_object_types | default(['Databases', 'Users', 'Roles', 'Warehouses', 'Network Policies']) %}
+{%- set freq = dr_replication_frequency | default('10 MINUTE') %}
+{%- set rpo = dr_rpo_target | default('') %}
+
+## DR Requirements Summary
+
+| Parameter | Value |
+|-----------|-------|
+| Source Organization | `{{ org }}` |
+| Source Account | `{{ org }}.{{ source }}` |
+| Target Account | `{{ org }}.{{ target }}` |
+| Failover Group Name | `{{ fg_name }}` |
+| Replication Frequency | `{{ freq }}` |
+| RPO Target | `{{ rpo if rpo else '*(not set)*' }}` |
+
+### Object Types to Replicate
+
+{{ obj_types | join(', ') }}
+
+### Databases to Include
+
+{%- if dbs | length > 0 %}
+{%- for db in dbs %}
+- `{{ db }}`
+{%- endfor %}
+{%- else %}
+All standard databases will be included.
+{%- endif %}

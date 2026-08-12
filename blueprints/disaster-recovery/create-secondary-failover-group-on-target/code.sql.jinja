@@ -1,0 +1,39 @@
+{%- set org = snowflake_org_name | default('YOUR_ORG') %}
+{%- set source = dr_source_account | default('SOURCE_ACCOUNT') %}
+{%- set target = dr_target_account | default('TARGET_ACCOUNT') %}
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set freq = dr_replication_frequency | default('10 MINUTE') %}
+-- ============================================================================
+-- STEP: Create Secondary Failover Group on Target
+-- ============================================================================
+-- Create replica group and start initial sync
+-- *** EXECUTE ON TARGET ACCOUNT: {{ org }}.{{ target }} ***
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- Create Secondary Failover Group
+-- ----------------------------------------------------------------------------
+CREATE FAILOVER GROUP IF NOT EXISTS {{ fg_name }}
+  AS REPLICA OF {{ org }}.{{ source }}.{{ fg_name }};
+
+-- ----------------------------------------------------------------------------
+-- Set Replication Schedule
+-- ----------------------------------------------------------------------------
+ALTER FAILOVER GROUP {{ fg_name }}
+  SET REPLICATION_SCHEDULE = '{{ freq }}';
+
+-- ----------------------------------------------------------------------------
+-- Trigger Initial Refresh
+-- ----------------------------------------------------------------------------
+ALTER FAILOVER GROUP {{ fg_name }} REFRESH;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+-- Monitor initial sync progress
+SELECT PHASE_NAME, START_TIME, END_TIME, PROGRESS,
+       DETAILS:"totalBytesToTransfer"::NUMBER AS BYTES_TO_TRANSFER,
+       DETAILS:"numberOfBytesTransferred"::NUMBER AS BYTES_TRANSFERRED
+FROM TABLE(INFORMATION_SCHEMA.REPLICATION_GROUP_REFRESH_PROGRESS('{{ fg_name }}'));

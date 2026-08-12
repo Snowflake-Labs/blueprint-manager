@@ -1,0 +1,73 @@
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set target = dr_target_account | default('TARGET_ACCOUNT') %}
+{%- set approver = dr_event_approver | default('VP Engineering') %}
+{%- set channel = dr_communication_channel | default('#incident') %}
+{%- set rto = dr_rto_target | default('30') %}
+{%- set rpo = dr_rpo_target | default('10') %}
+{%- set enable_redirect = dr_enable_client_redirect | default('No') %}
+
+## DR Runbook: {{ fg_name }}
+
+### 1. Event Declaration
+
+**Trigger Criteria:**
+- Snowflake region outage confirmed (check status.snowflake.com)
+- Outage duration exceeds {{ rto }} minutes
+- OR: Scheduled DR drill
+
+**Decision:**
+- On-call escalates to {{ approver }}
+- {{ approver }} declares DR event
+- Notification sent to {{ channel }}
+
+### 2. Snowflake Failover Steps
+
+1. Suspend replication: `ALTER FAILOVER GROUP {{ fg_name }} SUSPEND;`
+2. Promote to primary: `ALTER FAILOVER GROUP {{ fg_name }} PRIMARY;`
+{%- if enable_redirect == 'Yes' %}
+3. Redirect clients: `ALTER CONNECTION {{ fg_name }}_CONN PRIMARY;`
+{%- endif %}
+4. Resume warehouses: `ALTER WAREHOUSE <name> RESUME;`
+
+### 3. Manual Steps Outside Snowflake
+
+- Repoint ETL/ELT pipelines to target account
+- Update BI tool connections
+- Recycle application connection pools
+- Verify external storage access from target region
+
+### 4. Replication Exceptions
+
+Objects requiring manual recreation:
+- External tables
+- Event tables
+- Hybrid tables
+- Databases from inbound shares
+- PrivateLink / Private Link endpoints
+- MFA enrollment
+
+### 5. Validation Checklist
+
+- [ ] Failover group shows as primary on target
+{%- if enable_redirect == 'Yes' %}
+- [ ] Client redirect resolves to target account
+{%- endif %}
+- [ ] Critical databases accessible
+- [ ] Row counts pass on key tables
+- [ ] Warehouses resumed
+- [ ] ETL pipelines running
+- [ ] BI dashboards functional
+- [ ] Non-replicated objects recreated
+
+### 6. Communication Templates
+
+**DR Event Declared:**
+Subject: [DR EVENT] Snowflake failover initiated
+Target: {{ target }}. Estimated recovery: {{ rto }} minutes.
+
+**Recovery Complete:**
+Subject: [DR RESOLVED] Failover complete
+RPO achieved: {{ rpo }} minutes. All services on {{ target }}.
+
+**Failback Complete:**
+Subject: [DR FAILBACK] Restored to original primary

@@ -1,0 +1,11 @@
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+
+## Failover Execution
+
+Promoting failover group `{{ fg_name }}` on the target account.
+
+### Steps
+1. Suspend replication on target
+2. Promote `{{ fg_name }}` to primary
+3. Verify promotion succeeded
+4. Record failover duration (contributes to RTO)

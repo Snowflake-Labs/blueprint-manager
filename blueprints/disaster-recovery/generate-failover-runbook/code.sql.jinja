@@ -1,0 +1,48 @@
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set enable_redirect = dr_enable_client_redirect | default('No') %}
+-- ============================================================================
+-- STEP: Generate Failover Runbook
+-- ============================================================================
+-- SQL procedures referenced by the runbook
+-- These are the commands to execute during an actual DR event
+-- ============================================================================
+
+-- ===== FAILOVER PROCEDURE (execute on TARGET account) =====
+
+-- 1. Suspend replication
+-- ALTER FAILOVER GROUP {{ fg_name }} SUSPEND;
+
+-- 2. Promote to primary
+-- ALTER FAILOVER GROUP {{ fg_name }} PRIMARY;
+
+{%- if enable_redirect == 'Yes' %}
+-- 3. Redirect clients
+-- ALTER CONNECTION {{ fg_name }}_CONN PRIMARY;
+{%- endif %}
+
+-- 4. Resume warehouses
+-- ALTER WAREHOUSE <name> RESUME;
+
+-- ===== FAILBACK PROCEDURE (execute on ORIGINAL account) =====
+
+-- 1. Resume replication (original is now secondary)
+-- ALTER FAILOVER GROUP {{ fg_name }} RESUME;
+
+-- 2. Refresh to sync changes
+-- ALTER FAILOVER GROUP {{ fg_name }} REFRESH;
+
+-- 3. Suspend before promoting
+-- ALTER FAILOVER GROUP {{ fg_name }} SUSPEND;
+
+-- 4. Promote back to primary
+-- ALTER FAILOVER GROUP {{ fg_name }} PRIMARY;
+
+{%- if enable_redirect == 'Yes' %}
+-- 5. Redirect clients back
+-- ALTER CONNECTION {{ fg_name }}_CONN PRIMARY;
+{%- endif %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+SELECT 'Runbook SQL procedures generated — see comments above' AS STATUS;

@@ -1,0 +1,33 @@
+{%- set org = snowflake_org_name | default('YOUR_ORG') %}
+{%- set target = dr_target_account | default('TARGET_ACCOUNT') %}
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set dbs = dr_databases | default([]) %}
+{%- set obj_types = dr_object_types | default(['Databases', 'Users', 'Roles', 'Warehouses', 'Network Policies']) %}
+{%- set freq = dr_replication_frequency | default('10 MINUTE') %}
+-- ============================================================================
+-- STEP: Create Failover Group on Source
+-- ============================================================================
+-- Create primary failover group with replication schedule
+-- Execute on SOURCE account
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- Create Failover Group
+-- ----------------------------------------------------------------------------
+CREATE FAILOVER GROUP IF NOT EXISTS {{ fg_name }}
+  OBJECT_TYPES = {{ obj_types | map('upper') | join(', ') }}
+{%- if dbs | length > 0 %}
+  ALLOWED_DATABASES = {{ dbs | join(', ') }}
+{%- endif %}
+{%- if 'Integrations' in obj_types %}
+  ALLOWED_INTEGRATION_TYPES = SECURITY INTEGRATIONS, API INTEGRATIONS, STORAGE INTEGRATIONS, EXTERNAL ACCESS INTEGRATIONS, NOTIFICATION INTEGRATIONS
+{%- endif %}
+  ALLOWED_ACCOUNTS = {{ org }}.{{ target }}
+  REPLICATION_SCHEDULE = '{{ freq }}';
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+SHOW FAILOVER GROUPS;

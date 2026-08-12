@@ -1,0 +1,71 @@
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set dbs = dr_databases | default([]) %}
+-- ============================================================================
+-- STEP: Validate on New Primary
+-- ============================================================================
+-- Confirm data and functionality on the newly promoted primary
+-- *** EXECUTE ON NEW PRIMARY (former target account) ***
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- Check Warehouses (replicate suspended, need resume)
+-- ----------------------------------------------------------------------------
+SHOW WAREHOUSES;
+
+-- Resume warehouses as needed:
+-- ALTER WAREHOUSE <warehouse_name> RESUME;
+
+-- ----------------------------------------------------------------------------
+-- Validate Data Accessibility
+-- ----------------------------------------------------------------------------
+{%- if dbs | length > 0 %}
+{%- for db in dbs %}
+-- Check {{ db }}:
+-- SELECT COUNT(*) FROM {{ db }}.<schema>.<table>;
+-- SELECT MAX(<timestamp_col>) FROM {{ db }}.<schema>.<table>;
+{%- endfor %}
+{%- else %}
+-- SELECT COUNT(*) FROM <database>.<schema>.<table>;
+-- SELECT MAX(<timestamp_column>) FROM <database>.<schema>.<table>;
+{%- endif %}
+
+-- ----------------------------------------------------------------------------
+-- Optional Write Test
+-- ----------------------------------------------------------------------------
+-- CREATE OR REPLACE TEMPORARY TABLE TEMP.PUBLIC.DR_WRITE_TEST AS
+-- SELECT CURRENT_TIMESTAMP() AS TESTED_AT, 'DR drill write test' AS NOTE;
+
+-- ----------------------------------------------------------------------------
+-- Data Governance Policy Verification
+-- Confirm masking and row access policies replicated and are attached to tables.
+-- A failover that silently drops governance controls is a compliance regression.
+-- ----------------------------------------------------------------------------
+
+-- List all masking policies on the target account
+SHOW MASKING POLICIES;
+
+-- List all row access policies on the target account
+SHOW ROW ACCESS POLICIES;
+
+-- Spot-check policy attachments across all databases
+-- Verify critical tables still have their policies applied post-failover
+SELECT
+  POLICY_DB,
+  POLICY_SCHEMA,
+  POLICY_NAME,
+  POLICY_KIND,
+  REF_DATABASE_NAME,
+  REF_SCHEMA_NAME,
+  REF_ENTITY_NAME,
+  REF_ENTITY_DOMAIN,
+  REF_COLUMN_NAME
+FROM SNOWFLAKE.ACCOUNT_USAGE.POLICY_REFERENCES
+WHERE POLICY_KIND IN ('MASKING_POLICY', 'ROW_ACCESS_POLICY')
+ORDER BY REF_DATABASE_NAME, REF_ENTITY_NAME, POLICY_KIND;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+SELECT 'Validation complete — review results above' AS STATUS;

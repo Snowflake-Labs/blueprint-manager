@@ -1,0 +1,22 @@
+-- ============================================================================
+-- STEP: Audit Client Redirect Connections
+-- ============================================================================
+-- Check if transparent failover connections are configured
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- List All Connections
+-- ----------------------------------------------------------------------------
+SHOW CONNECTIONS;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+-- Connection details: name, primary/secondary, connection_url
+SELECT "name" AS CONNECTION_NAME,
+       "is_primary" AS IS_PRIMARY,
+       "snowflake_region" AS REGION,
+       "connection_url" AS URL
+FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));

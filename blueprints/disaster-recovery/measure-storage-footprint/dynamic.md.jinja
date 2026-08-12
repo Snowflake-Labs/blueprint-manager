@@ -1,0 +1,14 @@
+{%- set dbs = dr_databases | default([]) %}
+
+## Storage Footprint
+
+{%- if dbs | length > 0 %}
+Measuring storage for the following databases:
+{%- for db in dbs %}
+- `{{ db }}`
+{%- endfor %}
+{%- else %}
+Measuring storage for all standard (replicable) databases in the account.
+{%- endif %}
+
+Databases from inbound shares, application packages, and system databases are excluded from cost calculations.
