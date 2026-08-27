@@ -1,0 +1,24 @@
+-- ============================================================================
+-- STEP: Check Account Edition and Info
+-- ============================================================================
+-- Verify account supports DR features (Business Critical required for full DR)
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- Account and Organization Info
+-- ----------------------------------------------------------------------------
+SELECT CURRENT_ACCOUNT_NAME() AS ACCOUNT_NAME,
+       CURRENT_ORGANIZATION_NAME() AS ORG_NAME;
+
+-- ----------------------------------------------------------------------------
+-- Platform Info (includes edition)
+-- ----------------------------------------------------------------------------
+SELECT SYSTEM$GET_SNOWFLAKE_PLATFORM_INFO() AS PLATFORM_INFO;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+-- Check if replication accounts are visible (confirms org membership)
+SHOW REPLICATION ACCOUNTS;

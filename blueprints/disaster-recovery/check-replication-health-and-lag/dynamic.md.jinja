@@ -1,0 +1,9 @@
+{%- set rpo = dr_rpo_target | default('10') %}
+
+## Replication Health Check
+
+Target RPO: **{{ rpo }} minutes**
+
+If current replication lag exceeds {{ rpo }} minutes, consider:
+- Increasing replication frequency
+- Splitting critical databases into a separate group with tighter scheduling

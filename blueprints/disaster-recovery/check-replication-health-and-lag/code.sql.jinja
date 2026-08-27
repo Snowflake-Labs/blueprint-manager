@@ -1,0 +1,97 @@
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set rpo = dr_rpo_target | default('10') %}
+{%- set freq = dr_replication_frequency | default('10 MINUTE') %}
+-- ============================================================================
+-- STEP: Check Replication Health and Lag
+-- ============================================================================
+-- Measure replication freshness and effective RPO
+-- ============================================================================
+-- NOTE: The health queries below reference failover group '{{ fg_name }}'.
+-- On a first-run assessment (Task 1), this group does not yet exist — both
+-- functions will return empty result sets. This is expected behavior, not an
+-- error. Re-run this step after completing Task 2 to obtain meaningful data.
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- Pre-check: verify the failover group exists before running health queries
+-- If '{{ fg_name }}' does not appear in the results below, complete Task 2
+-- (Create Failover Group on Source) and return here afterward.
+-- ----------------------------------------------------------------------------
+SHOW FAILOVER GROUPS;
+
+-- ----------------------------------------------------------------------------
+-- Replication Refresh History (Last 10 refreshes)
+-- ----------------------------------------------------------------------------
+SELECT PHASE_NAME, START_TIME, END_TIME,
+       DATEDIFF('second', START_TIME, END_TIME) AS DURATION_SECONDS,
+       DATEDIFF('minute', END_TIME, CURRENT_TIMESTAMP()) AS MINUTES_BEHIND,
+       DETAILS:"totalBytesToTransfer"::NUMBER AS BYTES_TO_TRANSFER,
+       DETAILS:"numberOfBytesTransferred"::NUMBER AS BYTES_TRANSFERRED
+FROM TABLE(INFORMATION_SCHEMA.REPLICATION_GROUP_REFRESH_HISTORY('{{ fg_name }}'))
+ORDER BY END_TIME DESC
+LIMIT 10;
+
+-- ----------------------------------------------------------------------------
+-- Database Replication Usage (Last 7 Days)
+-- ----------------------------------------------------------------------------
+SELECT *
+FROM TABLE(INFORMATION_SCHEMA.DATABASE_REPLICATION_USAGE_HISTORY(
+  DATE_RANGE_START => DATEADD('day', -7, CURRENT_TIMESTAMP()),
+  DATE_RANGE_END => CURRENT_TIMESTAMP()
+));
+
+-- ----------------------------------------------------------------------------
+-- Refresh Overlap Diagnostic
+-- If avg_duration_mins >= replication interval, refreshes queue up and
+-- effective RPO silently degrades — the actual lag between refreshes grows
+-- larger than the scheduled interval.
+-- Your configured replication frequency: {{ freq }}
+-- ----------------------------------------------------------------------------
+SELECT
+  REPLICATION_GROUP_NAME,
+  COUNT(*) AS REFRESH_COUNT_30D,
+  ROUND(AVG(DATEDIFF('second', START_TIME, END_TIME)) / 60.0, 1) AS AVG_DURATION_MINS,
+  ROUND(MAX(DATEDIFF('second', START_TIME, END_TIME)) / 60.0, 1) AS MAX_DURATION_MINS,
+  CASE
+    WHEN AVG(DATEDIFF('second', START_TIME, END_TIME)) / 60.0 >= {{ rpo }}
+    THEN 'OVERLAP RISK — effective RPO may exceed target of {{ rpo }} min'
+    ELSE 'OK — avg refresh completes within RPO target'
+  END AS OVERLAP_STATUS
+FROM SNOWFLAKE.ACCOUNT_USAGE.REPLICATION_GROUP_REFRESH_HISTORY
+WHERE START_TIME >= DATEADD('day', -30, CURRENT_TIMESTAMP())
+  AND REPLICATION_GROUP_NAME = UPPER('{{ fg_name }}')
+GROUP BY REPLICATION_GROUP_NAME;
+
+-- ----------------------------------------------------------------------------
+-- Automated Lag Alert (run once to set up continuous monitoring)
+-- This alert fires when replication lag exceeds the RPO target of {{ rpo }} minutes.
+-- Replace <your_notification_integration> with your notification integration name.
+-- Replace <your_warehouse> with a warehouse to use for alert evaluation.
+-- ----------------------------------------------------------------------------
+-- CREATE OR REPLACE ALERT replication_lag_alert
+--   WAREHOUSE = <your_warehouse>
+--   SCHEDULE = '5 MINUTE'
+--   IF (EXISTS (
+--     SELECT 1
+--     FROM TABLE(INFORMATION_SCHEMA.REPLICATION_GROUP_REFRESH_HISTORY('{{ fg_name }}'))
+--     WHERE END_TIME = (
+--       SELECT MAX(END_TIME)
+--       FROM TABLE(INFORMATION_SCHEMA.REPLICATION_GROUP_REFRESH_HISTORY('{{ fg_name }}'))
+--     )
+--     AND DATEDIFF('minute', END_TIME, CURRENT_TIMESTAMP()) > {{ rpo }}
+--   ))
+--   THEN CALL SYSTEM$SEND_EMAIL(
+--     '<your_notification_integration>',
+--     '<alert_recipient@company.com>',
+--     'DR ALERT: Replication lag for {{ fg_name }} exceeds {{ rpo }}-minute RPO target',
+--     'Replication group {{ fg_name }} has not refreshed within the {{ rpo }}-minute RPO target. Investigate immediately.'
+--   );
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+-- Current refresh progress (if any in-flight)
+SELECT PHASE_NAME, START_TIME, END_TIME, PROGRESS
+FROM TABLE(INFORMATION_SCHEMA.REPLICATION_GROUP_REFRESH_PROGRESS('{{ fg_name }}'));

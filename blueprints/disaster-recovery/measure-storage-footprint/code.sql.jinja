@@ -1,0 +1,41 @@
+-- ============================================================================
+-- STEP: Measure Storage Footprint
+-- ============================================================================
+-- Query actual storage per database to establish data volume baseline
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- Storage Per Database (Last 7 Days Average)
+-- ----------------------------------------------------------------------------
+SELECT
+  DATABASE_NAME,
+  ROUND(AVG(AVERAGE_DATABASE_BYTES) / POWER(1024, 4), 4) AS AVG_TB,
+  ROUND(AVG(AVERAGE_FAILSAFE_BYTES) / POWER(1024, 4), 4) AS FAILSAFE_TB,
+  ROUND((AVG(AVERAGE_DATABASE_BYTES) + AVG(AVERAGE_FAILSAFE_BYTES)) / POWER(1024, 4), 4) AS TOTAL_TB
+FROM SNOWFLAKE.ACCOUNT_USAGE.DATABASE_STORAGE_USAGE_HISTORY
+WHERE USAGE_DATE >= DATEADD('day', -7, CURRENT_DATE())
+  AND DELETED IS NULL
+GROUP BY DATABASE_NAME
+ORDER BY AVG_TB DESC;
+
+-- ----------------------------------------------------------------------------
+-- Total Account Storage
+-- ----------------------------------------------------------------------------
+SELECT
+  ROUND(SUM(AVERAGE_DATABASE_BYTES) / POWER(1024, 4), 4) AS TOTAL_DB_TB,
+  ROUND(SUM(AVERAGE_FAILSAFE_BYTES) / POWER(1024, 4), 4) AS TOTAL_FAILSAFE_TB
+FROM SNOWFLAKE.ACCOUNT_USAGE.DATABASE_STORAGE_USAGE_HISTORY
+WHERE USAGE_DATE = (SELECT MAX(USAGE_DATE) FROM SNOWFLAKE.ACCOUNT_USAGE.DATABASE_STORAGE_USAGE_HISTORY)
+  AND DELETED IS NULL;
+
+-- ----------------------------------------------------------------------------
+-- Database Categories (for replicable vs non-replicable split)
+-- ----------------------------------------------------------------------------
+SHOW DATABASES;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+SELECT 'Storage footprint measured — proceed to cost estimation' AS STATUS;

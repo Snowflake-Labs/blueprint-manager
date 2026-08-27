@@ -1,0 +1,19 @@
+-- ============================================================================
+-- STEP: Gather Cost Parameters
+-- ============================================================================
+-- No SQL execution required for this step.
+-- Parameters are collected via questions (topology, rates, change rate).
+-- ============================================================================
+
+-- Verify access to ACCOUNT_USAGE views (needed for cost queries)
+USE ROLE ACCOUNTADMIN;
+
+SELECT COUNT(*) AS ROWS_ACCESSIBLE
+FROM SNOWFLAKE.ACCOUNT_USAGE.DATABASE_STORAGE_USAGE_HISTORY
+WHERE USAGE_DATE >= DATEADD('day', -1, CURRENT_DATE())
+LIMIT 1;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+SELECT 'ACCOUNT_USAGE access confirmed — proceed to storage measurement' AS STATUS;

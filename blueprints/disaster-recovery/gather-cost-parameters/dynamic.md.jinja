@@ -1,0 +1,27 @@
+{%- set topology = dr_topology | default('Cross-Region Same-Cloud') %}
+{%- set credit_rate = dr_credit_rate | default('3.00') %}
+{%- set storage_rate = dr_storage_rate | default('23.00') %}
+{%- set change_rate = dr_daily_change_rate | default('2') %}
+{%- set freq = dr_replication_frequency | default('10 MINUTE') %}
+{%- set drill_freq = dr_drill_frequency | default('Quarterly (4/year)') %}
+
+## Cost Parameters
+
+| Parameter | Value |
+|-----------|-------|
+| Topology | {{ topology }} |
+| Credit Rate | ${{ credit_rate }}/credit |
+| Storage Rate | ${{ storage_rate }}/TB/month |
+| Daily Change Rate | {{ change_rate }}% |
+| Replication Frequency | {{ freq }} |
+| DR Drill Frequency | {{ drill_freq }} |
+
+### Data Transfer Rate
+
+{%- if topology == 'Same-Region' %}
+**$0.00/TB** (free for same-region replication)
+{%- elif topology == 'Cross-Region Same-Cloud' %}
+**$20.00/TB** (standard cross-region rate)
+{%- elif topology == 'Cross-Cloud' %}
+**$40.00/TB** (inter-cloud egress)
+{%- endif %}

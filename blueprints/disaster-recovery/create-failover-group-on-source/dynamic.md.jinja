@@ -1,0 +1,25 @@
+{%- set org = snowflake_org_name | default('YOUR_ORG') %}
+{%- set target = dr_target_account | default('TARGET_ACCOUNT') %}
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set dbs = dr_databases | default([]) %}
+{%- set obj_types = dr_object_types | default(['Databases', 'Users', 'Roles', 'Warehouses', 'Network Policies']) %}
+{%- set freq = dr_replication_frequency | default('10 MINUTE') %}
+
+## Failover Group Configuration
+
+| Setting | Value |
+|---------|-------|
+| Group Name | `{{ fg_name }}` |
+| Object Types | `{{ obj_types | join(', ') }}` |
+| Allowed Accounts | `{{ org }}.{{ target }}` |
+| Replication Schedule | `{{ freq }}` |
+
+### Databases Included
+
+{%- if dbs | length > 0 %}
+{%- for db in dbs %}
+- `{{ db }}`
+{%- endfor %}
+{%- else %}
+All standard databases.
+{%- endif %}

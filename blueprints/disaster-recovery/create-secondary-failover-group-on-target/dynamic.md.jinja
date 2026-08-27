@@ -1,0 +1,16 @@
+{%- set org = snowflake_org_name | default('YOUR_ORG') %}
+{%- set source = dr_source_account | default('SOURCE_ACCOUNT') %}
+{%- set target = dr_target_account | default('TARGET_ACCOUNT') %}
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set freq = dr_replication_frequency | default('10 MINUTE') %}
+
+## Secondary Failover Group
+
+Execute the following on the **target account** (`{{ org }}.{{ target }}`):
+
+| Setting | Value |
+|---------|-------|
+| Replica Of | `{{ org }}.{{ source }}.{{ fg_name }}` |
+| Replication Schedule | `{{ freq }}` |
+
+After creation, the initial full sync will begin automatically.

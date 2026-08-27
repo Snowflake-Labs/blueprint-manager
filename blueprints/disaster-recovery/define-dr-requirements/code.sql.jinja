@@ -1,0 +1,25 @@
+{%- set org = snowflake_org_name | default('YOUR_ORG') %}
+{%- set target = dr_target_account | default('TARGET_ACCOUNT') %}
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+-- ============================================================================
+-- STEP: Define DR Requirements
+-- ============================================================================
+-- Validate target account exists in the organization
+-- Execute on SOURCE account
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- Validate Target Account Exists
+-- ----------------------------------------------------------------------------
+SHOW REPLICATION ACCOUNTS;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+-- Confirm target account is in the list
+SELECT "snowflake_region" AS REGION,
+       "account_name" AS ACCOUNT_NAME
+FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()))
+WHERE "account_name" = '{{ target }}';

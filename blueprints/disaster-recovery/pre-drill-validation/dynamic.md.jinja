@@ -1,0 +1,11 @@
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set rpo = dr_rpo_target | default('10') %}
+
+## Pre-Drill Checklist
+
+| Check | Target |
+|-------|--------|
+| Failover Group | `{{ fg_name }}` |
+| Max Acceptable Lag | {{ rpo }} minutes |
+
+Verify replication is current before proceeding with the drill.

@@ -883,6 +883,15 @@ def try_render_template(template_path, answers, jinja_env, base_dir):
             var_name = match.group(1)
             if "is null" in error_msg:
                 null_vars.append(var_name)
+            elif "has no attribute" in error_msg:
+                # Attribute errors (e.g. "'str object' has no attribute
+                # 'login_name'") indicate a type mismatch in the answers
+                # — the variable exists but its value has the wrong shape.
+                attr_match = re.search(r"has no attribute '([^']+)'", error_msg)
+                attr_name = attr_match.group(1) if attr_match else "unknown"
+                missing_vars.append(
+                    f"type error: expected object with '.{attr_name}' attribute"
+                )
             else:
                 missing_vars.append(var_name)
         else:

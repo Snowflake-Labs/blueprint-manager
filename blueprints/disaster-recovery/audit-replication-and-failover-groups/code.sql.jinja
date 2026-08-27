@@ -1,0 +1,46 @@
+-- ============================================================================
+-- STEP: Audit Replication and Failover Groups
+-- ============================================================================
+-- Discover existing DR infrastructure in the account
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- List Failover Groups (supports promotion)
+-- ----------------------------------------------------------------------------
+SHOW FAILOVER GROUPS;
+
+-- ----------------------------------------------------------------------------
+-- List Replication Groups (read-only, no failover)
+-- ----------------------------------------------------------------------------
+SHOW REPLICATION GROUPS;
+
+-- ----------------------------------------------------------------------------
+-- List Replication Accounts in Organization
+-- ----------------------------------------------------------------------------
+SHOW REPLICATION ACCOUNTS;
+
+-- ----------------------------------------------------------------------------
+-- Legacy: Replication Databases
+-- ----------------------------------------------------------------------------
+SHOW REPLICATION DATABASES;
+
+-- ----------------------------------------------------------------------------
+-- Network Policies (IMPORTANT: must be in failover group scope)
+-- If network policies exist here, ensure NETWORK POLICIES is included in
+-- dr_object_types. Without replication, the target account has no IP
+-- restrictions post-failover — any IP can connect.
+-- ----------------------------------------------------------------------------
+SHOW NETWORK POLICIES;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+-- Review the SHOW outputs above to confirm:
+--   SHOW FAILOVER GROUPS    : lists failover groups and their primary/secondary status
+--   SHOW REPLICATION GROUPS : lists read-only replication groups
+--   SHOW REPLICATION ACCOUNTS: confirms org membership and available target accounts
+--   SHOW REPLICATION DATABASES: lists any legacy database-level replication
+--   SHOW NETWORK POLICIES   : verify these are included in your failover group scope
+SHOW FAILOVER GROUPS;

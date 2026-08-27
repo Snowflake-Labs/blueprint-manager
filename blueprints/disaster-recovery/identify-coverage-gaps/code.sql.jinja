@@ -1,0 +1,48 @@
+-- ============================================================================
+-- STEP: Identify Coverage Gaps
+-- ============================================================================
+-- Find databases not in any replication group and non-replicable objects
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- All Databases in Account
+-- ----------------------------------------------------------------------------
+SHOW DATABASES;
+
+-- ----------------------------------------------------------------------------
+-- Databases Categorized
+-- ----------------------------------------------------------------------------
+SELECT "name" AS DATABASE_NAME,
+       "origin" AS ORIGIN,
+       "owner" AS OWNER,
+       CASE
+         WHEN "origin" != '' THEN 'IMPORTED (not replicable)'
+         WHEN "name" IN ('SNOWFLAKE', 'SNOWFLAKE_SAMPLE_DATA') THEN 'SYSTEM'
+         WHEN "owner" = 'APPLICATION' OR "name" LIKE '%_APP_%' THEN 'APP/PACKAGE'
+         ELSE 'STANDARD (replicable)'
+       END AS CATEGORY
+FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()))
+ORDER BY CATEGORY, DATABASE_NAME;
+
+-- ----------------------------------------------------------------------------
+-- Non-Replicable Objects: External Tables
+-- ----------------------------------------------------------------------------
+SELECT TABLE_CATALOG AS DATABASE_NAME, TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE
+FROM SNOWFLAKE.ACCOUNT_USAGE.TABLES
+WHERE TABLE_TYPE = 'EXTERNAL TABLE'
+  AND DELETED IS NULL;
+
+-- ----------------------------------------------------------------------------
+-- Non-Replicable Objects: Event Tables
+-- ----------------------------------------------------------------------------
+SELECT TABLE_CATALOG AS DATABASE_NAME, TABLE_SCHEMA, TABLE_NAME
+FROM SNOWFLAKE.ACCOUNT_USAGE.TABLES
+WHERE TABLE_TYPE = 'EVENT TABLE'
+  AND DELETED IS NULL;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+SELECT 'Assessment complete — review gaps above' AS STATUS;

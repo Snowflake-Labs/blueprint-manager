@@ -1,0 +1,27 @@
+{%- set dbs = dr_databases | default([]) %}
+
+## Coverage Gap Analysis
+
+{%- if dbs | length > 0 %}
+### Databases Selected for Replication
+
+{%- for db in dbs %}
+- `{{ db }}`
+{%- endfor %}
+
+Any database **not** in this list is unprotected.
+{%- else %}
+### All Standard Databases
+
+All standard (non-imported, non-system) databases will be evaluated for coverage.
+{%- endif %}
+
+### Objects That Cannot Be Replicated
+
+The following object types require manual remediation on the target account:
+- External tables
+- Event tables
+- Hybrid tables
+- Databases from inbound shares
+- Interactive warehouses
+- Append-only streams on replicated sources

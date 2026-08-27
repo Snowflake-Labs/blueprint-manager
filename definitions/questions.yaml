@@ -4490,3 +4490,372 @@
     **More Information:**
     * [SOC 2 Access Reviews](https://docs.snowflake.com/en/user-guide/security-access-control-overview)
 
+- answer_title: dr_target_account
+  question_text: What is the target DR account name?
+  answer_type: text
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    Provide the Snowflake account name for your DR target. This is the account
+    in a different region that will receive replicated data and serve as your
+    failover destination.
+
+    **Format:**
+    Use the account name only (not the full URL). Example: `MY_DR_ACCOUNT`
+
+    **Requirements:**
+    - Must be in the same Snowflake organization as the source account
+    - Should be in a different region (for geographic redundancy)
+    - Must be Business Critical Edition or higher for failover groups
+
+    **How to find it:**
+    Run `SHOW REPLICATION ACCOUNTS;` on the source to list all accounts in your org.
+
+- answer_title: dr_source_account
+  question_text: What is the source (primary) account name?
+  answer_type: text
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    Provide the Snowflake account name for your source (primary) account. This
+    is the account that currently holds your production data.
+
+    **Format:**
+    Use the account name only. Example: `MY_PROD_ACCOUNT`
+
+    **How to find it:**
+    Run `SELECT CURRENT_ACCOUNT_NAME();` on your current account.
+
+- answer_title: dr_failover_group_name
+  question_text: What name suffix should be used for failover group objects?
+  answer_type: text
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    Provide a name for the failover group and related objects. This will be used
+    as the identifier for the failover group, connection objects, etc.
+
+    **Connection naming:** This value also determines the client redirect connection
+    name: `{name}_CONN`. For example, `PROD_DR` produces a connection named
+    `PROD_DR_CONN`. Choose a name that is meaningful in both the failover group
+    and connection string contexts — your application teams will reference the
+    connection URL by this name.
+
+    **Naming Guidelines:**
+    - Use uppercase letters, numbers, and underscores
+    - Keep it short but descriptive
+    - Common patterns: `DR`, `PROD_DR`, `CRITICAL_DR`
+
+    **Examples:**
+    - `DR` — Simple, for a single failover group (connection: `DR_CONN`)
+    - `PROD_DR` — For production tier (connection: `PROD_DR_CONN`)
+    - `CRITICAL_DR` — For critical-tier databases with tight RPO (connection: `CRITICAL_DR_CONN`)
+
+- answer_title: dr_topology
+  question_text: What is the relationship between source and target regions?
+  answer_type: single-select
+  is_org_scope: false
+  options:
+    - text: Same-Region
+    - text: Cross-Region Same-Cloud
+    - text: Cross-Cloud
+  guidance: |
+    **What is this asking?**
+    Select the geographic relationship between your source and target accounts.
+    This determines data transfer costs.
+
+    **Options:**
+    - **Same-Region**: Source and target in the same cloud region (e.g., both AWS us-west-2).
+      Data transfer: $0/TB (free).
+    - **Cross-Region Same-Cloud**: Different regions on the same cloud provider
+      (e.g., AWS us-west-2 → AWS us-east-1). Data transfer: ~$20/TB.
+    - **Cross-Cloud**: Different cloud providers (e.g., AWS → Azure).
+      Data transfer: ~$40/TB.
+
+    **Recommendation:** Cross-Region Same-Cloud provides geographic redundancy
+    at moderate cost. Cross-Cloud provides maximum isolation but at higher cost.
+
+- answer_title: dr_object_types
+  question_text: Which object types do you want to replicate?
+  answer_type: multi-select
+  is_org_scope: false
+  options:
+    - text: Databases
+    - text: Users
+    - text: Roles
+    - text: Warehouses
+    - text: Integrations
+    - text: Network Policies
+    - text: Account Parameters
+    - text: Resource Monitors
+    - text: Shares
+  guidance: |
+    **What is this asking?**
+    Select all account-level object types that should be included in the failover group.
+
+    **Object Types:**
+    - **DATABASES**: Your databases and all their contents (tables, views, procedures, etc.)
+    - **USERS**: User accounts and authentication settings
+    - **ROLES**: Role hierarchy and privilege grants
+    - **WAREHOUSES**: Warehouse definitions (replicate in suspended state)
+    - **INTEGRATIONS**: Security, API, and storage integrations
+    - **NETWORK POLICIES**: IP allowlist/blocklist rules
+    - **ACCOUNT PARAMETERS**: Account-level configuration settings
+    - **RESOURCE MONITORS**: Credit usage monitors and quotas
+    - **SHARES**: Outbound data shares to other accounts or Marketplace listings
+
+    **Recommendation:** At minimum select DATABASES, USERS, and ROLES. For full
+    DR coverage, select all types. Include SHARES if this account has outbound
+    data shares or Marketplace listings that must remain available post-failover.
+
+    **Note:** Account objects (USERS, ROLES, WAREHOUSES, etc.) can only belong
+    to ONE failover group.
+
+- answer_title: dr_databases
+  question_text: Which databases should be included in the failover group?
+  answer_type: list
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    List the databases to include in the failover group. Only standard databases
+    can be replicated — imported databases (from shares), system databases, and
+    application packages are excluded automatically.
+
+    **Format:**
+    Enter each database name on a separate line.
+
+    **Examples:**
+    ```
+    ANALYTICS_DB
+    SALES_DB
+    CUSTOMER_DB
+    WAREHOUSE_DB
+    ```
+
+    **Note:** If you want ALL standard databases, leave this list empty and the
+    blueprint will include all eligible databases.
+
+- answer_title: dr_replication_frequency
+  question_text: How often should replication run?
+  answer_type: single-select
+  is_org_scope: false
+  options:
+    - text: 10 MINUTE
+    - text: 30 MINUTE
+    - text: 60 MINUTE
+    - text: 120 MINUTE
+    - text: USING CRON 0 0 * * * UTC
+  guidance: |
+    **What is this asking?**
+    Select the replication interval. This directly sets your RPO — data
+    ingested between refreshes could be lost during failover.
+
+    **Options:**
+    - `10 MINUTE` — 10-minute RPO (recommended for critical data)
+    - `30 MINUTE` — 30-minute RPO (standard workloads)
+    - `60 MINUTE` — 1-hour RPO (non-critical data)
+    - `120 MINUTE` — 2-hour RPO (low-criticality data)
+    - `USING CRON 0 0 * * * UTC` — Daily at midnight UTC
+
+    **Note:** Snowflake's `REPLICATION_SCHEDULE` only accepts `<n> MINUTE`
+    or `USING CRON <expr> <timezone>` syntax. The selected value is used
+    verbatim in the generated SQL.
+
+    **Recommendation:** Start with `10 MINUTE` for critical databases.
+    You can create separate failover groups with different frequencies for
+    different RPO tiers.
+
+- answer_title: dr_enable_client_redirect
+  question_text: Do you want to enable client redirect for transparent failover?
+  answer_type: single-select
+  is_org_scope: false
+  options:
+    - text: 'Yes'
+    - text: 'No'
+  guidance: |
+    **What is this asking?**
+    Client redirect creates a stable connection URL that automatically points to
+    whichever account is currently primary. Applications using this URL are
+    transparently redirected during failover without connection string changes.
+
+    **Select "Yes" to:**
+    - Create a connection object with a stable URL
+    - Enable automatic client redirection during failover
+    - Reduce manual intervention needed during DR events
+
+    **Select "No" if:**
+    - You prefer manual connection string management
+    - Your applications already handle multi-account connections
+    - You're using DNS CNAME-based routing
+
+    **Recommendation:** Yes for production environments. It significantly
+    reduces RTO by eliminating manual connection string updates.
+
+- answer_title: dr_rpo_target
+  question_text: What is your target RPO (Recovery Point Objective) in minutes?
+  answer_type: text
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    RPO defines the maximum acceptable data loss during a disaster, measured in
+    time. A 10-minute RPO means you accept losing up to 10 minutes of data.
+
+    **Common Values:**
+    - `5` — Near-zero data loss (aggressive, higher replication cost)
+    - `10` — Standard for critical business data
+    - `30` — Acceptable for most analytical workloads
+    - `60` — Standard for non-critical or batch-oriented data
+
+    **Relationship to Replication Frequency:**
+    Your replication frequency should be equal to or less than your RPO target.
+    Example: 10-minute RPO requires at least 10-minute replication frequency.
+
+- answer_title: dr_rto_target
+  question_text: What is your target RTO (Recovery Time Objective) in minutes?
+  answer_type: text
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    RTO defines the maximum acceptable downtime during a disaster. A 30-minute
+    RTO means services must be restored within 30 minutes of a declared event.
+
+    **Common Values:**
+    - `15` — Aggressive (requires client redirect and minimal manual steps)
+    - `30` — Standard for business-critical systems
+    - `60` — Acceptable with some manual intervention
+    - `240` — 4 hours, typical for non-critical systems
+
+    **Components of RTO:**
+    - Failover promotion time (~1-5 minutes)
+    - Client redirect (~instant if configured)
+    - Warehouse resume (seconds per warehouse)
+    - Manual steps (ETL/BI repointing, if needed)
+
+    **Note:** Client redirect significantly reduces RTO by eliminating manual
+    connection string changes.
+
+- answer_title: dr_credit_rate
+  question_text: What is your Snowflake credit rate ($/credit)?
+  answer_type: text
+  is_org_scope: true
+  guidance: |
+    **What is this asking?**
+    The dollar cost per Snowflake credit under your contract. This is used for
+    cost estimation calculations.
+
+    **Default Rates (On-Demand):**
+    - Standard Edition: $2.00/credit
+    - Enterprise Edition: $3.00/credit
+    - Business Critical Edition: $4.00/credit
+
+    **Capacity/Pre-Purchased Rates:**
+    Typically 20-50% lower than on-demand. Check your Snowflake contract for
+    your actual negotiated rate.
+
+    **Default:** If unsure, enter `3.00` (Enterprise on-demand).
+
+- answer_title: dr_storage_rate
+  question_text: What is your storage rate ($/TB/month)?
+  answer_type: text
+  is_org_scope: true
+  guidance: |
+    **What is this asking?**
+    The monthly cost per terabyte of storage. Used to estimate target account
+    storage costs.
+
+    **Common Values:**
+    - `23` — Capacity pricing (most contracts)
+    - `40` — On-demand pricing
+
+    **Default:** If unsure, enter `23`.
+
+- answer_title: dr_daily_change_rate
+  question_text: What percentage of data changes daily?
+  answer_type: text
+  is_org_scope: false
+  guidance: |
+    **What is this asking?**
+    The estimated percentage of total storage that changes (inserts, updates,
+    deletes) per day. This drives incremental replication cost calculations.
+
+    **Common Values:**
+    - `1` — Low-change environments (mostly historical/analytical data)
+    - `2` — Typical for mixed workloads (default)
+    - `5` — High-change environments (heavy ingestion/ETL)
+    - `10` — Very high-change (streaming or frequent full-table refreshes)
+
+    **How to estimate:**
+    Check INFORMATION_SCHEMA.TABLE_STORAGE_METRICS for bytes_inserted/updated
+    relative to total table size over recent days.
+
+- answer_title: dr_drill_frequency
+  question_text: How often will you run DR drills?
+  answer_type: single-select
+  is_org_scope: false
+  options:
+    - text: Monthly (12/year)
+    - text: Quarterly (4/year)
+    - text: Semi-Annually (2/year)
+    - text: Annually (1/year)
+  guidance: |
+    **What is this asking?**
+    How frequently you plan to execute DR failover/failback drills to validate
+    your disaster recovery readiness.
+
+    **Options:**
+    - **Monthly**: Best for highly regulated environments or critical systems
+    - **Quarterly**: Recommended for most production environments
+    - **Semi-Annually**: Minimum for compliance requirements
+    - **Annually**: Bare minimum (not recommended)
+
+    **Recommendation:** Quarterly (4/year) balances validation frequency with
+    operational overhead and cost.
+
+- answer_title: dr_team_name
+  question_text: What is the primary team responsible for Snowflake operations?
+  answer_type: text
+  is_org_scope: true
+  guidance: |
+    **What is this asking?**
+    The name of the team that owns Snowflake platform operations and would be
+    responsible for executing DR procedures.
+
+    **Examples:**
+    - `Data Platform Team`
+    - `Cloud Infrastructure Team`
+    - `Data Engineering`
+    - `SRE Team`
+
+- answer_title: dr_event_approver
+  question_text: Who has authority to declare a DR event?
+  answer_type: text
+  is_org_scope: true
+  guidance: |
+    **What is this asking?**
+    The role or person with authority to declare a disaster recovery event,
+    authorizing failover and stakeholder notification.
+
+    **Examples:**
+    - `VP Engineering`
+    - `CTO`
+    - `Director of Data Platform`
+    - `Head of Infrastructure`
+
+    **Note:** This person is the single "Accountable" party in the RACI matrix
+    for DR event declaration.
+
+- answer_title: dr_communication_channel
+  question_text: What communication channel is used for incident notifications?
+  answer_type: text
+  is_org_scope: true
+  guidance: |
+    **What is this asking?**
+    The primary channel where DR event notifications and updates are sent.
+
+    **Examples:**
+    - `#incident` (Slack channel)
+    - `#data-platform-alerts` (Slack)
+    - `PagerDuty` (alerting tool)
+    - `data-incidents@company.com` (email DL)
+    - `MS Teams - Incidents` (Teams channel)
+

@@ -1,0 +1,16 @@
+{%- set dbs = dr_databases | default([]) %}
+
+## Validation Queries
+
+{%- if dbs | length > 0 %}
+Validate the following databases on the new primary:
+{%- for db in dbs %}
+- `{{ db }}` — check row counts and freshness
+{%- endfor %}
+{%- else %}
+Validate critical databases by checking row counts and data freshness timestamps.
+{%- endif %}
+
+### Warehouse Resume
+
+Warehouses replicate in **suspended state**. Resume any needed for validation.

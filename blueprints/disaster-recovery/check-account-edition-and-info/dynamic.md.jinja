@@ -1,0 +1,18 @@
+{%- set org = snowflake_org_name | default('YOUR_ORG') %}
+{%- set target = dr_target_account | default('TARGET_ACCOUNT') %}
+
+## Account Information
+
+| Setting | Value |
+|---------|-------|
+| Organization | `{{ org }}` |
+| Target Account | `{{ org }}.{{ target }}` |
+
+## Edition Check
+
+Your account must be **Business Critical** or higher for:
+- Failover groups
+- Client redirect
+- Account object replication (users, roles, warehouses, integrations)
+
+If your edition is Standard or Enterprise, only database replication is available.

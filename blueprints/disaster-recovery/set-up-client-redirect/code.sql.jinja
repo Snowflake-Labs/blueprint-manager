@@ -1,0 +1,40 @@
+{%- set org = snowflake_org_name | default('YOUR_ORG') %}
+{%- set source = dr_source_account | default('SOURCE_ACCOUNT') %}
+{%- set target = dr_target_account | default('TARGET_ACCOUNT') %}
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+-- ============================================================================
+-- STEP: Set Up Client Redirect
+-- ============================================================================
+-- Create connection objects for transparent failover
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Part 1: Execute on SOURCE account ({{ org }}.{{ source }})
+-- ----------------------------------------------------------------------------
+USE ROLE ACCOUNTADMIN;
+
+-- Create primary connection
+CREATE CONNECTION IF NOT EXISTS {{ fg_name }}_CONN;
+
+-- Enable failover for the connection
+ALTER CONNECTION {{ fg_name }}_CONN
+  ENABLE FAILOVER TO ACCOUNTS {{ org }}.{{ target }};
+
+-- Get connection URL
+SHOW CONNECTIONS;
+
+-- ----------------------------------------------------------------------------
+-- Part 2: Execute on TARGET account ({{ org }}.{{ target }})
+-- *** Switch your session to the target account before running this block ***
+-- ----------------------------------------------------------------------------
+USE ROLE ACCOUNTADMIN;
+
+CREATE CONNECTION IF NOT EXISTS {{ fg_name }}_CONN
+  AS REPLICA OF {{ org }}.{{ source }}.{{ fg_name }}_CONN;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+-- Note the connection_url from SHOW CONNECTIONS output.
+-- All applications should use this URL instead of direct account URLs.
+SHOW CONNECTIONS;

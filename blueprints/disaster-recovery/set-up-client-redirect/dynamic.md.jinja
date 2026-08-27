@@ -1,0 +1,14 @@
+{%- set org = snowflake_org_name | default('YOUR_ORG') %}
+{%- set source = dr_source_account | default('SOURCE_ACCOUNT') %}
+{%- set target = dr_target_account | default('TARGET_ACCOUNT') %}
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+
+## Client Redirect Configuration
+
+| Setting | Value |
+|---------|-------|
+| Connection Name | `{{ fg_name }}_CONN` |
+| Primary Account | `{{ org }}.{{ source }}` |
+| Failover Target | `{{ org }}.{{ target }}` |
+
+After setup, all applications should use the **connection URL** (from `SHOW CONNECTIONS`) instead of direct account URLs.

@@ -1,0 +1,43 @@
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+{%- set enable_redirect = dr_enable_client_redirect | default('No') %}
+-- ============================================================================
+-- STEP: Execute Failover
+-- ============================================================================
+-- Promote secondary failover group to primary
+-- *** EXECUTE ON TARGET ACCOUNT ***
+-- ============================================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- ----------------------------------------------------------------------------
+-- Suspend replication before failover
+-- ----------------------------------------------------------------------------
+ALTER FAILOVER GROUP {{ fg_name }} SUSPEND;
+
+-- ----------------------------------------------------------------------------
+-- Wait for any in-progress refresh to complete
+-- ----------------------------------------------------------------------------
+SELECT PHASE_NAME, START_TIME
+FROM TABLE(INFORMATION_SCHEMA.REPLICATION_GROUP_REFRESH_PROGRESS('{{ fg_name }}'));
+
+-- ----------------------------------------------------------------------------
+-- Promote secondary to primary
+-- ----------------------------------------------------------------------------
+ALTER FAILOVER GROUP {{ fg_name }} PRIMARY;
+
+{%- if enable_redirect == 'Yes' %}
+
+-- ----------------------------------------------------------------------------
+-- Redirect client connection
+-- ----------------------------------------------------------------------------
+ALTER CONNECTION {{ fg_name }}_CONN PRIMARY;
+{%- endif %}
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+-- Confirm this account is now primary
+SHOW FAILOVER GROUPS;
+{%- if enable_redirect == 'Yes' %}
+SHOW CONNECTIONS;
+{%- endif %}

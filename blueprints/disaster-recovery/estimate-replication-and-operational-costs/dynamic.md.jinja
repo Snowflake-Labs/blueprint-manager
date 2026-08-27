@@ -1,0 +1,41 @@
+{%- set topology = dr_topology | default('Cross-Region Same-Cloud') %}
+{%- set credit_rate = dr_credit_rate | default('3.00') %}
+{%- set storage_rate = dr_storage_rate | default('23.00') %}
+{%- set change_rate = dr_daily_change_rate | default('2') %}
+{%- set drill_freq = dr_drill_frequency | default('Quarterly (4/year)') %}
+
+## Cost Estimation Summary
+
+### Formulas Used
+
+**Initial Replication:**
+```
+initial_transfer = replicable_TB × transfer_rate
+initial_compute = replicable_TB × 1024 × 0.5 credits/GB × ${{ credit_rate }}
+```
+
+**Monthly Incremental:**
+```
+daily_change = replicable_TB × {{ change_rate }}%
+monthly_transfer = daily_change × 30 × transfer_rate
+monthly_compute = daily_change × 30 × 1024 × 0.2 credits/GB × ${{ credit_rate }}
+```
+
+**Monthly Storage:**
+```
+monthly_storage = replicable_TB × ${{ storage_rate }}/TB
+```
+
+{%- if topology == 'Same-Region' %}
+{%- set transfer_rate = '0.00' %}
+{%- elif topology == 'Cross-Region Same-Cloud' %}
+{%- set transfer_rate = '20.00' %}
+{%- elif topology == 'Cross-Cloud' %}
+{%- set transfer_rate = '40.00' %}
+{%- else %}
+{%- set transfer_rate = '20.00' %}
+{%- endif %}
+
+### Transfer Rate Applied
+
+${{ transfer_rate }}/TB ({{ topology }})

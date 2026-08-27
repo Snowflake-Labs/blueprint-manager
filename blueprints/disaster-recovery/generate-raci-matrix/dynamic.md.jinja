@@ -1,0 +1,21 @@
+{%- set team = dr_team_name | default('Data Platform Team') %}
+{%- set approver = dr_event_approver | default('VP Engineering') %}
+
+## RACI Matrix
+
+| # | Activity | R | A | C | I |
+|---|----------|---|---|---|---|
+| 1 | Monitor Snowflake availability | On-call engineer | {{ team }} lead | — | — |
+| 2 | Declare DR event | On-call engineer | {{ approver }} | — | All stakeholders |
+| 3 | Send initial notification | Communications lead | {{ approver }} | Legal | All stakeholders |
+| 4 | Suspend replication on target | {{ team }} | {{ team }} lead | — | On-call engineer |
+| 5 | Promote failover group | {{ team }} | {{ team }} lead | — | All stakeholders |
+| 6 | Promote client redirect | {{ team }} | {{ team }} lead | App owners | All stakeholders |
+| 7 | Resume warehouses | {{ team }} | {{ team }} lead | — | Data engineering |
+| 8 | Recreate non-replicated objects | {{ team }} | {{ team }} lead | — | Data engineering |
+| 9 | Repoint ETL pipelines | Data engineering | Data eng lead | {{ team }} | All stakeholders |
+| 10 | Repoint BI tools | BI team | BI lead | {{ team }} | End users |
+| 11 | Validate data integrity | Data engineering | Data eng lead | — | All stakeholders |
+| 12 | Send recovery-complete notification | Communications lead | {{ approver }} | — | All stakeholders |
+| 13 | Execute failback | {{ team }} | {{ approver }} | All teams | All stakeholders |
+| 14 | Post-incident review | {{ approver }} | CTO | All teams | All stakeholders |

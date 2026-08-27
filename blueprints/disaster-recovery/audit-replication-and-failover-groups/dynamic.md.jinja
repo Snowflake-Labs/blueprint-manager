@@ -1,0 +1,7 @@
+{%- set fg_name = dr_failover_group_name | default('DR') %}
+
+## Replication Audit
+
+Checking for existing failover and replication groups with suffix `{{ fg_name }}`.
+
+If no groups are found, this represents a **critical DR gap** — proceed to Task 2 (Implementation).
