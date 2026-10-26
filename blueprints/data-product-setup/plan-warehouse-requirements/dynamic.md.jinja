@@ -1,19 +1,24 @@
+{%- set account_strategy = account_strategy if account_strategy is defined else 'Single Account' %}
 ## Warehouse Requirements
 
 ### Configured Warehouses
 
 | Warehouse Name | Workload | Size | Timeout | Comment |
 |----------------|----------|------|---------|---------|
-{%- for wh in warehouse_configuration %}
-{%- if account_strategy == 'Single Account' %}
-| `{{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ data_product_environment | upper }}_{{ wh.workload | upper }}` | {{ wh.workload | upper }} | {{ wh.size }} | {{ wh.timeout_minutes }} min | {{ wh.comment }} |
-{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
-| `{{ data_product_domain | upper }}_{{ data_product_name | upper }}_{{ wh.workload | upper }}` | {{ wh.workload | upper }} | {{ wh.size }} | {{ wh.timeout_minutes }} min | {{ wh.comment }} |
-{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
-| `{{ data_product_name | upper }}_{{ data_product_environment | upper }}_{{ wh.workload | upper }}` | {{ wh.workload | upper }} | {{ wh.size }} | {{ wh.timeout_minutes }} min | {{ wh.comment }} |
-{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
-| `{{ data_product_name | upper }}_{{ wh.workload | upper }}` | {{ wh.workload | upper }} | {{ wh.size }} | {{ wh.timeout_minutes }} min | {{ wh.comment }} |
+{%- set valid_orders = ['<domain>_<env>_<dataproduct>', '<domain>_<dataproduct>_<env>', '<env>_<domain>_<dataproduct>'] %}
+{%- set order = object_component_order if object_component_order is defined and object_component_order in valid_orders else '<domain>_<dataproduct>_<env>' %}
+{%- set strategy = account_strategy if account_strategy is defined else 'Single Account' %}
+{%- set parts = [] %}
+{%- for component in order.split('_') %}
+{%- set token = component[1:-1] %}
+{%- if token == 'domain' and strategy not in ['Multi-Account (Domain-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_domain | upper) %}{% endif %}
+{%- elif token == 'env' and strategy not in ['Multi-Account (Environment-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_environment | upper) %}{% endif %}
+{%- elif token == 'dataproduct' %}{%- if parts.append(data_product_name | upper) %}{% endif %}
 {%- endif %}
+{%- endfor %}
+{%- set prefix = parts | join('_') %}
+{%- for wh in warehouse_configuration %}
+| `{{ prefix }}_{{ wh.workload | upper }}` | {{ wh.workload | upper }} | {{ wh.size }} | {{ wh.timeout_minutes }} min | {{ wh.comment }} |
 {%- endfor %}
 
 ### Warehouse Access Roles
@@ -23,15 +28,7 @@ Each warehouse gets an access role for USAGE and MONITOR privileges:
 | Warehouse | Access Role | Grants |
 |-----------|-------------|--------|
 {%- for wh in warehouse_configuration %}
-{%- if account_strategy == 'Single Account' %}
-{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.workload | upper %}
-{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
-{%- set wh_name = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ wh.workload | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
-{%- set wh_name = data_product_name | upper ~ '_' ~ data_product_environment | upper ~ '_' ~ wh.workload | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
-{%- set wh_name = data_product_name | upper ~ '_' ~ wh.workload | upper %}
-{%- endif %}
+{%- set wh_name = prefix ~ '_' ~ wh.workload | upper %}
 | `{{ wh_name }}` | `_WH_U_{{ wh_name }}` | USAGE, MONITOR |
 {%- endfor %}
 

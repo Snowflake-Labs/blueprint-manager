@@ -3,11 +3,12 @@ In this step, you'll create virtual warehouses based on the warehouse configurat
 1. **Size and Scaling** — Initial size, min/max cluster counts for auto-scaling
 2. **Auto-suspend** — Automatic suspension after idle period
 3. **Auto-resume** — Automatic resume when queries arrive
-4. **Tags** — Governance tags for cost attribution and classification
+4. **Statement timeout** — Configured in minutes and applied as `STATEMENT_TIMEOUT_IN_SECONDS` (minutes × 60); fractional minutes are rounded to the nearest second (values under one second are raised to 1 second), and values above 10,080 minutes are clamped to Snowflake’s 604,800-second maximum
+5. **Tags** — Governance tags for cost attribution and classification
 
-Warehouses are created using the CREATE role and then ownership is transferred to ADMIN for ongoing management.
+The step first grants `CREATE WAREHOUSE ON ACCOUNT` to the CREATE role using SECURITYADMIN, then creates warehouses as the CREATE role and transfers ownership to ADMIN for ongoing management. The CREATE role retains the privilege after the step, so reruns and later warehouse additions work without re-granting.
 
-**Account Context:** Execute this SQL in the target account using the CREATE role.
+**Account Context:** Execute this SQL in the target account using SECURITYADMIN for the privilege grant and the CREATE role to create warehouses.
 
 ## Why is this important?
 
@@ -20,6 +21,7 @@ Separate warehouses enable:
 ## Prerequisites
 
 - Core roles created (Step 2.1)
+- SECURITYADMIN available to grant `CREATE WAREHOUSE ON ACCOUNT`
 - Warehouse configuration defined (Step 1.5)
 - Governance tags available in platform database
 
@@ -53,43 +55,6 @@ For production workloads, consider multi-cluster warehouses:
 
 
 ### Configuration Questions
-
-#### What is the name of this data product? (`data_product_name`: text)
-**What is this asking?**
-Provide a descriptive name for your data product. This name will be used in database names, role names, and resource tags.
-
-**Why does this matter?**
-The data product name is a key component of object naming:
-- Databases: `<domain>_<dataproduct>_<zone>_<env>` (based on your naming convention)
-- Roles: `<dataproduct>_owner`, `<dataproduct>_reader`
-- Tags: `DATAPRODUCT = '<dataproduct>'`
-
-A clear, descriptive name makes resources easy to identify and manage.
-
-**Naming Guidelines:**
-- Use lowercase, single words or concatenated words (no underscores)
-- Underscores are reserved for separating naming components (domain, zone, env)
-- Be descriptive but concise
-- Reflect the business purpose or use case
-- Avoid technical jargon unless widely understood
-- Avoid reserved words or special characters
-
-**Examples:**
-| Name | Description |
-|------|-------------|
-| `customer360` | Unified customer data and analytics |
-| `salesanalytics` | Sales reporting and analysis |
-| `supplychain` | Supply chain operations data |
-| `finreporting` | Financial reporting and compliance |
-| `marketing` | Marketing campaign attribution |
-| `productcatalog` | Product information management |
-| `inventory` | Inventory tracking and forecasting |
-
-**Recommendation:**
-Choose a name that business users would recognize. Ask: "If someone searched for this data, what would they type?"
-
-**More Information:**
-* [Identifier Requirements](https://docs.snowflake.com/en/sql-reference/identifiers-syntax) — Valid characters and length limits
 
 #### What account strategy do you wish to implement? (`account_strategy`: single-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
@@ -126,38 +91,36 @@ Choose the account strategy that best fits your organization. Your choice determ
 - Multi-Account (Domain-based)
 - Multi-Account (Domain + Environment)
 
-#### Which account will this data product be deployed to? (`target_account_name`: text)
+#### What core component ordering will be used for account-level object names? (`object_component_order`: single-select)
+**Why Order Matters:**  
+Snowflake displays objects alphabetically. The component order determines how objects cluster together in Snowsight, BI tools, and queries.  
 
-**What is this asking?**
-Enter the name of the Snowflake account where this data product will be created.
+**Option 1: `<domain>_<env>_<dataproduct>`**  
+* Objects cluster by **domain first**, then by environment  
+* All Finance objects together, all Marketing objects together  
+* Example: `FIN_PROD_ANALYTICS`, `FIN_DEV_ANALYTICS`, `MKT_PROD_CAMPAIGNS`  
+* Best for: Organizations where domain ownership is primary  
 
-**Why does this matter?**
-This ensures all generated SQL is clearly documented with the target account, preventing deployment errors and providing clear audit trails.
+**Option 2: `<domain>_<dataproduct>_<env>`**  
+* Objects cluster by **domain first**, then by data product  
+* All Finance Analytics together across environments  
+* Example: `FIN_ANALYTICS_PROD`, `FIN_ANALYTICS_DEV`, `MKT_CAMPAIGNS_PROD`  
+* Best for: Data product-centric organizations  
 
-**How to find your account name:**
-- In Snowsight: Click your account name in the bottom-left corner
-- Run SQL: `SELECT CURRENT_ACCOUNT_NAME();`
-- From your URL: `https://<org>-<account>.snowflakecomputing.com`
+**Option 3: `<env>_<domain>_<dataproduct>`**  
+* Objects cluster by **environment first**  
+* All Production objects together, all Development objects together  
+* Example: `PROD_FIN_ANALYTICS`, `PROD_MKT_CAMPAIGNS`, `DEV_FIN_ANALYTICS`  
+* Best for: Operations teams focused on environment-based management  
 
-**Examples based on strategy:**
+**Recommendation:** Most organizations prefer `<domain>_<env>_<dataproduct>` or `<domain>_<dataproduct>_<env>` for domain-centric clustering.  
 
-**Domain-based strategy:**
-- `ACME_SALES` - Sales domain account
-- `ACME_FINANCE` - Finance domain account
-
-**Environment-based strategy:**
-- `ACME_DEV` - Development environment account
-- `ACME_PROD` - Production environment account
-
-**Domain + Environment strategy:**
-- `ACME_SALES_DEV` - Sales domain, Development environment
-- `ACME_FINANCE_PROD` - Finance domain, Production environment
-
-**Recommendation:**
-Copy the exact account name from your Snowflake session to avoid typos.
-
-**More Information:**
-* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) — Understanding account names
+**More Information:**  
+* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  
+**Options:**
+- <domain>_<env>_<dataproduct>
+- <domain>_<dataproduct>_<env>
+- <env>_<domain>_<dataproduct>
 
 #### Which domain does this data product belong to? (`data_product_domain`: single-select)
 **What is this asking?**
@@ -217,6 +180,76 @@ Environment assignment determines:
 
 **Recommendation:**
 For environment-based and domain+environment strategies, select the environment that matches your target account name.
+
+#### What is the name of this data product? (`data_product_name`: text)
+**What is this asking?**
+Provide a descriptive name for your data product. This name will be used in database names, role names, and resource tags.
+
+**Why does this matter?**
+The data product name is a key component of object naming:
+- Databases: `<domain>_<dataproduct>_<zone>_<env>` (based on your naming convention)
+- Roles: `<dataproduct>_owner`, `<dataproduct>_reader`
+- Tags: `DATAPRODUCT = '<dataproduct>'`
+
+A clear, descriptive name makes resources easy to identify and manage.
+
+**Naming Guidelines:**
+- Use lowercase, single words or concatenated words (no underscores)
+- Underscores are reserved for separating naming components (domain, zone, env)
+- Be descriptive but concise
+- Reflect the business purpose or use case
+- Avoid technical jargon unless widely understood
+- Avoid reserved words or special characters
+
+**Examples:**
+| Name | Description |
+|------|-------------|
+| `customer360` | Unified customer data and analytics |
+| `salesanalytics` | Sales reporting and analysis |
+| `supplychain` | Supply chain operations data |
+| `finreporting` | Financial reporting and compliance |
+| `marketing` | Marketing campaign attribution |
+| `productcatalog` | Product information management |
+| `inventory` | Inventory tracking and forecasting |
+
+**Recommendation:**
+Choose a name that business users would recognize. Ask: "If someone searched for this data, what would they type?"
+
+**More Information:**
+* [Identifier Requirements](https://docs.snowflake.com/en/sql-reference/identifiers-syntax) — Valid characters and length limits
+
+#### Which account will this data product be deployed to? (`target_account_name`: text)
+
+**What is this asking?**
+Enter the name of the Snowflake account where this data product will be created.
+
+**Why does this matter?**
+This ensures all generated SQL is clearly documented with the target account, preventing deployment errors and providing clear audit trails.
+
+**How to find your account name:**
+- In Snowsight: Click your account name in the bottom-left corner
+- Run SQL: `SELECT CURRENT_ACCOUNT_NAME();`
+- From your URL: `https://<org>-<account>.snowflakecomputing.com`
+
+**Examples based on strategy:**
+
+**Domain-based strategy:**
+- `ACME_SALES` - Sales domain account
+- `ACME_FINANCE` - Finance domain account
+
+**Environment-based strategy:**
+- `ACME_DEV` - Development environment account
+- `ACME_PROD` - Production environment account
+
+**Domain + Environment strategy:**
+- `ACME_SALES_DEV` - Sales domain, Development environment
+- `ACME_FINANCE_PROD` - Finance domain, Production environment
+
+**Recommendation:**
+Copy the exact account name from your Snowflake session to avoid typos.
+
+**More Information:**
+* [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) — Understanding account names
 
 #### Define the warehouses for your data product. (`warehouse_configuration`: object-list)
 **What is this asking?**
