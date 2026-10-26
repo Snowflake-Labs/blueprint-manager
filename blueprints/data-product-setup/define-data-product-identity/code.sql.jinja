@@ -1,3 +1,15 @@
+{%- set valid_orders = ['<domain>_<env>_<dataproduct>', '<domain>_<dataproduct>_<env>', '<env>_<domain>_<dataproduct>'] %}
+{%- set order = object_component_order if object_component_order is defined and object_component_order in valid_orders else '<domain>_<dataproduct>_<env>' %}
+{%- set strategy = account_strategy if account_strategy is defined else 'Single Account' %}
+{%- set parts = [] %}
+{%- for component in order.split('_') %}
+{%- set token = component[1:-1] %}
+{%- if token == 'domain' and strategy not in ['Multi-Account (Domain-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_domain | upper) %}{% endif %}
+{%- elif token == 'env' and strategy not in ['Multi-Account (Environment-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_environment | upper) %}{% endif %}
+{%- elif token == 'dataproduct' %}{%- if parts.append(data_product_name | upper) %}{% endif %}
+{%- endif %}
+{%- endfor %}
+{%- set prefix = parts | join('_') %}
 -- ============================================================================
 -- DATA PRODUCT IDENTITY
 -- ============================================================================
@@ -37,26 +49,15 @@ SCIM Configuration:
 {%- endif %}
 
 Naming Components (based on {{ account_strategy }}):
-{%- if account_strategy == 'Single Account' %}
-- Full pattern: <domain>_<dataproduct>_<zone>_<env>
-- Example: {{ data_product_domain | upper }}_{{ data_product_name | upper }}_RAW_{{ data_product_environment | upper }}
-{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
-- Pattern: <domain>_<dataproduct>_<zone> (environment implicit)
-- Example: {{ data_product_domain | upper }}_{{ data_product_name | upper }}_RAW
-{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
-- Pattern: <dataproduct>_<zone>_<env> (domain implicit)
-- Example: {{ data_product_name | upper }}_RAW_{{ data_product_environment | upper }}
-{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
-- Pattern: <dataproduct>_<zone> (domain and environment implicit)
-- Example: {{ data_product_name | upper }}_RAW
-{%- endif %}
+- Prefix: {{ prefix }}
+- Example: {{ prefix }}_RAW
 
 Core Roles to be Created:
-- {{ data_product_name | upper }}_ADMIN  (owns infrastructure)
-- {{ data_product_name | upper }}_CREATE (creates objects)
-- {{ data_product_name | upper }}_WRITE  (modifies data)
-- {{ data_product_name | upper }}_RBAC   (owns access roles)
-- {{ data_product_name | upper }}_READ   (read-only access)
+- {{ prefix }}_ADMIN  (owns infrastructure)
+- {{ prefix }}_CREATE (creates objects)
+- {{ prefix }}_WRITE  (modifies data)
+- {{ prefix }}_RBAC   (owns access roles)
+- {{ prefix }}_READ   (read-only access)
 
 Cost Allocation Tags:
 - DOMAIN = '{{ data_product_domain | upper }}'

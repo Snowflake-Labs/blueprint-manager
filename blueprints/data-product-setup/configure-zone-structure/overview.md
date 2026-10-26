@@ -54,72 +54,36 @@ Each zone becomes a database following your naming convention:
 
 ### Configuration Questions
 
-#### What is the name of this data product? (`data_product_name`: text)
-**What is this asking?**
-Provide a descriptive name for your data product. This name will be used in database names, role names, and resource tags.
+#### What core component ordering will be used for account-level object names? (`object_component_order`: single-select)
+**Why Order Matters:**  
+Snowflake displays objects alphabetically. The component order determines how objects cluster together in Snowsight, BI tools, and queries.  
 
-**Why does this matter?**
-The data product name is a key component of object naming:
-- Databases: `<domain>_<dataproduct>_<zone>_<env>` (based on your naming convention)
-- Roles: `<dataproduct>_owner`, `<dataproduct>_reader`
-- Tags: `DATAPRODUCT = '<dataproduct>'`
+**Option 1: `<domain>_<env>_<dataproduct>`**  
+* Objects cluster by **domain first**, then by environment  
+* All Finance objects together, all Marketing objects together  
+* Example: `FIN_PROD_ANALYTICS`, `FIN_DEV_ANALYTICS`, `MKT_PROD_CAMPAIGNS`  
+* Best for: Organizations where domain ownership is primary  
 
-A clear, descriptive name makes resources easy to identify and manage.
+**Option 2: `<domain>_<dataproduct>_<env>`**  
+* Objects cluster by **domain first**, then by data product  
+* All Finance Analytics together across environments  
+* Example: `FIN_ANALYTICS_PROD`, `FIN_ANALYTICS_DEV`, `MKT_CAMPAIGNS_PROD`  
+* Best for: Data product-centric organizations  
 
-**Naming Guidelines:**
-- Use lowercase, single words or concatenated words (no underscores)
-- Underscores are reserved for separating naming components (domain, zone, env)
-- Be descriptive but concise
-- Reflect the business purpose or use case
-- Avoid technical jargon unless widely understood
-- Avoid reserved words or special characters
+**Option 3: `<env>_<domain>_<dataproduct>`**  
+* Objects cluster by **environment first**  
+* All Production objects together, all Development objects together  
+* Example: `PROD_FIN_ANALYTICS`, `PROD_MKT_CAMPAIGNS`, `DEV_FIN_ANALYTICS`  
+* Best for: Operations teams focused on environment-based management  
 
-**Examples:**
-| Name | Description |
-|------|-------------|
-| `customer360` | Unified customer data and analytics |
-| `salesanalytics` | Sales reporting and analysis |
-| `supplychain` | Supply chain operations data |
-| `finreporting` | Financial reporting and compliance |
-| `marketing` | Marketing campaign attribution |
-| `productcatalog` | Product information management |
-| `inventory` | Inventory tracking and forecasting |
+**Recommendation:** Most organizations prefer `<domain>_<env>_<dataproduct>` or `<domain>_<dataproduct>_<env>` for domain-centric clustering.  
 
-**Recommendation:**
-Choose a name that business users would recognize. Ask: "If someone searched for this data, what would they type?"
-
-**More Information:**
-* [Identifier Requirements](https://docs.snowflake.com/en/sql-reference/identifiers-syntax) — Valid characters and length limits
-
-#### Define the data zones for your data product. (`data_zones`: object-list)
-**What is this asking?**
-Define each data zone (logical layer) for your data product. Zones represent 
-stages in your data pipeline.
-
-**Common Zone Patterns:**
-
-**Three-Zone (Medallion):**
-| Zone | Purpose | Time Travel |
-|------|---------|-------------|
-| RAW | Landing zone for source data | 1 day |
-| CURATED | Cleansed and validated data | 7 days |
-| CONSUMPTION | Business-ready analytics | 7 days |
-
-**Four-Zone:**
-| Zone | Purpose | Time Travel |
-|------|---------|-------------|
-| LANDING | Raw ingestion | 1 day |
-| BRONZE | Light transformation | 1 day |
-| SILVER | Business logic applied | 7 days |
-| GOLD | Aggregated/consumption | 7 days |
-
-**Why does this matter?**
-- Each zone becomes a separate database
-- Zone structure affects data lineage and access patterns
-- Time travel settings impact storage costs
-
-**Recommendation:** Start with 3 zones. You can add more later.
-
+**More Information:**  
+* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  
+**Options:**
+- <domain>_<env>_<dataproduct>
+- <domain>_<dataproduct>_<env>
+- <env>_<domain>_<dataproduct>
 
 #### What account strategy do you wish to implement? (`account_strategy`: single-select)
 Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
@@ -214,3 +178,70 @@ Environment assignment determines:
 
 **Recommendation:**
 For environment-based and domain+environment strategies, select the environment that matches your target account name.
+
+#### What is the name of this data product? (`data_product_name`: text)
+**What is this asking?**
+Provide a descriptive name for your data product. This name will be used in database names, role names, and resource tags.
+
+**Why does this matter?**
+The data product name is a key component of object naming:
+- Databases: `<domain>_<dataproduct>_<zone>_<env>` (based on your naming convention)
+- Roles: `<dataproduct>_owner`, `<dataproduct>_reader`
+- Tags: `DATAPRODUCT = '<dataproduct>'`
+
+A clear, descriptive name makes resources easy to identify and manage.
+
+**Naming Guidelines:**
+- Use lowercase, single words or concatenated words (no underscores)
+- Underscores are reserved for separating naming components (domain, zone, env)
+- Be descriptive but concise
+- Reflect the business purpose or use case
+- Avoid technical jargon unless widely understood
+- Avoid reserved words or special characters
+
+**Examples:**
+| Name | Description |
+|------|-------------|
+| `customer360` | Unified customer data and analytics |
+| `salesanalytics` | Sales reporting and analysis |
+| `supplychain` | Supply chain operations data |
+| `finreporting` | Financial reporting and compliance |
+| `marketing` | Marketing campaign attribution |
+| `productcatalog` | Product information management |
+| `inventory` | Inventory tracking and forecasting |
+
+**Recommendation:**
+Choose a name that business users would recognize. Ask: "If someone searched for this data, what would they type?"
+
+**More Information:**
+* [Identifier Requirements](https://docs.snowflake.com/en/sql-reference/identifiers-syntax) — Valid characters and length limits
+
+#### Define the data zones for your data product. (`data_zones`: object-list)
+**What is this asking?**
+Define each data zone (logical layer) for your data product. Zones represent 
+stages in your data pipeline.
+
+**Common Zone Patterns:**
+
+**Three-Zone (Medallion):**
+| Zone | Purpose | Time Travel |
+|------|---------|-------------|
+| RAW | Landing zone for source data | 1 day |
+| CURATED | Cleansed and validated data | 7 days |
+| CONSUMPTION | Business-ready analytics | 7 days |
+
+**Four-Zone:**
+| Zone | Purpose | Time Travel |
+|------|---------|-------------|
+| LANDING | Raw ingestion | 1 day |
+| BRONZE | Light transformation | 1 day |
+| SILVER | Business logic applied | 7 days |
+| GOLD | Aggregated/consumption | 7 days |
+
+**Why does this matter?**
+- Each zone becomes a separate database
+- Zone structure affects data lineage and access patterns
+- Time travel settings impact storage costs
+
+**Recommendation:** Start with 3 zones. You can add more later.
+

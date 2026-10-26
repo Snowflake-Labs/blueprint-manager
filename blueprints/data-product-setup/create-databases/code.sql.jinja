@@ -1,3 +1,4 @@
+{%- set account_strategy = account_strategy if account_strategy is defined else 'Single Account' %}
 -- ============================================================================
 -- CREATE DATABASES
 -- ============================================================================
@@ -12,15 +13,18 @@
 -- ============================================================================
 
 -- Derive the data product prefix for object names
-{%- if account_strategy == 'Single Account' %}
-{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
-{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
-{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
-{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
-{%- set prefix = data_product_name | upper %}
+{%- set valid_orders = ['<domain>_<env>_<dataproduct>', '<domain>_<dataproduct>_<env>', '<env>_<domain>_<dataproduct>'] %}
+{%- set order = object_component_order if object_component_order is defined and object_component_order in valid_orders else '<domain>_<dataproduct>_<env>' %}
+{%- set strategy = account_strategy if account_strategy is defined else 'Single Account' %}
+{%- set parts = [] %}
+{%- for component in order.split('_') %}
+{%- set token = component[1:-1] %}
+{%- if token == 'domain' and strategy not in ['Multi-Account (Domain-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_domain | upper) %}{% endif %}
+{%- elif token == 'env' and strategy not in ['Multi-Account (Environment-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_environment | upper) %}{% endif %}
+{%- elif token == 'dataproduct' %}{%- if parts.append(data_product_name | upper) %}{% endif %}
 {%- endif %}
+{%- endfor %}
+{%- set prefix = parts | join('_') %}
 
 -- Tag references
 {%- set dp_domain_tag = platform_database_name | upper ~ '.' ~ governance_name | upper ~ '.DOMAIN' %}
@@ -45,13 +49,13 @@ USE ROLE SYSADMIN;
 
 CREATE DATABASE IF NOT EXISTS {{ db_name }}
   DATA_RETENTION_TIME_IN_DAYS = {{ zone.time_travel_days }}
+  COMMENT = '{{ data_product_name }} data product - {{ zone.name | upper }} zone ({{ zone.description }})'
   WITH TAG (
     {{ dp_domain_tag }} = '{{ data_product_domain | upper }}',
     {{ dp_env_tag }} = '{{ data_product_environment | upper }}',
     {{ dp_product_tag }} = '{{ data_product_name | upper }}',
     {{ dp_zone_tag }} = '{{ zone.name | upper }}'
-  )
-  COMMENT = '{{ data_product_name }} data product - {{ zone.name | upper }} zone ({{ zone.description }})';
+  );
 
 -- Remove default PUBLIC schema (not needed)
 DROP SCHEMA IF EXISTS {{ db_name }}.PUBLIC;

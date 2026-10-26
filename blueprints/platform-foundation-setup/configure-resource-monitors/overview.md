@@ -4,6 +4,22 @@ In this step, you'll configure the **Account-Level Resource Monitor**. This acts
 
 **Account Context:** This step should be executed in your Organization Account (if created) or your primary account.
 
+## **Before You Run This Step**
+
+This step uses `CREATE OR REPLACE RESOURCE MONITOR account_resource_monitor`. If a monitor with this name already exists, it will be deleted and recreated: its credit quota, triggers, and accumulated usage are reset, and any warehouses assigned to it lose that assignment. The step then runs `ALTER ACCOUNT SET RESOURCE_MONITOR`, replacing any monitor currently assigned at the account level. If that account-level monitor has a different name, it is not deleted; it is simply unassigned.
+
+Before running this step, inspect existing monitors and the current account-level assignment:
+
+```sql
+SHOW RESOURCE MONITORS LIKE 'account_resource_monitor';
+SHOW RESOURCE MONITORS;
+SELECT "name", "level" FROM TABLE(RESULT_SCAN(LAST_QUERY_ID())) WHERE "level" = 'ACCOUNT';
+```
+
+In the `SHOW RESOURCE MONITORS` output, a row with `level` = `ACCOUNT` is the monitor currently assigned at the account level.
+
+If these checks return no monitor named `account_resource_monitor` and no row with `level` = `ACCOUNT`, it is safe to run as-is. If a monitor with that name exists or another monitor is already assigned to the account, record its settings and decide whether replacing or reassigning it is intended before running.
+
 ## **Why is this important?**
 
 The account-level resource monitor provides:
@@ -51,6 +67,7 @@ The account-level resource monitor provides:
 
 * [Working with Resource Monitors](https://docs.snowflake.com/en/user-guide/resource-monitors) — Overview of resource monitor capabilities  
 * [CREATE RESOURCE MONITOR](https://docs.snowflake.com/en/sql-reference/sql/create-resource-monitor) — SQL command reference
+
 
 ### Configuration Questions
 

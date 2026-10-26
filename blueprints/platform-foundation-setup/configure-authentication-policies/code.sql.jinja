@@ -1,3 +1,6 @@
+{%- set auth_policy_schema = (platform_database_name | upper) ~ '.' ~ (governance_name | upper) %}
+{%- set human_policy_fqn = auth_policy_schema ~ '.HUMAN_USER_AUTH_POLICY' %}
+{%- set service_policy_fqn = auth_policy_schema ~ '.SERVICE_ACCOUNT_AUTH_POLICY' %}
 -- ============================================================================
 -- AUTHENTICATION POLICIES CONFIGURATION
 -- ============================================================================
@@ -6,19 +9,22 @@
 
 USE ROLE ACCOUNTADMIN;
 USE DATABASE {{ platform_database_name | upper }};
+USE SCHEMA {{ governance_name | upper }};
+
+-- Authentication policies are created in the platform governance schema.
 
 -- ============================================================================
 -- STEP 1: CREATE HUMAN USER AUTHENTICATION POLICY
 -- ============================================================================
 
 {%- if "SAML (SSO)" in human_auth_methods and "Password with MFA" not in human_auth_methods %}
-CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
+CREATE OR REPLACE AUTHENTICATION POLICY {{ human_policy_fqn }}
   AUTHENTICATION_METHODS = (SAML)
   CLIENT_TYPES = (SNOWFLAKE_UI, DRIVERS, SNOWSQL)
   SECURITY_INTEGRATIONS = ({{ saml_integration_name | upper }})
   COMMENT = 'Human user policy - SAML SSO only';
 {%- elif "SAML (SSO)" in human_auth_methods and "Password with MFA" in human_auth_methods %}
-CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
+CREATE OR REPLACE AUTHENTICATION POLICY {{ human_policy_fqn }}
   AUTHENTICATION_METHODS = (SAML, PASSWORD)
   MFA_ENROLLMENT = 'REQUIRED'
 {%- if mfa_method | length == 1 and "TOTP (Authenticator Apps)" in mfa_method %}
@@ -32,7 +38,7 @@ CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
   SECURITY_INTEGRATIONS = ({{ saml_integration_name | upper }})
   COMMENT = 'Human user policy - SAML or Password with MFA';
 {%- else %}
-CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
+CREATE OR REPLACE AUTHENTICATION POLICY {{ human_policy_fqn }}
   AUTHENTICATION_METHODS = (PASSWORD)
   MFA_ENROLLMENT = 'REQUIRED'
 {%- if mfa_method | length == 1 and "TOTP (Authenticator Apps)" in mfa_method %}
@@ -65,7 +71,7 @@ CREATE OR REPLACE AUTHENTICATION POLICY human_user_auth_policy
 -- ERROR: No service authentication methods selected. At least one method is required.
 -- Please go back and select at least one service authentication method.
 {%- else %}
-CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
+CREATE OR REPLACE AUTHENTICATION POLICY {{ service_policy_fqn }}
   AUTHENTICATION_METHODS = ({{ auth_methods | join(', ') }})
   CLIENT_TYPES = (DRIVERS)
   SECURITY_INTEGRATIONS = ()
@@ -78,7 +84,7 @@ CREATE OR REPLACE AUTHENTICATION POLICY service_account_auth_policy
 
 {%- if apply_auth_policies_account_level == "Yes - Apply default policy to all users" %}
 -- Apply human user policy at account level
-ALTER ACCOUNT SET AUTHENTICATION POLICY human_user_auth_policy;
+ALTER ACCOUNT SET AUTHENTICATION POLICY {{ human_policy_fqn }};
 {%- else %}
 -- Apply policies to specific users (phased rollout)
 -- Uncomment the users you want to apply the authentication policy to:
@@ -90,7 +96,7 @@ ALTER ACCOUNT SET AUTHENTICATION POLICY human_user_auth_policy;
 {%- else %}
 {%- set quoted_id = user.username | upper %}
 {%- endif %}
--- ALTER USER {{ quoted_id }} SET AUTHENTICATION POLICY human_user_auth_policy;
+-- ALTER USER {{ quoted_id }} SET AUTHENTICATION POLICY {{ human_policy_fqn }};{{ '\n' }}
 {%- endfor %}
 {%- else %}
 {%- for user in scim_admin_users %}
@@ -100,7 +106,7 @@ ALTER ACCOUNT SET AUTHENTICATION POLICY human_user_auth_policy;
 {%- else %}
 {%- set quoted_id = user.login_name | upper %}
 {%- endif %}
--- ALTER USER {{ quoted_id }} SET AUTHENTICATION POLICY human_user_auth_policy;
+-- ALTER USER {{ quoted_id }} SET AUTHENTICATION POLICY {{ human_policy_fqn }};{{ '\n' }}
 {%- endfor %}
 {%- endif %}
 {%- endif %}
@@ -112,19 +118,22 @@ ALTER ACCOUNT SET AUTHENTICATION POLICY human_user_auth_policy;
 -- ============================================================================
 
 -- For service accounts created in Data Product Configuration:
--- ALTER USER <service_account> SET AUTHENTICATION POLICY service_account_auth_policy;
+-- ALTER USER <service_account> SET AUTHENTICATION POLICY {{ service_policy_fqn }};
 
 -- ============================================================================
 -- VERIFICATION
 -- ============================================================================
 
 -- List all authentication policies
-SHOW AUTHENTICATION POLICIES;
+SHOW AUTHENTICATION POLICIES IN SCHEMA {{ platform_database_name | upper }}.{{ governance_name | upper }};
 
 -- Describe each policy
-DESC AUTHENTICATION POLICY human_user_auth_policy;
-DESC AUTHENTICATION POLICY service_account_auth_policy;
-DESC AUTHENTICATION POLICY breakglass_auth_policy;
+DESC AUTHENTICATION POLICY {{ human_policy_fqn }};
+{%- if auth_methods | length > 0 %}
+DESC AUTHENTICATION POLICY {{ service_policy_fqn }};
+{%- endif %}{{ '\n' }}
+-- The break-glass policy is created by the Break-Glass step and may live in a different schema.
+SHOW AUTHENTICATION POLICIES LIKE 'BREAKGLASS_AUTH_POLICY' IN ACCOUNT;
 
 -- Check account-level authentication policy
 SHOW PARAMETERS LIKE 'AUTHENTICATION_POLICY' IN ACCOUNT;

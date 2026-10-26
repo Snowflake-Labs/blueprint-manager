@@ -3343,6 +3343,9 @@
     - Ensure 24/7 monitoring for critical budgets
 
 
+    **Requirement:** Each address must be verified in Snowflake. An unverified address makes notification setup fail. See [Email notifications — verify email addresses](https://docs.snowflake.com/en/user-guide/notifications/email-stored-procedures).
+
+
     **Examples:**
 
     - `finops-team@company.com`
@@ -3817,7 +3820,7 @@
   guidance: "**What is this asking?**\nEnter the email address for resource monitor alerts and notifications.\n\
     \n**Recommended recipients:**\n- Team distribution list (preferred)\n- Data product owner\n- FinOps\
     \ team\n\n**Examples:**\n- `data-team@company.com`\n- `finops@company.com`\n- `john.smith@company.com`\n\
-    \n**Note:** Use a distribution list rather than individual email to ensure \ncoverage during absences.\n"
+    \n**Note:** Use a distribution list rather than individual email to ensure \ncoverage during absences.\n\n**Prerequisite — verified email required:**\nThe address must belong to a Snowflake user in this account whose email address has been verified. Unverified addresses cause `ALLOWED_RECIPIENTS` / email sending to fail. For a distribution list, the list address itself must be set on and verified by a Snowflake user.\n\n**More Information:**\n* [Email notifications — verify email addresses](https://docs.snowflake.com/en/user-guide/notifications/email-stored-procedures)\n"
 - answer_title: scim_prefix
   question_text: What prefix is used for your SCIM provisioner role?
   answer_type: text
@@ -4858,4 +4861,3 @@
     - `PagerDuty` (alerting tool)
     - `data-incidents@company.com` (email DL)
     - `MS Teams - Incidents` (Teams channel)
-

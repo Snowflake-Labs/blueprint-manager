@@ -1,7 +1,7 @@
 In this step, you'll create the five core account-level roles for your data product:
 
 1. **ADMIN** (`<prefix>_ADMIN`) — Full administrative control; owns databases, schemas, and warehouses
-2. **CREATE** (`<prefix>_CREATE`) — Can create objects; receives account access roles for tasks, masking, tagging
+2. **CREATE** (`<prefix>_CREATE`) — Can create objects and manage grants within the data product
 3. **WRITE** (`<prefix>_WRITE`) — Can modify data (INSERT, UPDATE, DELETE)
 4. **RBAC** (`<prefix>_RBAC`) — Owns database access roles; enables delegated access governance
 5. **READ** (`<prefix>_READ`) — Read-only access across the data product
@@ -25,7 +25,8 @@ Core roles provide:
 - Target account accessible with USERADMIN role
 - Data product identity defined (Step 1.2)
 - SCIM prefix configured (or NONE)
-- (Optional) Account access roles exist (`_AR_EXEC_TASK`, `_AR_APPLY_DDM`, etc.)
+
+The `<prefix>_AR_*` account access roles are created later by the hierarchy step, so no pre-existing account access roles are required.
 
 ## Key Concepts
 
@@ -34,7 +35,7 @@ Core roles provide:
 ```
 SYSADMIN
 └── <dataproduct>_ADMIN
-    ├── <dataproduct>_CREATE ← _AR_EXEC_TASK, _AR_VIEW_AUSG, _AR_APPLY_*
+    ├── <dataproduct>_CREATE
     └── <dataproduct>_RBAC
 ```
 
@@ -61,6 +62,41 @@ Role ownership depends on your SCIM configuration:
 
 
 ### Configuration Questions
+
+#### What account strategy do you wish to implement? (`account_strategy`: single-select)
+Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
+  **Single Account:**  
+  * Best for: Small to medium organizations, centralized teams, simpler governance  
+  * Naming: Domain \+ Environment \+ Data Product at database level  
+  * Pros: Lower operational overhead, easier cross-database queries, centralized management  
+  * Cons: Less isolation, shared resource limits, single security boundary  
+  * Recommendation: Consider setting up an organization account even for single-account deployments to enable future growth  
+* **Multi-Account (Environment-based):**  
+  * Best for: Organizations requiring strong environment isolation (dev/test/prod)  
+  * Naming: Environment at account level, Domain \+ Data Product at database level  
+  * Pros: Complete environment isolation, independent security controls, separate billing  
+  * Cons: More complex data sharing, higher operational overhead  
+  * Requirement: Organization account required  
+* **Multi-Account (Domain-based):**  
+  * Best for: Large enterprises with autonomous business units/domains  
+  * Naming: Domain at account level, Environment \+ Data Product at database level  
+  * Pros: Clear cost allocation per domain, independent governance, domain autonomy  
+  * Cons: Higher complexity, requires data sharing for cross-domain analytics  
+  * Requirement: Organization account required  
+* **Multi-Account (Domain \+ Environment):**  
+  * Best for: Large organizations needing both domain and environment isolation  
+  * Naming: Domain \+ Environment at account level, Data Product at database level  
+  * Pros: Maximum isolation, clear ownership and environment separation  
+  * Cons: Highest complexity and operational overhead, most accounts to manage  
+  * Requirement: Organization account required  
+* **More Information:**  
+  * [Organizations](https://docs.snowflake.com/en/user-guide/organizations)  
+  * [Managing Multiple Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts)  
+**Options:**
+- Single Account
+- Multi-Account (Environment-based)
+- Multi-Account (Domain-based)
+- Multi-Account (Domain + Environment)
 
 #### What is the name of this data product? (`data_product_name`: text)
 **What is this asking?**
@@ -181,41 +217,6 @@ For example: `AAD_PROVISIONER`, `OKTA_PROVISIONER`
 * [SCIM Provisioning](https://docs.snowflake.com/en/user-guide/scim)
 
 
-#### What account strategy do you wish to implement? (`account_strategy`: single-select)
-Choose the account strategy that best fits your organization. Your choice determines how domain (business unit/entity) and environment are organized:  
-  **Single Account:**  
-  * Best for: Small to medium organizations, centralized teams, simpler governance  
-  * Naming: Domain \+ Environment \+ Data Product at database level  
-  * Pros: Lower operational overhead, easier cross-database queries, centralized management  
-  * Cons: Less isolation, shared resource limits, single security boundary  
-  * Recommendation: Consider setting up an organization account even for single-account deployments to enable future growth  
-* **Multi-Account (Environment-based):**  
-  * Best for: Organizations requiring strong environment isolation (dev/test/prod)  
-  * Naming: Environment at account level, Domain \+ Data Product at database level  
-  * Pros: Complete environment isolation, independent security controls, separate billing  
-  * Cons: More complex data sharing, higher operational overhead  
-  * Requirement: Organization account required  
-* **Multi-Account (Domain-based):**  
-  * Best for: Large enterprises with autonomous business units/domains  
-  * Naming: Domain at account level, Environment \+ Data Product at database level  
-  * Pros: Clear cost allocation per domain, independent governance, domain autonomy  
-  * Cons: Higher complexity, requires data sharing for cross-domain analytics  
-  * Requirement: Organization account required  
-* **Multi-Account (Domain \+ Environment):**  
-  * Best for: Large organizations needing both domain and environment isolation  
-  * Naming: Domain \+ Environment at account level, Data Product at database level  
-  * Pros: Maximum isolation, clear ownership and environment separation  
-  * Cons: Highest complexity and operational overhead, most accounts to manage  
-  * Requirement: Organization account required  
-* **More Information:**  
-  * [Organizations](https://docs.snowflake.com/en/user-guide/organizations)  
-  * [Managing Multiple Accounts](https://docs.snowflake.com/en/user-guide/organizations-manage-accounts)  
-**Options:**
-- Single Account
-- Multi-Account (Environment-based)
-- Multi-Account (Domain-based)
-- Multi-Account (Domain + Environment)
-
 #### Which account will this data product be deployed to? (`target_account_name`: text)
 
 **What is this asking?**
@@ -248,6 +249,37 @@ Copy the exact account name from your Snowflake session to avoid typos.
 
 **More Information:**
 * [Account Identifiers](https://docs.snowflake.com/en/user-guide/admin-account-identifier) — Understanding account names
+
+#### What core component ordering will be used for account-level object names? (`object_component_order`: single-select)
+**Why Order Matters:**  
+Snowflake displays objects alphabetically. The component order determines how objects cluster together in Snowsight, BI tools, and queries.  
+
+**Option 1: `<domain>_<env>_<dataproduct>`**  
+* Objects cluster by **domain first**, then by environment  
+* All Finance objects together, all Marketing objects together  
+* Example: `FIN_PROD_ANALYTICS`, `FIN_DEV_ANALYTICS`, `MKT_PROD_CAMPAIGNS`  
+* Best for: Organizations where domain ownership is primary  
+
+**Option 2: `<domain>_<dataproduct>_<env>`**  
+* Objects cluster by **domain first**, then by data product  
+* All Finance Analytics together across environments  
+* Example: `FIN_ANALYTICS_PROD`, `FIN_ANALYTICS_DEV`, `MKT_CAMPAIGNS_PROD`  
+* Best for: Data product-centric organizations  
+
+**Option 3: `<env>_<domain>_<dataproduct>`**  
+* Objects cluster by **environment first**  
+* All Production objects together, all Development objects together  
+* Example: `PROD_FIN_ANALYTICS`, `PROD_MKT_CAMPAIGNS`, `DEV_FIN_ANALYTICS`  
+* Best for: Operations teams focused on environment-based management  
+
+**Recommendation:** Most organizations prefer `<domain>_<env>_<dataproduct>` or `<domain>_<dataproduct>_<env>` for domain-centric clustering.  
+
+**More Information:**  
+* [Object Identifiers](https://docs.snowflake.com/en/sql-reference/identifiers)  
+**Options:**
+- <domain>_<env>_<dataproduct>
+- <domain>_<dataproduct>_<env>
+- <env>_<domain>_<dataproduct>
 
 #### What do you want to name the platform database? (`platform_database_name`: text)
 **What is the Platform/Infrastructure Database?**  

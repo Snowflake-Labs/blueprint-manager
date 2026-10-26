@@ -1,14 +1,18 @@
 ## Role Hierarchy Configuration
 
-{%- if account_strategy == 'Single Account' %}
-{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
-{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
-{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
-{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
-{%- set prefix = data_product_name | upper %}
+{%- set valid_orders = ['<domain>_<env>_<dataproduct>', '<domain>_<dataproduct>_<env>', '<env>_<domain>_<dataproduct>'] %}
+{%- set order = object_component_order if object_component_order is defined and object_component_order in valid_orders else '<domain>_<dataproduct>_<env>' %}
+{%- set strategy = account_strategy if account_strategy is defined else 'Single Account' %}
+{%- set parts = [] %}
+{%- for component in order.split('_') %}
+{%- set token = component[1:-1] %}
+{%- if token == 'domain' and strategy not in ['Multi-Account (Domain-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_domain | upper) %}{% endif %}
+{%- elif token == 'env' and strategy not in ['Multi-Account (Environment-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_environment | upper) %}{% endif %}
+{%- elif token == 'dataproduct' %}{%- if parts.append(data_product_name | upper) %}{% endif %}
 {%- endif %}
+{%- endfor %}
+{%- set prefix = parts | join('_') %}
+{%- set scim_enabled = scim_prefix and (scim_prefix | trim) and (scim_prefix | trim | upper) != 'NONE' %}
 
 ### Core Role Hierarchy
 
@@ -50,10 +54,10 @@
 
 ### SCIM Integration
 
-{%- if scim_prefix %}
+{%- if scim_enabled %}
 | Connection | Target |
 |------------|--------|
-| `{{ prefix }}_ADMIN` | → `{{ scim_prefix }}_PROVISIONER` |
+| `{{ prefix }}_ADMIN` | → `{{ scim_prefix | trim | upper }}_PROVISIONER` |
 
 Users can be assigned to data product roles through your identity provider.
 {%- else %}
@@ -70,3 +74,4 @@ Users can be assigned to data product roles through your identity provider.
 | Warehouses | `{{ prefix }}_ADMIN` |
 | Warehouse Access Roles | `{{ prefix }}_RBAC` |
 | Account Access Roles | `{{ prefix }}_RBAC` |
+{%- set account_strategy = account_strategy if account_strategy is defined else 'Single Account' %}
