@@ -1,3 +1,17 @@
+{%- set account_strategy = account_strategy if account_strategy is defined else 'Single Account' %}
+{%- set valid_orders = ['<domain>_<env>_<dataproduct>', '<domain>_<dataproduct>_<env>', '<env>_<domain>_<dataproduct>'] %}
+{%- set order = object_component_order if object_component_order is defined and object_component_order in valid_orders else '<domain>_<dataproduct>_<env>' %}
+{%- set strategy = account_strategy if account_strategy is defined else 'Single Account' %}
+{%- set parts = [] %}
+{%- for component in order.split('_') %}
+{%- set token = component[1:-1] %}
+{%- if token == 'domain' and strategy not in ['Multi-Account (Domain-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_domain | upper) %}{% endif %}
+{%- elif token == 'env' and strategy not in ['Multi-Account (Environment-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_environment | upper) %}{% endif %}
+{%- elif token == 'dataproduct' %}{%- if parts.append(data_product_name | upper) %}{% endif %}
+{%- endif %}
+{%- endfor %}
+{%- set prefix = parts | join('_') %}
+
 -- ============================================================================
 -- CREATE WAREHOUSES
 -- ============================================================================
@@ -7,21 +21,14 @@
 {%- endif %}
 -- ============================================================================
 -- EXECUTE FROM: {% if account_strategy != 'Single Account' %}{{ target_account_name | upper }}{% else %}Primary Account{% endif %}
--- REQUIRED ROLE: {{ data_product_name | upper }}_CREATE (has CREATE WAREHOUSE privilege)
+-- REQUIRED ROLE: SECURITYADMIN (grants CREATE WAREHOUSE), {{ prefix }}_CREATE (creates warehouses)
 -- ============================================================================
 
--- Derive the data product prefix for object names
-{%- if account_strategy == 'Single Account' %}
-{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
-{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
-{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
-{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
-{%- set prefix = data_product_name | upper %}
-{%- endif %}
+-- GRANT CREATE WAREHOUSE TO CREATE ROLE
+USE ROLE SECURITYADMIN;
+GRANT CREATE WAREHOUSE ON ACCOUNT TO ROLE {{ prefix }}_CREATE;
 
--- Use the CREATE role (has CREATE WAREHOUSE privilege)
+-- Use the CREATE role (CREATE WAREHOUSE privilege granted above)
 USE ROLE {{ prefix }}_CREATE;
 
 -- ============================================================================
@@ -42,14 +49,17 @@ CREATE WAREHOUSE IF NOT EXISTS {{ wh_name }}
     SCALING_POLICY = 'STANDARD'
     AUTO_SUSPEND = {{ wh.auto_suspend_seconds }}
     AUTO_RESUME = TRUE
+{%- if wh.timeout_minutes is defined and wh.timeout_minutes is not none and (wh.timeout_minutes | float) > 0 %}
+    STATEMENT_TIMEOUT_IN_SECONDS = {{ [[(([(wh.timeout_minutes | float), 10080] | min) * 60) | round | int, 1] | max, 604800] | min }}
+{%- endif %}
     INITIALLY_SUSPENDED = TRUE
     ENABLE_QUERY_ACCELERATION = FALSE
     COMMENT = '{{ wh.name }} warehouse for {{ data_product_name }} data product';
 
 -- Apply governance tags
 ALTER WAREHOUSE {{ wh_name }} SET TAG
-    {{ platform_database_name }}.{{ governance_name }}.DOMAIN = '{{ data_product_domain }}',
-    {{ platform_database_name }}.{{ governance_name }}.ENVIRONMENT = '{{ data_product_environment }}',
+    {{ platform_database_name }}.{{ governance_name }}.DOMAIN = '{{ data_product_domain | upper }}',
+    {{ platform_database_name }}.{{ governance_name }}.ENVIRONMENT = '{{ data_product_environment | upper }}',
     {{ platform_database_name }}.{{ governance_name }}.DATAPRODUCT = '{{ data_product_name }}',
     {{ platform_database_name }}.{{ governance_name }}.WORKLOAD = '{{ wh.name | upper }}';
 

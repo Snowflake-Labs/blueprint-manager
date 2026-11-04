@@ -10,6 +10,17 @@
 | **Reset Frequency** | {{ account_resource_monitor_reset_frequency }} |
 | **Scope** | Account-wide (all warehouses) |
 
+### ⚠️ Before You Run: Existing Monitor Replacement
+
+This step uses `CREATE OR REPLACE RESOURCE MONITOR account_resource_monitor`. If a monitor with this name already exists, it will be deleted and recreated, resetting its credit quota, triggers, and accumulated usage and removing its warehouse assignments. The step also runs `ALTER ACCOUNT SET RESOURCE_MONITOR`, replacing the monitor currently assigned at the account level; a different monitor is unassigned, not deleted.
+
+Before running, check for an existing monitor and the current account-level assignment:
+
+- `SHOW RESOURCE MONITORS LIKE 'account_resource_monitor';`
+- `SHOW RESOURCE MONITORS;` — a row with `level` = `ACCOUNT` is the monitor currently assigned at the account level.
+
+If neither check finds a monitor named `account_resource_monitor` or a row with `level` = `ACCOUNT`, it is safe to run as-is. If either finds one, record its settings and decide whether the replacement or reassignment is intended.
+
 ### How the Monitor Works
 {%- if account_resource_monitor_action == "Suspend Immediately" %}
 

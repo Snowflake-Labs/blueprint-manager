@@ -1,3 +1,15 @@
+{%- set valid_orders = ['<domain>_<env>_<dataproduct>', '<domain>_<dataproduct>_<env>', '<env>_<domain>_<dataproduct>'] %}
+{%- set order = object_component_order if object_component_order is defined and object_component_order in valid_orders else '<domain>_<dataproduct>_<env>' %}
+{%- set strategy = account_strategy if account_strategy is defined else 'Single Account' %}
+{%- set parts = [] %}
+{%- for component in order.split('_') %}
+{%- set token = component[1:-1] %}
+{%- if token == 'domain' and strategy not in ['Multi-Account (Domain-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_domain | upper) %}{% endif %}
+{%- elif token == 'env' and strategy not in ['Multi-Account (Environment-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_environment | upper) %}{% endif %}
+{%- elif token == 'dataproduct' %}{%- if parts.append(data_product_name | upper) %}{% endif %}
+{%- endif %}
+{%- endfor %}
+{%- set prefix = parts | join('_') %}
 ## Core Roles Configuration
 
 ### Roles to Create
@@ -10,24 +22,19 @@
 
 | Role | Name | Purpose | Owner |
 |------|------|---------|-------|
-| **ADMIN** | `{{ data_product_name | upper }}_ADMIN` | Owns infrastructure (databases, schemas, warehouses) | `{{ owner_role }}` |
-| **CREATE** | `{{ data_product_name | upper }}_CREATE` | Creates objects, receives account access roles | `{{ owner_role }}` |
-| **WRITE** | `{{ data_product_name | upper }}_WRITE` | Modifies data (DML operations) | `{{ owner_role }}` |
-| **RBAC** | `{{ data_product_name | upper }}_RBAC` | Owns access roles for delegated governance | `{{ owner_role }}` |
-| **READ** | `{{ data_product_name | upper }}_READ` | Read-only access to data product | `{{ owner_role }}` |
+| **ADMIN** | `{{ prefix }}_ADMIN` | Owns infrastructure (databases, schemas, warehouses) | `{{ owner_role }}` |
+| **CREATE** | `{{ prefix }}_CREATE` | Creates objects and manages grants | `{{ owner_role }}` |
+| **WRITE** | `{{ prefix }}_WRITE` | Modifies data (DML operations) | `{{ owner_role }}` |
+| **RBAC** | `{{ prefix }}_RBAC` | Owns access roles for delegated governance | `{{ owner_role }}` |
+| **READ** | `{{ prefix }}_READ` | Read-only access to data product | `{{ owner_role }}` |
 
 ### Role Hierarchy
 
 ```
 SYSADMIN
-└── {{ data_product_name | upper }}_ADMIN
-    ├── {{ data_product_name | upper }}_CREATE
-    │   ├── _AR_EXEC_TASK (execute tasks)
-    │   ├── _AR_VIEW_AUSG (view account usage)
-    │   ├── _AR_APPLY_DDM (apply masking policies)
-    │   ├── _AR_APPLY_RAP (apply row access policies)
-    │   └── _AR_APPLY_TAG (apply tags)
-    └── {{ data_product_name | upper }}_RBAC
+└── {{ prefix }}_ADMIN
+    ├── {{ prefix }}_CREATE
+    └── {{ prefix }}_RBAC
 ```
 
 ### SCIM Configuration
@@ -53,14 +60,12 @@ SYSADMIN
 
 ### Account Access Roles
 
-The following account access roles will be granted to `{{ data_product_name | upper }}_CREATE`:
+No account access roles are granted in this step. The following `<prefix>_AR_*` account access roles are created and granted in the later hierarchy step:
 
 | Access Role | Purpose |
 |-------------|---------|
-| `_AR_EXEC_TASK` | Execute Snowflake tasks (scheduled jobs) |
-| `_AR_VIEW_AUSG` | View Account Usage data for monitoring |
-| `_AR_APPLY_DDM` | Apply dynamic data masking policies |
-| `_AR_APPLY_RAP` | Apply row access policies |
-| `_AR_APPLY_TAG` | Apply tags to objects |
-
-> **Note:** These roles must exist in the account. If they don't exist, the grants will be skipped with warnings.
+| `<prefix>_AR_EXEC_TASK` | Execute Snowflake tasks (scheduled jobs) |
+| `<prefix>_AR_VIEW_AUSG` | View Account Usage data for monitoring |
+| `<prefix>_AR_APPLY_DDM` | Apply dynamic data masking policies |
+| `<prefix>_AR_APPLY_RAP` | Apply row access policies |
+| `<prefix>_AR_APPLY_TAG` | Apply tags to objects |

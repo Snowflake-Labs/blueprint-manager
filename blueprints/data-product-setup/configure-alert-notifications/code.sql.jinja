@@ -1,3 +1,4 @@
+{%- set account_strategy = account_strategy if account_strategy is defined else 'Single Account' %}
 -- ============================================================================
 -- CONFIGURE ALERT NOTIFICATIONS
 -- ============================================================================
@@ -11,15 +12,18 @@
 -- ============================================================================
 
 -- Derive the data product prefix for object names
-{%- if account_strategy == 'Single Account' %}
-{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
-{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
-{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
-{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
-{%- set prefix = data_product_name | upper %}
+{%- set valid_orders = ['<domain>_<env>_<dataproduct>', '<domain>_<dataproduct>_<env>', '<env>_<domain>_<dataproduct>'] %}
+{%- set order = object_component_order if object_component_order is defined and object_component_order in valid_orders else '<domain>_<dataproduct>_<env>' %}
+{%- set strategy = account_strategy if account_strategy is defined else 'Single Account' %}
+{%- set parts = [] %}
+{%- for component in order.split('_') %}
+{%- set token = component[1:-1] %}
+{%- if token == 'domain' and strategy not in ['Multi-Account (Domain-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_domain | upper) %}{% endif %}
+{%- elif token == 'env' and strategy not in ['Multi-Account (Environment-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_environment | upper) %}{% endif %}
+{%- elif token == 'dataproduct' %}{%- if parts.append(data_product_name | upper) %}{% endif %}
 {%- endif %}
+{%- endfor %}
+{%- set prefix = parts | join('_') %}
 
 -- Notification configuration requires ACCOUNTADMIN
 USE ROLE ACCOUNTADMIN;
@@ -45,16 +49,29 @@ USE ROLE {{ prefix }}_ADMIN;
 -- Create an alert schema if it doesn't exist
 CREATE SCHEMA IF NOT EXISTS {{ prefix }}_{{ data_zones[0].name | upper }}.ALERTS;
 
--- Create alert to notify on resource monitor status
+-- Create alert to notify on resource monitor status.
+-- ACCOUNT_USAGE.RESOURCE_MONITORS can lag up to ~2 hours. The NOT EXISTS guard
+-- skips the email if this alert (in this data product's database only) already
+-- triggered in the last 24 hours, so a
+-- monitor above 75% sends at most one email per day instead of one per hour.
 CREATE OR REPLACE ALERT {{ prefix }}_{{ data_zones[0].name | upper }}.ALERTS.RESOURCE_MONITOR_ALERT
   WAREHOUSE = {{ prefix }}_WH_{{ warehouse_configuration[0].name | upper }}
   SCHEDULE = 'USING CRON 0 * * * * UTC'
   IF (EXISTS (
-    SELECT 1 
+    SELECT 1
     FROM SNOWFLAKE.ACCOUNT_USAGE.RESOURCE_MONITORS
     WHERE NAME = '{{ prefix }}_MONITOR'
       AND USED_CREDITS / NULLIF(CREDIT_QUOTA, 0) >= 0.75
-      AND END_TIME IS NULL
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM TABLE({{ prefix }}_{{ data_zones[0].name | upper }}.INFORMATION_SCHEMA.ALERT_HISTORY(
+      SCHEDULED_TIME_RANGE_START => DATEADD('hour', -24, CURRENT_TIMESTAMP()),
+      RESULT_LIMIT => 10000
+    ))
+    WHERE NAME = 'RESOURCE_MONITOR_ALERT'
+      AND SCHEMA_NAME = 'ALERTS'
+      AND STATE = 'TRIGGERED'
+      AND DATABASE_NAME = '{{ prefix }}_{{ data_zones[0].name | upper }}'
   ))
   THEN
     CALL SYSTEM$SEND_EMAIL(
@@ -64,12 +81,14 @@ CREATE OR REPLACE ALERT {{ prefix }}_{{ data_zones[0].name | upper }}.ALERTS.RES
       'Resource monitor {{ prefix }}_MONITOR has exceeded 75% of credit quota. Current usage requires attention.'
     );
 
--- Enable the alert
-ALTER ALERT {{ prefix }}_{{ data_zones[0].name | upper }}.ALERTS.RESOURCE_MONITOR_ALERT RESUME;
-
--- Grant execute alert permission (required for alert to run)
+-- Grant EXECUTE ALERT to the alert owner role (required before RESUME)
 USE ROLE SECURITYADMIN;
 GRANT EXECUTE ALERT ON ACCOUNT TO ROLE {{ prefix }}_ADMIN;
+
+USE ROLE {{ prefix }}_ADMIN;
+
+-- Enable the alert
+ALTER ALERT {{ prefix }}_{{ data_zones[0].name | upper }}.ALERTS.RESOURCE_MONITOR_ALERT RESUME;
 
 {%- else %}
 
@@ -132,8 +151,8 @@ Your {{ data_product_name }} data product is now fully configured with:
 {%- if notification_email %}
 ✓ Alert notifications to {{ notification_email }}
 {%- endif %}
-{%- if scim_prefix %}
-✓ SCIM integration via {{ scim_prefix }}_PROVISIONER
+{%- if scim_prefix and (scim_prefix | trim) and (scim_prefix | trim | upper) != 'NONE' %}
+✓ SCIM integration via {{ scim_prefix | trim | upper }}_PROVISIONER
 {%- endif %}
 
 NEXT STEPS:

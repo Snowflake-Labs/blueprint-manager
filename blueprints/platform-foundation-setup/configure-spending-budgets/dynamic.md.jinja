@@ -26,6 +26,8 @@ Budget alerts will be sent to:
 - `{{ email | trim }}`
 {%- endfor %}
 
+**Prerequisite:** Each listed address must be a verified email address in Snowflake, otherwise notification setup fails. See [Email notifications — verify email addresses](https://docs.snowflake.com/en/user-guide/notifications/email-stored-procedures).
+
 ### What Happens When Budget Threshold is Exceeded?
 
 **Important:** Snowflake budgets are **informational only**.

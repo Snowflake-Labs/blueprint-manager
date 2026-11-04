@@ -40,7 +40,7 @@ A [**tag**](https://docs.snowflake.com/en/user-guide/object-tagging/introduction
 
 * **Start simple:** You can set a [maximum of 50 tags on a single object](https://docs.snowflake.com/user-guide/object-tagging/introduction#tag-quotas), including tables and views. Begin with essential dimensions and expand as your FinOps maturity grows. You can always add more tags later.
 
-* **Automate tag application:** Use SQL scripts or IaC tools to automate tag application and reduce manual errors. Snowflake doesn't automatically prevent creating resources without tags, so this step will help you to create an untagged_warehouses view to monitor and identify resources missing required tags.
+* **Automate tag application:** Use SQL scripts or IaC tools to automate tag application and reduce manual errors. Snowflake doesn't automatically prevent creating resources without tags. The `untagged_warehouses` view lists warehouses with credit usage in the last 30 days, sourced from `WAREHOUSE_METERING_HISTORY`, that lack a `DOMAIN` tag. It exposes `warehouse_name`, `last_metered_at`, and `credits_last_30_days`; idle warehouses without metering in that window won't appear. Use `SHOW WAREHOUSES` for a full warehouse inventory. The view excludes the `CLOUD_SERVICES_ONLY` pseudo warehouse, and warehouses dropped during the last 30 days can still appear until they age out; verify with `SHOW WAREHOUSES`.
 
 * **Enforce production at minimum:** At a minimum, consider requiring tags on production resources to ensure cost visibility where it matters most.
 
@@ -50,6 +50,7 @@ A [**tag**](https://docs.snowflake.com/en/user-guide/object-tagging/introduction
 
 * [Introduction to Object Tagging](https://docs.snowflake.com/en/user-guide/object-tagging/introduction) — Overview of Snowflake's tagging framework  
 * [Attributing Costs using Tags](https://docs.snowflake.com/en/user-guide/cost-attributing) — Using tags for cost allocation and reporting
+
 
 ### Configuration Questions
 

@@ -1,3 +1,15 @@
+{%- set valid_orders = ['<domain>_<env>_<dataproduct>', '<domain>_<dataproduct>_<env>', '<env>_<domain>_<dataproduct>'] %}
+{%- set order = object_component_order if object_component_order is defined and object_component_order in valid_orders else '<domain>_<dataproduct>_<env>' %}
+{%- set strategy = account_strategy if account_strategy is defined else 'Single Account' %}
+{%- set parts = [] %}
+{%- for component in order.split('_') %}
+{%- set token = component[1:-1] %}
+{%- if token == 'domain' and strategy not in ['Multi-Account (Domain-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_domain | upper) %}{% endif %}
+{%- elif token == 'env' and strategy not in ['Multi-Account (Environment-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_environment | upper) %}{% endif %}
+{%- elif token == 'dataproduct' %}{%- if parts.append(data_product_name | upper) %}{% endif %}
+{%- endif %}
+{%- endfor %}
+{%- set prefix = parts | join('_') %}
 ## Data Product Identity
 
 ### Core Identity
@@ -40,18 +52,18 @@ Based on your SCIM configuration:
 ```
 {%- if scim_prefix | upper != 'NONE' %}
 Owner Role: {{ scim_prefix | upper }}_PROVISIONER
-  └── {{ data_product_name | upper }}_ADMIN
-  └── {{ data_product_name | upper }}_CREATE
-  └── {{ data_product_name | upper }}_WRITE
-  └── {{ data_product_name | upper }}_RBAC
-  └── {{ data_product_name | upper }}_READ
+  └── {{ prefix }}_ADMIN
+  └── {{ prefix }}_CREATE
+  └── {{ prefix }}_WRITE
+  └── {{ prefix }}_RBAC
+  └── {{ prefix }}_READ
 {%- else %}
 Owner Role: USERADMIN
-  └── {{ data_product_name | upper }}_ADMIN
-  └── {{ data_product_name | upper }}_CREATE
-  └── {{ data_product_name | upper }}_WRITE
-  └── {{ data_product_name | upper }}_RBAC
-  └── {{ data_product_name | upper }}_READ
+  └── {{ prefix }}_ADMIN
+  └── {{ prefix }}_CREATE
+  └── {{ prefix }}_WRITE
+  └── {{ prefix }}_RBAC
+  └── {{ prefix }}_READ
 {%- endif %}
 ```
 

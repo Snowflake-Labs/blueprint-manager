@@ -8,8 +8,8 @@ This section documents the authentication policies for your Snowflake account. T
 
 | User Type | Policy Name | Authentication Methods | MFA |
 |-----------|-------------|------------------------|-----|
-| Human Users | `human_user_auth_policy` | {{ human_auth_methods | join(', ') }} | {{ mfa_method | join(', ') }} |
-| Service Accounts | `service_account_auth_policy` | {{ service_auth_methods | join(', ') }} | Not Required |
+| Human Users | `{{ platform_database_name | upper }}.{{ governance_name | upper }}.HUMAN_USER_AUTH_POLICY` | {{ human_auth_methods | join(', ') }} | {{ mfa_method | join(', ') }} |
+| Service Accounts | `{{ platform_database_name | upper }}.{{ governance_name | upper }}.SERVICE_ACCOUNT_AUTH_POLICY` | {{ service_auth_methods | join(', ') }} | Not Required |
 | Break-Glass | `breakglass_auth_policy` | Password Only | Disabled |
 
 ## Policy Details
@@ -18,7 +18,7 @@ This section documents the authentication policies for your Snowflake account. T
 
 | Setting | Value |
 |---------|-------|
-| **Policy Name** | `human_user_auth_policy` |
+| **Policy Name** | `{{ platform_database_name | upper }}.{{ governance_name | upper }}.HUMAN_USER_AUTH_POLICY` |
 | **Authentication Methods** | {{ human_auth_methods | join(', ') }} |
 | **MFA Methods** | {{ mfa_method | join(', ') }} |
 | **Client Types** | All (UI, Drivers, SnowSQL) |
@@ -36,7 +36,7 @@ Users authenticate with password + MFA. Consider implementing SSO for improved s
 
 | Setting | Value |
 |---------|-------|
-| **Policy Name** | `service_account_auth_policy` |
+| **Policy Name** | `{{ platform_database_name | upper }}.{{ governance_name | upper }}.SERVICE_ACCOUNT_AUTH_POLICY` |
 | **Authentication Methods** | {{ service_auth_methods | join(', ') }} |
 | **MFA Methods** | None (not applicable for services) |
 | **Client Types** | Drivers only (no UI access) |

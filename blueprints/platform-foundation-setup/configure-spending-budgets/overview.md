@@ -12,7 +12,7 @@ Configuring your budget correctly ensures you receive meaningful alerts:
 ## External Prerequisites
 
 - Monthly credit limit approved by your finance team
-- Email addresses or distribution lists for alert recipients
+- Each budget notification email address, including distribution list addresses, must be verified in Snowflake before use. Unverified recipients cause budget notification setup with `SET_EMAIL_NOTIFICATIONS` to fail. See [Email notifications — verify email addresses](https://docs.snowflake.com/en/user-guide/notifications/email-stored-procedures).
 
 ## Key Concepts
 
@@ -26,7 +26,7 @@ To convert from a dollar amount, use your negotiated credit rate. For example, i
 The percentage of the limit (e.g., 75%) that triggers an alert when projected spending exceeds it.
 
 **Email Notifications**
-This step configures email-based notifications, which is the simplest approach. Distribution lists are recommended for team visibility.
+This step configures email-based notifications, which is the simplest approach. Distribution lists are recommended for team visibility. Recipients must be verified email addresses in Snowflake, or setup fails.
 
 **Alternative Notification Methods**
 Snowflake also supports webhooks (Slack/Teams) and cloud service queues (SNS/Event Grid). These require additional configuration via notification integrations. See the "Upgrading to Webhook Notifications" section in the generated documentation.
@@ -53,6 +53,7 @@ For multiple thresholds (e.g., 50%, 75%, 90%), use Resource Monitors (Configure 
 * [SET_SPENDING_LIMIT Class Method](https://docs.snowflake.com/en/sql-reference/classes/budget/methods/set_spending_limit) — Setting credit limits on budgets
 * [SET_NOTIFICATION_THRESHOLD Class Method](https://docs.snowflake.com/en/sql-reference/classes/budget/methods/set_notification_threshold) — Configuring alert thresholds
 * [SET_REFRESH_TIER Class Method](https://docs.snowflake.com/en/sql-reference/classes/budget/methods/set_refresh_tier) — Setting forecast update frequency
+
 
 ### Configuration Questions
 
@@ -143,6 +144,8 @@ Budget alerts need to reach people who can investigate and take action on spendi
 - Use distribution lists for team visibility (e.g., `finops-team@company.com`)
 - Include both technical and financial stakeholders
 - Ensure 24/7 monitoring for critical budgets
+
+**Requirement:** Each address must be verified in Snowflake. An unverified address makes notification setup fail. See [Email notifications — verify email addresses](https://docs.snowflake.com/en/user-guide/notifications/email-stored-procedures).
 
 **Examples:**
 - `finops-team@company.com`

@@ -70,20 +70,26 @@ GROUP BY tr.tag_value, DATE_TRUNC('day', wm.start_time)
 ORDER BY usage_date DESC, total_credits DESC;
 
 -- View: Untagged warehouses
+-- Uses WAREHOUSE_METERING_HISTORY because the account-usage warehouses inventory is not documented;
+-- only warehouses with credit usage in the last 30 days are listed. Joins tags on warehouse ID,
+-- excludes the CLOUD_SERVICES_ONLY pseudo warehouse, and reports each warehouse's latest name.
+-- Warehouses dropped within the window may still appear until they age out.
 CREATE OR REPLACE VIEW untagged_warehouses AS
-SELECT 
-  w.name AS warehouse_name,
-  w.size,
-  w.created_on
-FROM snowflake.account_usage.warehouses w
+SELECT
+  MAX_BY(wm.warehouse_name, wm.start_time) AS warehouse_name,
+  MAX(wm.end_time) AS last_metered_at,
+  SUM(wm.credits_used) AS credits_last_30_days
+FROM snowflake.account_usage.warehouse_metering_history wm
 LEFT JOIN (
-  SELECT DISTINCT object_name 
-  FROM snowflake.account_usage.tag_references 
+  SELECT DISTINCT object_id
+  FROM snowflake.account_usage.tag_references
   WHERE tag_name = 'DOMAIN' AND domain = 'WAREHOUSE' AND object_deleted IS NULL
-) d ON w.name = d.object_name
-WHERE w.deleted IS NULL
-  AND d.object_name IS NULL
-ORDER BY w.created_on DESC;
+) d ON wm.warehouse_id = d.object_id
+WHERE wm.start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP())
+  AND wm.warehouse_name <> 'CLOUD_SERVICES_ONLY'
+  AND d.object_id IS NULL
+GROUP BY wm.warehouse_id
+ORDER BY credits_last_30_days DESC;
 
 -- Grant access to cost views
 GRANT SELECT ON VIEW cost_by_domain TO ROLE SYSADMIN;

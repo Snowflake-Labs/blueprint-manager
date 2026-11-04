@@ -1,3 +1,4 @@
+{%- set account_strategy = account_strategy if account_strategy is defined else 'Single Account' %}
 -- ============================================================================
 -- CREATE DATA PRODUCT CORE ROLES
 -- ============================================================================
@@ -21,15 +22,18 @@
 {%- endif %}
 
 -- Derive the data product prefix for object names
-{%- if account_strategy == 'Single Account' %}
-{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper ~ '_' ~ data_product_environment | upper %}
-{%- elif account_strategy == 'Multi-Account (Environment-based)' %}
-{%- set prefix = data_product_domain | upper ~ '_' ~ data_product_name | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain-based)' %}
-{%- set prefix = data_product_name | upper ~ '_' ~ data_product_environment | upper %}
-{%- elif account_strategy == 'Multi-Account (Domain + Environment)' %}
-{%- set prefix = data_product_name | upper %}
+{%- set valid_orders = ['<domain>_<env>_<dataproduct>', '<domain>_<dataproduct>_<env>', '<env>_<domain>_<dataproduct>'] %}
+{%- set order = object_component_order if object_component_order is defined and object_component_order in valid_orders else '<domain>_<dataproduct>_<env>' %}
+{%- set strategy = account_strategy if account_strategy is defined else 'Single Account' %}
+{%- set parts = [] %}
+{%- for component in order.split('_') %}
+{%- set token = component[1:-1] %}
+{%- if token == 'domain' and strategy not in ['Multi-Account (Domain-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_domain | upper) %}{% endif %}
+{%- elif token == 'env' and strategy not in ['Multi-Account (Environment-based)', 'Multi-Account (Domain + Environment)'] %}{%- if parts.append(data_product_environment | upper) %}{% endif %}
+{%- elif token == 'dataproduct' %}{%- if parts.append(data_product_name | upper) %}{% endif %}
 {%- endif %}
+{%- endfor %}
+{%- set prefix = parts | join('_') %}
 
 -- Get the domain tag reference
 {%- set dp_domain_tag = platform_database_name | upper ~ '.' ~ governance_name | upper ~ '.DOMAIN' %}
@@ -45,32 +49,32 @@ USE ROLE USERADMIN;
 -- ADMIN Role - Full administrative control
 -- Owns all infrastructure: databases, schemas, warehouses
 CREATE ROLE IF NOT EXISTS {{ prefix }}_ADMIN
-  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}')
-  COMMENT = 'Admin role for {{ data_product_name }} data product - owns infrastructure';
+  COMMENT = 'Admin role for {{ data_product_name }} data product - owns infrastructure'
+  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}');
 
 -- CREATE Role - Object creation and delegated administration
 -- Can create objects and manage grants within the data product
 CREATE ROLE IF NOT EXISTS {{ prefix }}_CREATE
-  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}')
-  COMMENT = 'Create role for {{ data_product_name }} data product - creates objects';
+  COMMENT = 'Create role for {{ data_product_name }} data product - creates objects'
+  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}');
 
 -- WRITE Role - Data modification privileges
 -- Can execute DML (INSERT, UPDATE, DELETE) on all objects
 CREATE ROLE IF NOT EXISTS {{ prefix }}_WRITE
-  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}')
-  COMMENT = 'Write role for {{ data_product_name }} data product - modifies data';
+  COMMENT = 'Write role for {{ data_product_name }} data product - modifies data'
+  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}');
 
 -- RBAC Role - Access role ownership
 -- Owns database access roles for delegated governance
 CREATE ROLE IF NOT EXISTS {{ prefix }}_RBAC
-  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}')
-  COMMENT = 'RBAC role for {{ data_product_name }} data product - owns access roles';
+  COMMENT = 'RBAC role for {{ data_product_name }} data product - owns access roles'
+  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}');
 
 -- READ Role - Read-only access
 -- Can query all data in the data product
 CREATE ROLE IF NOT EXISTS {{ prefix }}_READ
-  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}')
-  COMMENT = 'Read role for {{ data_product_name }} data product - read-only access';
+  COMMENT = 'Read role for {{ data_product_name }} data product - read-only access'
+  WITH TAG ({{ dp_domain_tag }} = '{{ data_product_domain | upper }}');
 
 -- ============================================================================
 -- STEP 2: TRANSFER OWNERSHIP TO SCIM/USERADMIN
@@ -100,20 +104,9 @@ GRANT ROLE {{ prefix }}_RBAC TO ROLE {{ prefix }}_ADMIN;
 GRANT ROLE {{ prefix }}_ADMIN TO ROLE SYSADMIN;
 
 -- ============================================================================
--- STEP 4: GRANT ACCOUNT ACCESS ROLES TO CREATE ROLE
--- ============================================================================
--- These roles provide account-level privileges needed for data product operations.
--- Note: These roles must exist in the account (created in Account Creation workflow)
-
--- Grant account access roles to CREATE role
--- If roles don't exist, these statements will fail - that's expected if 
--- account access roles weren't created in this account
-
-GRANT ROLE _AR_EXEC_TASK TO ROLE {{ prefix }}_CREATE;
-GRANT ROLE _AR_VIEW_AUSG TO ROLE {{ prefix }}_CREATE;
-GRANT ROLE _AR_APPLY_DDM TO ROLE {{ prefix }}_CREATE;
-GRANT ROLE _AR_APPLY_RAP TO ROLE {{ prefix }}_CREATE;
-GRANT ROLE _AR_APPLY_TAG TO ROLE {{ prefix }}_CREATE;
+-- Account access roles {{ prefix }}_AR_EXEC_TASK, {{ prefix }}_AR_VIEW_AUSG,
+-- {{ prefix }}_AR_APPLY_DDM, {{ prefix }}_AR_APPLY_RAP, and {{ prefix }}_AR_APPLY_TAG
+-- are created and granted in the later Transfer Ownership & Wire Hierarchy step.
 
 -- ============================================================================
 -- VERIFICATION
@@ -141,7 +134,7 @@ Roles created for {{ data_product_name }} data product:
 
 2. {{ prefix }}_CREATE
    - Purpose: Creates objects, manages grants
-   - Receives: _AR_EXEC_TASK, _AR_VIEW_AUSG, _AR_APPLY_DDM, _AR_APPLY_RAP, _AR_APPLY_TAG
+   - Account access roles are wired in the hierarchy step using {{ prefix }}_AR_* names.
    - Granted to: ADMIN
 
 3. {{ prefix }}_WRITE
